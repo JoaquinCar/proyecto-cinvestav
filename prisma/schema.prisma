@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// AUTH
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  role         Role     @default(BECARIO)
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sesionesRegistradas Sesion[]
+}
+
+enum Role {
+  ADMIN
+  BECARIO
+  READONLY
+}
+
+// DOMINIO PRINCIPAL
+
+model Edicion {
+  id          String   @id @default(cuid())
+  anio        Int      @unique
+  nombre      String
+  fechaInicio DateTime
+  fechaFin    DateTime
+
+  minAsistencias   Int     @default(5)
+  porcentajeMinimo Float?
+  asistenciaGlobal Boolean @default(true)
+
+  activa    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  clases        Clase[]
+  inscripciones Inscripcion[]
+}
+
+model Participante {
+  id        String   @id @default(cuid())
+  nombre    String
+  apellidos String
+  edad      Int
+  escuela   String
+  grado     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inscripciones Inscripcion[]
+
+  @@index([nombre, apellidos])
+}
+
+model Inscripcion {
+  id                 String   @id @default(cuid())
+  participanteId     String
+  edicionId          String
+  constanciaUrl      String?
+  constanciaGenerada Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  participante Participante @relation(fields: [participanteId], references: [id])
+  edicion      Edicion      @relation(fields: [edicionId], references: [id])
+  asistencias  Asistencia[]
+
+  @@unique([participanteId, edicionId])
+}
+
+model Clase {
+  id           String   @id @default(cuid())
+  edicionId    String
+  nombre       String
+  investigador String
+  descripcion  String?
+  createdAt    DateTime @default(now())
+
+  edicion  Edicion  @relation(fields: [edicionId], references: [id])
+  sesiones Sesion[]
+}
+
+model Sesion {
+  id              String   @id @default(cuid())
+  claseId         String
+  fecha           DateTime
+  temas           String?
+  notas           String?
+  registradaPorId String?
+  createdAt       DateTime @default(now())
+
+  clase         Clase        @relation(fields: [claseId], references: [id])
+  registradaPor User?        @relation(fields: [registradaPorId], references: [id])
+  asistencias   Asistencia[]
+}
+
+model Asistencia {
+  id            String   @id @default(cuid())
+  inscripcionId String
+  sesionId      String
+  presente      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  inscripcion Inscripcion @relation(fields: [inscripcionId], references: [id])
+  sesion      Sesion      @relation(fields: [sesionId], references: [id])
+
+  @@unique([inscripcionId, sesionId])
+}
