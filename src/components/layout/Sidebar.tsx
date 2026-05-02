@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Users,
@@ -96,6 +97,7 @@ export default function Sidebar() {
         <button
           className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-white/5"
           style={{ color: "oklch(0.55 0.05 240)" }}
+          onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut size={16} strokeWidth={1.8} />
           Cerrar sesión
