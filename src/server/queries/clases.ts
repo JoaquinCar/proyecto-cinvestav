@@ -144,6 +144,38 @@ export async function obtenerSesionPorId(id: string) {
   });
 }
 
+// ── Obtener sesión con clase y edición (para la vista de asistencia) ──────────
+
+export type SesionConClase = NonNullable<Awaited<ReturnType<typeof obtenerSesionConClase>>>;
+
+export async function obtenerSesionConClase(id: string) {
+  return prisma.sesion.findUnique({
+    where: { id },
+    select: {
+      id:    true,
+      fecha: true,
+      temas: true,
+      notas: true,
+      clase: {
+        select: {
+          id:           true,
+          nombre:       true,
+          investigador: true,
+          edicionId:    true,
+          edicion: {
+            select: {
+              id:     true,
+              nombre: true,
+              anio:   true,
+              activa: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 // ── Crear una sesión ──────────────────────────────────────────────────────────
 
 export async function crearSesion(data: CrearSesionInput, registradaPorId?: string) {

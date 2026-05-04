@@ -136,7 +136,7 @@ export default async function ParticipantesEdicionPage({
           />
         ) : (
           <ListaParticipantesClient
-            participantesIniciales={participantes as any}
+            participantesIniciales={participantes}
             edicionId={id}
           />
         )}

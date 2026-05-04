@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -48,6 +49,7 @@ const btnGoldTextStyle: React.CSSProperties = {
 // ── Subform: Contraseña ───────────────────────────────────────────────────────
 
 function PasswordForm() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,7 +69,7 @@ function PasswordForm() {
         redirect: false,
       });
       if (result?.ok) {
-        window.location.href = "/";
+        router.push("/");
       } else {
         setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
       }

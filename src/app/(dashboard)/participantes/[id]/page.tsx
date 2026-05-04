@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { obtenerHistorialParticipante } from "@/server/queries/participantes";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { EstadoBadge } from "@/components/shared/EstadoBadge";
 import {
   GraduationCap,
@@ -14,7 +13,7 @@ import {
   CheckCircle2,
   Circle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 

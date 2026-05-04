@@ -14,10 +14,10 @@ export interface Participante {
   edad: number;
   escuela: string;
   grado: string;
-  createdAt: string;
+  createdAt: Date | string;
   inscripciones?: Array<{
     id: string;
-    edicion: { id: string; anio: number; nombre: string };
+    edicion: { id: string; anio: number; nombre: string; activa?: boolean };
     constanciaGenerada: boolean;
   }>;
 }

@@ -66,7 +66,7 @@ describe("GET /api/ediciones", () => {
 
   it("retorna 401 cuando no hay sesión activa", async () => {
     const { auth } = await import("@/lib/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null as any);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const { GET } = await import("@/app/api/ediciones/route");
     const response = await GET();
@@ -131,7 +131,7 @@ describe("POST /api/ediciones", () => {
 
   it("retorna 401 cuando no hay sesión activa", async () => {
     const { auth } = await import("@/lib/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null as any);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const { POST } = await import("@/app/api/ediciones/route");
     const request = makeRequest({ anio: 2025, nombre: "Test" }, "POST");
@@ -234,7 +234,7 @@ describe("GET /api/ediciones/[id]", () => {
 
   it("retorna 401 cuando no hay sesión activa", async () => {
     const { auth } = await import("@/lib/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null as any);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const { GET } = await import("@/app/api/ediciones/[id]/route");
     const request = new Request("http://localhost/api/ediciones/edicion-1");
@@ -293,7 +293,7 @@ describe("PUT /api/ediciones/[id]", () => {
 
   it("retorna 401 cuando no hay sesión activa", async () => {
     const { auth } = await import("@/lib/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null as any);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const { PUT } = await import("@/app/api/ediciones/[id]/route");
     const request = new Request("http://localhost/api/ediciones/edicion-1", {
@@ -403,7 +403,7 @@ describe("DELETE /api/ediciones/[id]", () => {
 
   it("retorna 401 cuando no hay sesión activa", async () => {
     const { auth } = await import("@/lib/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null as any);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const { DELETE } = await import("@/app/api/ediciones/[id]/route");
     const request = new Request("http://localhost/api/ediciones/edicion-1", {
@@ -506,7 +506,7 @@ describe("PUT /api/ediciones/[id]/activar", () => {
 
   it("retorna 401 cuando no hay sesión activa", async () => {
     const { auth } = await import("@/lib/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null as any);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const { PUT } = await import("@/app/api/ediciones/[id]/activar/route");
     const request = new Request(
