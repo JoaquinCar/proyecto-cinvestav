@@ -3,37 +3,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { listarEdiciones } from "@/server/queries/ediciones";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { EdicionCard, type EdicionCardData } from "@/components/ediciones/EdicionCard";
+import { EdicionCard } from "@/components/ediciones/EdicionCard";
 
 export const metadata: Metadata = { title: "Ediciones · Pasaporte Científico" };
-
-async function getEdiciones(): Promise<EdicionCardData[]> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/ediciones`,
-    { cache: "no-store" }
-  );
-
-  if (!res.ok) {
-    // Surface error gracefully — page still renders with empty state
-    return [];
-  }
-
-  const json = await res.json();
-
-  // Guard against { error: "..." } shape
-  if (!Array.isArray(json)) return [];
-
-  return json as EdicionCardData[];
-}
 
 export default async function EdicionesPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
   const isAdmin = session.user.role === "ADMIN";
-  const ediciones = await getEdiciones();
+  const ediciones = await listarEdiciones();
 
   // Sort: activa first, then descending by year
   const sorted = [...ediciones].sort((a, b) => {

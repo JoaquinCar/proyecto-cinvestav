@@ -1,65 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { obtenerEdicionPorId } from "@/server/queries/ediciones";
+import { buscarParticipantes } from "@/server/queries/participantes";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { EstadoBadge } from "@/components/shared/EstadoBadge";
 import { DrawerRegistro } from "@/components/participantes/DrawerRegistro";
 import { ListaParticipantesClient } from "@/components/participantes/ListaParticipantesClient";
 import { Users, GraduationCap, Award } from "lucide-react";
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-
-interface ParticipanteInscrito {
-  id: string;
-  nombre: string;
-  apellidos: string;
-  edad: number;
-  escuela: string;
-  grado: string;
-  createdAt: string;
-  inscripciones?: Array<{
-    id: string;
-    edicion: { id: string; anio: number; nombre: string };
-    constanciaGenerada: boolean;
-  }>;
-}
-
-interface EdicionInfo {
-  id: string;
-  anio: number;
-  nombre: string;
-  activa: boolean;
-}
-
-// ── Fetch server-side ─────────────────────────────────────────────────────────
-
-async function getEdicion(id: string): Promise<EdicionInfo | null> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/ediciones/${id}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
-
-async function getParticipantes(edicionId: string): Promise<ParticipanteInscrito[]> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/participantes?edicionId=${edicionId}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.participantes ?? [];
-  } catch {
-    return [];
-  }
-}
 
 // ── Metadata dinámica ─────────────────────────────────────────────────────────
 
@@ -69,12 +17,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const edicion = await getEdicion(id);
-  return {
-    title: edicion
-      ? `Participantes · ${edicion.nombre}`
-      : "Participantes",
-  };
+  const edicion = await obtenerEdicionPorId(id);
+  return { title: edicion ? `Participantes · ${edicion.nombre}` : "Participantes" };
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -89,8 +33,8 @@ export default async function ParticipantesEdicionPage({
 
   const { id } = await params;
   const [edicion, participantes] = await Promise.all([
-    getEdicion(id),
-    getParticipantes(id),
+    obtenerEdicionPorId(id),
+    buscarParticipantes(undefined, id),
   ]);
 
   if (!edicion) {
@@ -192,7 +136,7 @@ export default async function ParticipantesEdicionPage({
           />
         ) : (
           <ListaParticipantesClient
-            participantesIniciales={participantes}
+            participantesIniciales={participantes as any}
             edicionId={id}
           />
         )}
