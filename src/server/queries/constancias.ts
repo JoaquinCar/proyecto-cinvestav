@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db";
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { generarPDFConstancia, type DatosConstancia } from "@/lib/pdf/constancia";
 
 export type ElegibilidadResult = {
@@ -93,7 +93,8 @@ export async function generarYGuardarConstancia(
   const buffer = await generarPDFConstancia(datos);
   const path = `constancias/${edicion.id}/${inscripcionId}.pdf`;
 
-  const { error } = await supabaseAdmin.storage
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.storage
     .from("constancias")
     .upload(path, buffer, { contentType: "application/pdf", upsert: true });
 
@@ -101,7 +102,7 @@ export async function generarYGuardarConstancia(
 
   const {
     data: { publicUrl },
-  } = supabaseAdmin.storage.from("constancias").getPublicUrl(path);
+  } = admin.storage.from("constancias").getPublicUrl(path);
 
   await prisma.inscripcion.update({
     where: { id: inscripcionId },
