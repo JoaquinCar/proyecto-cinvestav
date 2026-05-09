@@ -80,14 +80,14 @@ pasaporte-cientifico/
 | # | Módulo | Estado |
 |---|--------|--------|
 | 0 | Auth (NextAuth v5 credentials + magic link) | ✅ Completo — PR #1 |
-| 1 | Registro de participantes | 🔄 En progreso — feature/modulos-1-2 |
-| 2 | Gestión de ediciones | 🔄 En progreso — feature/modulos-1-2 |
-| 3 | Clases y temas | 🔲 Pendiente |
-| 4 | Control de asistencia | 🔲 Pendiente |
-| 5 | Constancia automática PDF | 🔲 Pendiente |
-| 6 | Dashboard y reportes | 🔲 Pendiente |
-| 7 | Reporte PDF por clase | 🔲 Pendiente |
-| 8 | Historial entre ediciones | 🔲 Pendiente |
+| 1 | Registro de participantes | ✅ Completo — feature/modulos-1-2 |
+| 2 | Gestión de ediciones | ✅ Completo — feature/modulos-1-2 |
+| 3 | Clases y temas | ✅ Completo — feature/modulos-1-2 |
+| 4 | Control de asistencia | ✅ Completo — feature/modulos-1-2 |
+| 5 | Constancia automática PDF | ✅ Completo — feature/modulos-1-2 |
+| 6 | Dashboard y reportes | ✅ Completo — feature/modulos-1-2 |
+| 7 | Reporte PDF por clase | ✅ Completo — feature/modulos-1-2 |
+| 8 | Historial entre ediciones | ✅ Completo — feature/modulos-1-2 |
 
 ---
 
