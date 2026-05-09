@@ -10,6 +10,7 @@ import {
   StickyNote,
   Users,
   Pencil,
+  FileDown,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerClasePorId, listarSesionesDeClase } from "@/server/queries/clases";
@@ -165,8 +166,21 @@ export default async function ClaseDetallePage({
           </div>
 
           {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <a
+              href={`/api/pdf/reporte-clase/${clase.id}`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+              style={{
+                background: "oklch(0.18 0.032 248)",
+                border: "1px solid oklch(0.28 0.055 248)",
+                color: "oklch(0.72 0.165 72)",
+              }}
+            >
+              <FileDown size={15} />
+              Reporte PDF
+            </a>
           {isBecarioOrAdmin && (
-            <div className="flex items-center gap-2 shrink-0">
+            <>
               <FormSesion
                 claseId={clase.id}
                 claseNombre={clase.nombre}
@@ -186,8 +200,9 @@ export default async function ClaseDetallePage({
                   Editar
                 </Link>
               )}
-            </div>
+            </>
           )}
+          </div>
         </div>
 
         {/* Description */}
