@@ -4,11 +4,11 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { obtenerHistorialParticipante } from "@/server/queries/participantes";
 import { EstadoBadge } from "@/components/shared/EstadoBadge";
+import { BotonConstancia } from "@/components/constancias/BotonConstancia";
 import {
   GraduationCap,
   School,
   Calendar,
-  Download,
   ArrowLeft,
   CheckCircle2,
   Circle,
@@ -36,8 +36,15 @@ type InscripcionTimeline = {
   id: string;
   constanciaGenerada: boolean;
   constanciaUrl?: string | null;
-  edicion: { id: string; anio: number; nombre: string; activa: boolean };
-  asistencias: unknown[];
+  edicion: {
+    id: string;
+    anio: number;
+    nombre: string;
+    activa: boolean;
+    minAsistencias: number;
+    porcentajeMinimo: number | null;
+  };
+  asistencias: { id: string }[];
 };
 
 function TimelineItem({
@@ -141,23 +148,16 @@ function TimelineItem({
               <EstadoBadge estado="en-progreso" />
             )}
 
-            {inscripcion.constanciaGenerada && inscripcion.constanciaUrl && (
-              <a
-                href={inscripcion.constanciaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:opacity-80 min-h-[44px] sm:min-h-0"
-                style={{
-                  background: "oklch(0.52 0.17 152 / 0.12)",
-                  border: "1px solid oklch(0.52 0.17 152 / 0.35)",
-                  color: "oklch(0.72 0.12 152)",
-                }}
-                aria-label={`Descargar constancia ${inscripcion.edicion.nombre}`}
-              >
-                <Download size={13} />
-                Constancia
-              </a>
-            )}
+            <BotonConstancia
+              inscripcionId={inscripcion.id}
+              elegible={
+                inscripcion.asistencias.length >= inscripcion.edicion.minAsistencias
+              }
+              asistencias={inscripcion.asistencias.length}
+              minimo={inscripcion.edicion.minAsistencias}
+              constanciaUrl={inscripcion.constanciaUrl}
+              constanciaGenerada={inscripcion.constanciaGenerada}
+            />
           </div>
         </div>
       </div>

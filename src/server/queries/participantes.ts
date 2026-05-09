@@ -64,15 +64,18 @@ export async function obtenerHistorialParticipante(id: string) {
         include: {
           edicion: {
             select: {
-              id:          true,
-              anio:        true,
-              nombre:      true,
-              activa:      true,
-              fechaInicio: true,
-              fechaFin:    true,
+              id:               true,
+              anio:             true,
+              nombre:           true,
+              activa:           true,
+              fechaInicio:      true,
+              fechaFin:         true,
+              minAsistencias:   true,
+              porcentajeMinimo: true,
             },
           },
           asistencias: {
+            where: { presente: true },
             include: {
               sesion: {
                 select: {
