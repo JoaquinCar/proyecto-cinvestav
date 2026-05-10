@@ -5,7 +5,12 @@ export const metadata: Metadata = {
   title: "Acceso",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   return (
     <main className="min-h-screen flex items-center justify-center dot-grid px-4">
       {/* Ambient glow */}
@@ -57,6 +62,16 @@ export default function LoginPage() {
             border: "1px solid oklch(0.28 0.055 248)",
             boxShadow: "0 25px 50px oklch(0.08 0.02 248 / 0.8)",
           }}>
+          {error && (
+            <div className="rounded-lg px-4 py-3 text-sm mb-6"
+              style={{
+                background: "oklch(0.60 0.21 25 / 0.12)",
+                border: "1px solid oklch(0.60 0.21 25 / 0.4)",
+                color: "oklch(0.75 0.15 25)",
+              }}>
+              Credenciales incorrectas. Verifica tu correo y contraseña.
+            </div>
+          )}
           <LoginForm />
         </div>
 
