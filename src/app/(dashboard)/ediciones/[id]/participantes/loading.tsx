@@ -1,4 +1,4 @@
-import { TableSkeleton, CardSkeleton } from "@/components/shared/LoadingSkeleton";
+import { TableSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LoadingParticipantes() {

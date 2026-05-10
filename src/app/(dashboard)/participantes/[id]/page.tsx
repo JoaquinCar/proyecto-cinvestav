@@ -2,63 +2,18 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { obtenerHistorialParticipante } from "@/server/queries/participantes";
 import { EstadoBadge } from "@/components/shared/EstadoBadge";
+import { BotonConstancia } from "@/components/constancias/BotonConstancia";
 import {
   GraduationCap,
   School,
   Calendar,
-  Download,
   ArrowLeft,
   CheckCircle2,
   Circle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-
-interface InscripcionDetalle {
-  id: string;
-  constanciaGenerada: boolean;
-  constanciaUrl?: string | null;
-  edicion: {
-    id: string;
-    anio: number;
-    nombre: string;
-    activa: boolean;
-  };
-  _count?: {
-    asistencias: number;
-  };
-}
-
-interface ParticipanteDetalle {
-  id: string;
-  nombre: string;
-  apellidos: string;
-  edad: number;
-  escuela: string;
-  grado: string;
-  createdAt: string;
-  inscripciones: InscripcionDetalle[];
-}
-
-// ── Fetch ─────────────────────────────────────────────────────────────────────
-
-async function getParticipante(id: string): Promise<ParticipanteDetalle | null> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/participantes/${id}`,
-      { cache: "no-store" }
-    );
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error("Error al obtener participante");
-    const data = await res.json();
-    return data.participante ?? null;
-  } catch {
-    return null;
-  }
-}
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -68,7 +23,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const participante = await getParticipante(id);
+  const participante = await obtenerHistorialParticipante(id);
   if (!participante) return { title: "Participante" };
   return {
     title: `${participante.nombre} ${participante.apellidos} · Historial`,
@@ -77,14 +32,29 @@ export async function generateMetadata({
 
 // ── Componente: Item de timeline ──────────────────────────────────────────────
 
+type InscripcionTimeline = {
+  id: string;
+  constanciaGenerada: boolean;
+  constanciaUrl?: string | null;
+  edicion: {
+    id: string;
+    anio: number;
+    nombre: string;
+    activa: boolean;
+    minAsistencias: number;
+    porcentajeMinimo: number | null;
+  };
+  asistencias: { id: string }[];
+};
+
 function TimelineItem({
   inscripcion,
   isLast,
 }: {
-  inscripcion: InscripcionDetalle;
+  inscripcion: InscripcionTimeline;
   isLast: boolean;
 }) {
-  const asistencias = inscripcion._count?.asistencias ?? 0;
+  const asistencias = inscripcion.asistencias.length;
 
   return (
     <div className="relative flex gap-4">
@@ -178,23 +148,16 @@ function TimelineItem({
               <EstadoBadge estado="en-progreso" />
             )}
 
-            {inscripcion.constanciaGenerada && inscripcion.constanciaUrl && (
-              <a
-                href={inscripcion.constanciaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:opacity-80 min-h-[44px] sm:min-h-0"
-                style={{
-                  background: "oklch(0.52 0.17 152 / 0.12)",
-                  border: "1px solid oklch(0.52 0.17 152 / 0.35)",
-                  color: "oklch(0.72 0.12 152)",
-                }}
-                aria-label={`Descargar constancia ${inscripcion.edicion.nombre}`}
-              >
-                <Download size={13} />
-                Constancia
-              </a>
-            )}
+            <BotonConstancia
+              inscripcionId={inscripcion.id}
+              elegible={
+                inscripcion.asistencias.length >= inscripcion.edicion.minAsistencias
+              }
+              asistencias={inscripcion.asistencias.length}
+              minimo={inscripcion.edicion.minAsistencias}
+              constanciaUrl={inscripcion.constanciaUrl}
+              constanciaGenerada={inscripcion.constanciaGenerada}
+            />
           </div>
         </div>
       </div>
@@ -213,7 +176,7 @@ export default async function ParticipanteHistorialPage({
   if (!session) redirect("/login");
 
   const { id } = await params;
-  const participante = await getParticipante(id);
+  const participante = await obtenerHistorialParticipante(id);
 
   if (!participante) notFound();
 
@@ -310,7 +273,7 @@ export default async function ParticipanteHistorialPage({
           {
             label: "Asistencias totales",
             value: inscripcionesOrdenadas.reduce(
-              (acc, i) => acc + (i._count?.asistencias ?? 0),
+              (acc, i) => acc + (i.asistencias?.length ?? 0),
               0
             ),
             color: "oklch(0.64 0.12 220)",

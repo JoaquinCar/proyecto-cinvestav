@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Search, ChevronRight, Award, X } from "lucide-react";
+import { Search, ChevronRight, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { EstadoBadge } from "@/components/shared/EstadoBadge";
 import { TableSkeleton } from "@/components/shared/LoadingSkeleton";

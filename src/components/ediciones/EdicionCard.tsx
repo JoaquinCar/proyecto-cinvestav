@@ -5,8 +5,8 @@ export interface EdicionCardData {
   id: string;
   anio: number;
   nombre: string;
-  fechaInicio: string;
-  fechaFin: string;
+  fechaInicio: Date | string;
+  fechaFin: Date | string;
   activa: boolean;
   _count?: {
     inscripciones?: number;
@@ -18,7 +18,7 @@ interface EdicionCardProps {
   edicion: EdicionCardData;
 }
 
-function formatRange(inicio: string, fin: string): string {
+function formatRange(inicio: Date | string, fin: Date | string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const locale = "es-MX";
   const start = new Date(inicio);
