@@ -15,12 +15,12 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/",                    label: "Dashboard",     icon: LayoutDashboard },
-  { href: "/ediciones",           label: "Ediciones",     icon: Layers },
-  { href: "/participantes",       label: "Participantes", icon: Users },
-  { href: "/clases",              label: "Clases",        icon: BookOpen },
-  { href: "/asistencia",          label: "Asistencia",    icon: ClipboardCheck },
-  { href: "/estadisticas",        label: "Estadísticas",  icon: BarChart3 },
+  { href: "/",             label: "Dashboard",     icon: LayoutDashboard, match: (p: string) => p === "/" },
+  { href: "/ediciones",    label: "Ediciones",     icon: Layers,          match: (p: string) => p === "/ediciones" || p.startsWith("/ediciones/") && !p.includes("/clases") && !p.includes("/participantes") },
+  { href: "/participantes",label: "Participantes", icon: Users,           match: (p: string) => p.startsWith("/participantes") || p.includes("/participantes") },
+  { href: "/clases",       label: "Clases",        icon: BookOpen,        match: (p: string) => p.startsWith("/clases") || p.includes("/clases") },
+  { href: "/asistencia",   label: "Asistencia",    icon: ClipboardCheck,  match: (p: string) => p.startsWith("/asistencia") || p.includes("/asistencia") },
+  { href: "/estadisticas", label: "Estadísticas",  icon: BarChart3,       match: (p: string) => p.startsWith("/estadisticas") },
 ];
 
 export default function Sidebar() {
@@ -65,8 +65,8 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-5 space-y-1">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+        {navItems.map(({ href, label, icon: Icon, match }) => {
+          const active = match(pathname);
           return (
             <Link
               key={href}
