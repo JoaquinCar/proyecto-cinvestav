@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Crimson_Pro, Outfit, JetBrains_Mono } from "next/font/google";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 const crimsonPro = Crimson_Pro({
@@ -43,7 +44,9 @@ export default function RootLayout({
       lang="es"
       className={`${crimsonPro.variable} ${outfit.variable} ${jetbrainsMono.variable} h-full`}
     >
-      <body className="min-h-full antialiased">{children}</body>
+      <body className="min-h-full antialiased">
+          <Providers>{children}</Providers>
+        </body>
     </html>
   );
 }
