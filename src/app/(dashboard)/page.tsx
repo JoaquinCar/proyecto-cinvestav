@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Users, ClipboardCheck, Award, BookOpen, Download } from "lucide-react";
+import { Users, ClipboardCheck, BookOpen, Download } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/server/db";
 import { obtenerMetricasEdicion } from "@/server/queries/estadisticas";
@@ -27,12 +27,6 @@ const statCards = [
     bgClass: "bg-success/10",
   },
   {
-    label: "Constancias generadas",
-    icon: Award,
-    colorClass: "text-primary",
-    bgClass: "bg-primary/10",
-  },
-  {
     label: "Sesiones impartidas",
     icon: BookOpen,
     colorClass: "text-chart-5",
@@ -50,7 +44,6 @@ export default async function DashboardPage() {
   const statValues = [
     metricas?.totalParticipantes ?? "—",
     metricas ? `${metricas.promedioAsistencia}%` : "—",
-    metricas?.totalConstancias ?? "—",
     metricas?.totalSesiones ?? "—",
   ];
 
@@ -81,7 +74,7 @@ export default async function DashboardPage() {
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {statCards.map(({ label, icon: Icon, colorClass, bgClass }, i) => (
           <div
             key={label}

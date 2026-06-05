@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/server/db";
 import {
   obtenerHistoricoEdiciones,
   obtenerEscuelasRecurrentes,
   obtenerParticipantesRecurrentes,
 } from "@/server/queries/historico";
+import { obtenerMetricasEdicion } from "@/server/queries/estadisticas";
 import { GraficaHistorico } from "@/components/dashboard/GraficaHistorico";
+import { GraficaTendencia } from "@/components/dashboard/GraficaTendencia";
+import { GraficaEdad } from "@/components/dashboard/GraficaEdad";
+import { GraficaGenero } from "@/components/dashboard/GraficaGenero";
+import { GraficaRanking } from "@/components/dashboard/GraficaRanking";
 
 export const metadata: Metadata = {
   title: "Estadísticas históricas · Pasaporte Científico",
@@ -16,14 +22,19 @@ export default async function EstadisticasPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const [ediciones, escuelas, participantes] = await Promise.all([
+  const [ediciones, escuelas, participantes, edicionActiva] = await Promise.all([
     obtenerHistoricoEdiciones(),
     obtenerEscuelasRecurrentes(),
     obtenerParticipantesRecurrentes(),
+    prisma.edicion.findFirst({ where: { activa: true } }),
   ]);
 
+  const metricas = edicionActiva
+    ? await obtenerMetricasEdicion(edicionActiva.id)
+    : null;
+
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8 max-w-6xl">
       <div className="animate-fade-up">
         <h1 className="font-display text-3xl font-semibold text-foreground">
           Estadísticas{" "}
@@ -35,6 +46,46 @@ export default async function EstadisticasPage() {
       </div>
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
+
+      {/* ── Edición activa ── */}
+      {metricas && edicionActiva && (
+        <section className="space-y-4 animate-fade-up animate-fade-up-delay-1">
+          <h2 className="font-display text-xl font-semibold text-foreground">
+            {edicionActiva.nombre}{" "}
+            <span className="text-sm font-normal text-muted-foreground">· edición activa</span>
+          </h2>
+
+          {/* Tendencia */}
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <h3 className="text-sm font-semibold mb-1 text-foreground">Tendencia de asistencia</h3>
+            <p className="text-xs mb-4 text-muted-foreground">Asistentes presentes por fecha de sesión</p>
+            <GraficaTendencia data={metricas.tendencia} />
+          </div>
+
+          {/* Edad + Género */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6">
+              <h3 className="text-sm font-semibold mb-1 text-foreground">Distribución por edad</h3>
+              <p className="text-xs mb-4 text-muted-foreground">Participantes inscritos por edad</p>
+              <GraficaEdad data={metricas.porEdad} />
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="text-sm font-semibold mb-1 text-foreground">Niñas y niños</h3>
+              <p className="text-xs mb-4 text-muted-foreground">Distribución por género</p>
+              <GraficaGenero data={metricas.porGenero} />
+            </div>
+          </div>
+
+          {/* Ranking */}
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <h3 className="text-sm font-semibold mb-1 text-foreground">Clases con más convocatoria</h3>
+            <p className="text-xs mb-4 text-muted-foreground">Total de asistencias registradas por clase</p>
+            <GraficaRanking data={metricas.rankingClases} />
+          </div>
+        </section>
+      )}
+
+      <div className="h-px bg-border" />
 
       <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up animate-fade-up-delay-1">
         <h2 className="text-sm font-semibold mb-1 text-foreground">
