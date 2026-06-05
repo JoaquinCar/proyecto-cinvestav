@@ -114,12 +114,18 @@ async function main() {
     { nombre: "Renata", apellidos: "Gutiérrez Peña", edad: 9, escuela: "Primaria Vicente Guerrero", grado: "3ro" },
   ];
 
+  const nombresFemeninos = new Set([
+    "Sofía", "Valentina", "Isabella", "Camila", "Emma", "Mía", "Lucía", "Renata",
+  ]);
+  const generoDe = (nombre: string): "FEMENINO" | "MASCULINO" =>
+    nombresFemeninos.has(nombre) ? "FEMENINO" : "MASCULINO";
+
   const participantes = await Promise.all(
     participantesData.map((p, i) =>
       prisma.participante.upsert({
         where: { id: `participante-${i}` },
-        update: {},
-        create: { id: `participante-${i}`, ...p },
+        update: { genero: generoDe(p.nombre) },
+        create: { id: `participante-${i}`, ...p, genero: generoDe(p.nombre) },
       })
     )
   );

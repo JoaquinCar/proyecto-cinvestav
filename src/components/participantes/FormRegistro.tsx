@@ -35,6 +35,7 @@ const formSchema = z.object({
     .max(18, "Máximo 18 años"),
   escuela:   z.string().min(1, "Escuela requerida").max(200).trim(),
   grado:     z.string().min(1, "Grado requerido"),
+  genero:    z.enum(["FEMENINO", "MASCULINO"]).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -329,25 +330,51 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
           </div>
         </div>
 
-        {/* Escuela */}
-        <div className="space-y-1.5">
-          <Label htmlFor="reg-escuela" className="text-sm font-medium text-foreground">
-            Escuela <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="reg-escuela"
-            type="text"
-            placeholder="Ej. Primaria José María Morelos"
-            {...register("escuela")}
-            className={[
-              "h-11 rounded-xl bg-muted border transition-colors",
-              "focus-visible:ring-primary",
-              errors.escuela ? "border-destructive" : "border-border",
-            ].join(" ")}
-          />
-          {errors.escuela && (
-            <p className="text-xs text-destructive">{errors.escuela.message}</p>
-          )}
+        {/* Escuela + Género */}
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_10rem] gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="reg-escuela" className="text-sm font-medium text-foreground">
+              Escuela <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="reg-escuela"
+              type="text"
+              placeholder="Ej. Primaria José María Morelos"
+              {...register("escuela")}
+              className={[
+                "h-11 rounded-xl bg-muted border transition-colors",
+                "focus-visible:ring-primary",
+                errors.escuela ? "border-destructive" : "border-border",
+              ].join(" ")}
+            />
+            {errors.escuela && (
+              <p className="text-xs text-destructive">{errors.escuela.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium text-foreground">
+              Género <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <Controller
+              name="genero"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger
+                    className="h-11 w-full rounded-xl bg-muted border border-border focus:ring-primary"
+                    aria-label="Seleccionar género"
+                  >
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FEMENINO">Niña</SelectItem>
+                    <SelectItem value="MASCULINO">Niño</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
         </div>
       </fieldset>
 

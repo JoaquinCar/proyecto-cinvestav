@@ -8,6 +8,7 @@ export const participanteSchema = z.object({
   edad:      z.number().int().min(5, "Edad mínima 5 años").max(18, "Edad máxima 18 años"),
   escuela:   z.string().min(1, "Escuela requerida").max(200).trim(),
   grado:     z.string().min(1, "Grado requerido").max(50).trim(),
+  genero:    z.enum(["FEMENINO", "MASCULINO"]).optional(),
 });
 
 export type ParticipanteInput = z.infer<typeof participanteSchema>;

@@ -8,6 +8,11 @@ export type MetricasEdicion = {
   porEscuela: { escuela: string; cantidad: number }[];
   porGrado: { grado: string; cantidad: number }[];
   clasesResumen: { nombre: string; sesiones: number; asistenciaPromedio: number }[];
+  // ── nuevos agregados ──
+  tendencia: { fecha: string; etiqueta: string; presentes: number }[];
+  porEdad: { edad: number; cantidad: number }[];
+  porGenero: { genero: "FEMENINO" | "MASCULINO" | "Sin especificar"; cantidad: number }[];
+  rankingClases: { nombre: string; asistentes: number }[];
 };
 
 export async function obtenerMetricasEdicion(
@@ -20,7 +25,7 @@ export async function obtenerMetricasEdicion(
       prisma.inscripcion.findMany({
         where: { edicionId },
         select: {
-          participante: { select: { escuela: true, grado: true } },
+          participante: { select: { escuela: true, grado: true, edad: true, genero: true } },
           asistencias: { where: { presente: true }, select: { id: true } },
         },
       }),
@@ -31,6 +36,7 @@ export async function obtenerMetricasEdicion(
           sesiones: {
             select: {
               id: true,
+              fecha: true,
               asistencias: { where: { presente: true }, select: { id: true } },
             },
           },
@@ -78,6 +84,60 @@ export async function obtenerMetricasEdicion(
     return { nombre: c.nombre, sesiones: c.sesiones.length, asistenciaPromedio };
   });
 
+  // ── Tendencia: presentes por fecha (programa a lo largo del tiempo) ──────────
+  const fechaMap = new Map<string, number>();
+  for (const c of clases) {
+    for (const s of c.sesiones) {
+      const key = new Date(s.fecha).toISOString().slice(0, 10);
+      fechaMap.set(key, (fechaMap.get(key) ?? 0) + s.asistencias.length);
+    }
+  }
+  const tendencia = Array.from(fechaMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([fecha, presentes]) => ({
+      fecha,
+      etiqueta: new Date(fecha + "T00:00:00").toLocaleDateString("es-MX", {
+        day: "numeric",
+        month: "short",
+      }),
+      presentes,
+    }));
+
+  // ── Distribución por edad ─────────────────────────────────────────────────
+  const edadCounts = new Map<number, number>();
+  for (const i of inscripciones) {
+    const e = i.participante.edad;
+    edadCounts.set(e, (edadCounts.get(e) ?? 0) + 1);
+  }
+  const porEdad = Array.from(edadCounts.entries())
+    .map(([edad, cantidad]) => ({ edad, cantidad }))
+    .sort((a, b) => a.edad - b.edad);
+
+  // ── Distribución por género ───────────────────────────────────────────────
+  const generoCounts = { FEMENINO: 0, MASCULINO: 0, "Sin especificar": 0 };
+  for (const i of inscripciones) {
+    const g = i.participante.genero;
+    if (g === "FEMENINO") generoCounts.FEMENINO += 1;
+    else if (g === "MASCULINO") generoCounts.MASCULINO += 1;
+    else generoCounts["Sin especificar"] += 1;
+  }
+  const porGenero = (
+    Object.entries(generoCounts) as [
+      "FEMENINO" | "MASCULINO" | "Sin especificar",
+      number,
+    ][]
+  )
+    .filter(([, cantidad]) => cantidad > 0)
+    .map(([genero, cantidad]) => ({ genero, cantidad }));
+
+  // ── Ranking de clases por asistentes totales ──────────────────────────────
+  const rankingClases = clases
+    .map((c) => ({
+      nombre: c.nombre,
+      asistentes: c.sesiones.reduce((acc, s) => acc + s.asistencias.length, 0),
+    }))
+    .sort((a, b) => b.asistentes - a.asistentes);
+
   return {
     totalParticipantes,
     totalSesiones,
@@ -86,6 +146,10 @@ export async function obtenerMetricasEdicion(
     porEscuela,
     porGrado,
     clasesResumen,
+    tendencia,
+    porEdad,
+    porGenero,
+    rankingClases,
   };
 }
 

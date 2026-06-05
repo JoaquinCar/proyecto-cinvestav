@@ -58,12 +58,18 @@ model Participante {
   edad      Int
   escuela   String
   grado     String
+  genero    Genero?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   inscripciones Inscripcion[]
 
   @@index([nombre, apellidos])
+}
+
+enum Genero {
+  FEMENINO
+  MASCULINO
 }
 
 model Inscripcion {

@@ -6,6 +6,10 @@ import { prisma } from "@/server/db";
 import { obtenerMetricasEdicion } from "@/server/queries/estadisticas";
 import { GraficaEscuelas } from "@/components/dashboard/GraficaEscuelas";
 import { GraficaGrados } from "@/components/dashboard/GraficaGrados";
+import { GraficaTendencia } from "@/components/dashboard/GraficaTendencia";
+import { GraficaEdad } from "@/components/dashboard/GraficaEdad";
+import { GraficaGenero } from "@/components/dashboard/GraficaGenero";
+import { GraficaRanking } from "@/components/dashboard/GraficaRanking";
 
 export const metadata: Metadata = { title: "Dashboard · Pasaporte Científico" };
 
@@ -116,6 +120,51 @@ export default async function DashboardPage() {
           </p>
           <GraficaGrados data={metricas?.porGrado ?? []} />
         </div>
+      </div>
+
+      {/* Tendencia de asistencia por fecha */}
+      <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up">
+        <h3 className="text-sm font-semibold mb-1 text-foreground">
+          Tendencia de asistencia
+        </h3>
+        <p className="text-xs mb-4 text-muted-foreground">
+          Asistentes presentes por fecha de sesión
+        </p>
+        <GraficaTendencia data={metricas?.tendencia ?? []} />
+      </div>
+
+      {/* Edad + Género */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up">
+        <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6">
+          <h3 className="text-sm font-semibold mb-1 text-foreground">
+            Distribución por edad
+          </h3>
+          <p className="text-xs mb-4 text-muted-foreground">
+            Participantes inscritos por edad
+          </p>
+          <GraficaEdad data={metricas?.porEdad ?? []} />
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h3 className="text-sm font-semibold mb-1 text-foreground">
+            Niñas y niños
+          </h3>
+          <p className="text-xs mb-4 text-muted-foreground">
+            Distribución por género
+          </p>
+          <GraficaGenero data={metricas?.porGenero ?? []} />
+        </div>
+      </div>
+
+      {/* Ranking de clases */}
+      <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up">
+        <h3 className="text-sm font-semibold mb-1 text-foreground">
+          Clases con más convocatoria
+        </h3>
+        <p className="text-xs mb-4 text-muted-foreground">
+          Total de asistencias registradas por clase
+        </p>
+        <GraficaRanking data={metricas?.rankingClases ?? []} />
       </div>
     </div>
   );

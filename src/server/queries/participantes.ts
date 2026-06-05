@@ -50,6 +50,7 @@ export async function crearParticipante(data: ParticipanteInput) {
       edad:      data.edad,
       escuela:   data.escuela,
       grado:     data.grado,
+      genero:    data.genero ?? null,
     },
   });
 }

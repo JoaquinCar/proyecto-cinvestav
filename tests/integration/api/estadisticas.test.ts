@@ -21,6 +21,10 @@ const metricasMock = {
   porEscuela: [{ escuela: "Primaria Centro", cantidad: 10 }],
   porGrado: [{ grado: "3°", cantidad: 15 }],
   clasesResumen: [{ nombre: "Astronomía", sesiones: 4, asistenciaPromedio: 80 }],
+  tendencia: [{ fecha: "2026-01-24", etiqueta: "24 ene", presentes: 31 }],
+  porEdad: [{ edad: 10, cantidad: 12 }],
+  porGenero: [{ genero: "FEMENINO" as const, cantidad: 16 }],
+  rankingClases: [{ nombre: "Astronomía", asistentes: 40 }],
 };
 
 function req(method: string, path: string): Request {
