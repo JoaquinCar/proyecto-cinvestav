@@ -68,35 +68,22 @@ function BottomSheet({ open, onClose, children }: BottomSheetProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Registrar participante"
-        className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl max-h-[92dvh]"
-        style={{
-          background: "oklch(0.16 0.030 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-          borderBottom: "none",
-          animation: "slide-up 250ms cubic-bezier(0.22, 1, 0.36, 1) both",
-        }}
+        className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl max-h-[92dvh] bg-card border border-border border-b-0"
+        style={{ animation: "slide-up 250ms cubic-bezier(0.22, 1, 0.36, 1) both" }}
       >
         {/* Handle + header */}
-        <div
-          className="shrink-0 flex items-center justify-between px-5 pt-3 pb-4"
-          style={{ borderBottom: "1px solid oklch(0.22 0.038 248)" }}
-        >
+        <div className="shrink-0 flex items-center justify-between px-5 pt-3 pb-4 border-b border-border">
           {/* Handle bar */}
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full"
-            style={{ background: "oklch(0.35 0.04 248)" }} />
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-border" />
 
-          <h2
-            className="font-display text-xl font-medium mt-2"
-            style={{ color: "oklch(0.96 0.01 80)" }}
-          >
+          <h2 className="font-display text-xl font-medium mt-2 text-foreground">
             Registrar participante
           </h2>
 
           <button
             type="button"
             onClick={onClose}
-            className="mt-2 rounded-full w-8 h-8 flex items-center justify-center transition-colors hover:bg-white/10"
-            style={{ color: "oklch(0.62 0.06 235)" }}
+            className="mt-2 rounded-full w-8 h-8 flex items-center justify-center transition-colors hover:bg-muted text-muted-foreground"
             aria-label="Cerrar"
           >
             <X size={18} />
@@ -163,12 +150,7 @@ export function DrawerRegistro({
     <Button
       type="button"
       onClick={() => setOpen(true)}
-      className="btn-gold fixed bottom-6 right-5 z-30 sm:static sm:bottom-auto sm:right-auto rounded-full sm:rounded-lg h-14 w-14 sm:h-9 sm:w-auto sm:px-4 shadow-lg sm:shadow-none flex items-center justify-center gap-2"
-      style={{
-        color: "oklch(0.13 0.028 248)",
-        border: "none",
-        boxShadow: "0 4px 24px oklch(0.72 0.165 72 / 0.35)",
-      }}
+      className="btn-primary fixed bottom-6 right-5 z-30 sm:static sm:bottom-auto sm:right-auto rounded-full sm:rounded-xl h-14 w-14 sm:h-11 sm:w-auto sm:px-4 shadow-lg sm:shadow-none flex items-center justify-center gap-2"
       aria-label="Registrar participante"
     >
       <UserPlus size={20} className="sm:size-4" strokeWidth={2} />
@@ -196,18 +178,9 @@ export function DrawerRegistro({
       {!isMobile && (
         <Dialog open={open} onOpenChange={setOpen}>
           {/* Aquí NO ponemos trigger dentro de Dialog cuando es controlado */}
-          <DialogContent
-            className="sm:max-w-lg"
-            style={{
-              background: "oklch(0.16 0.030 248)",
-              border: "1px solid oklch(0.28 0.055 248)",
-            }}
-          >
+          <DialogContent className="sm:max-w-lg bg-card border border-border">
             <DialogHeader>
-              <DialogTitle
-                className="font-display text-xl font-medium"
-                style={{ color: "oklch(0.96 0.01 80)" }}
-              >
+              <DialogTitle className="font-display text-xl font-medium text-foreground">
                 Registrar participante
               </DialogTitle>
             </DialogHeader>
@@ -235,12 +208,7 @@ export function FABRegistro({
       <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-gold fixed bottom-6 right-5 z-30 rounded-full h-14 w-14 flex items-center justify-center shadow-lg sm:hidden"
-        style={{
-          color: "oklch(0.13 0.028 248)",
-          border: "none",
-          boxShadow: "0 4px 24px oklch(0.72 0.165 72 / 0.35)",
-        }}
+        className="btn-primary fixed bottom-6 right-5 z-30 rounded-full h-14 w-14 flex items-center justify-center shadow-lg sm:hidden"
         aria-label="Registrar participante"
       >
         <UserPlus size={22} strokeWidth={2} />

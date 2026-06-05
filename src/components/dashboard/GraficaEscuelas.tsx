@@ -15,15 +15,21 @@ interface Props {
   data: { escuela: string; cantidad: number }[];
 }
 
+// chart-1 through chart-5 cycling for bars
+const CHART_VARS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
+
 export function GraficaEscuelas({ data }: Props) {
   const top10 = data.slice(0, 10);
 
   if (top10.length === 0) {
     return (
-      <div
-        className="h-48 flex items-center justify-center text-sm"
-        style={{ color: "oklch(0.35 0.04 248)" }}
-      >
+      <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
         Sin datos aún
       </div>
     );
@@ -38,12 +44,12 @@ export function GraficaEscuelas({ data }: Props) {
       >
         <CartesianGrid
           strokeDasharray="3 3"
-          stroke="oklch(0.24 0.04 248)"
+          stroke="var(--border)"
           horizontal={false}
         />
         <XAxis
           type="number"
-          tick={{ fill: "oklch(0.55 0.05 240)", fontSize: 11 }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           allowDecimals={false}
@@ -52,22 +58,22 @@ export function GraficaEscuelas({ data }: Props) {
           type="category"
           dataKey="escuela"
           width={130}
-          tick={{ fill: "oklch(0.62 0.06 235)", fontSize: 10 }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
           tickLine={false}
           axisLine={false}
         />
         <Tooltip
           contentStyle={{
-            background: "oklch(0.18 0.032 248)",
-            border: "1px solid oklch(0.28 0.055 248)",
-            borderRadius: "8px",
-            color: "oklch(0.96 0.01 80)",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            color: "var(--foreground)",
           }}
-          cursor={{ fill: "oklch(0.20 0.035 248)" }}
+          cursor={{ fill: "var(--muted)" }}
         />
         <Bar dataKey="cantidad" radius={[0, 4, 4, 0]}>
           {top10.map((_, i) => (
-            <Cell key={i} fill={`oklch(0.72 0.165 ${72 + i * 6})`} />
+            <Cell key={i} fill={CHART_VARS[i % CHART_VARS.length]} />
           ))}
         </Bar>
       </BarChart>

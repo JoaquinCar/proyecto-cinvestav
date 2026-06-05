@@ -58,25 +58,13 @@ function normalizarTexto(texto: string): string {
 
 function FilaSkeleton() {
   return (
-    <div
-      className="flex items-center gap-4 px-4 py-4 rounded-xl"
-      style={{
-        background: "oklch(0.18 0.032 248)",
-        border: "1px solid oklch(0.28 0.055 248)",
-      }}
-    >
-      <Skeleton
-        className="w-12 h-12 rounded-xl shrink-0"
-        style={{ background: "oklch(0.22 0.04 248)" }}
-      />
+    <div className="flex items-center gap-4 px-4 py-4 rounded-xl bg-card border border-border">
+      <Skeleton className="w-12 h-12 rounded-xl shrink-0 bg-muted" />
       <div className="flex-1 space-y-2 min-w-0">
-        <Skeleton className="h-4 w-40 rounded" style={{ background: "oklch(0.22 0.04 248)" }} />
-        <Skeleton className="h-3 w-28 rounded" style={{ background: "oklch(0.20 0.035 248)" }} />
+        <Skeleton className="h-4 w-40 rounded bg-muted" />
+        <Skeleton className="h-3 w-28 rounded bg-muted" />
       </div>
-      <Skeleton
-        className="h-6 w-20 rounded-full shrink-0"
-        style={{ background: "oklch(0.20 0.035 248)" }}
-      />
+      <Skeleton className="h-6 w-20 rounded-full shrink-0 bg-muted" />
     </div>
   );
 }
@@ -233,14 +221,7 @@ export function ListaAsistencia({
 
   if (isError) {
     return (
-      <div
-        className="rounded-xl p-6 text-center text-sm"
-        style={{
-          background: "oklch(0.18 0.032 248)",
-          border: "1px solid oklch(0.60 0.21 25 / 0.35)",
-          color: "oklch(0.75 0.10 25)",
-        }}
-      >
+      <div className="rounded-2xl p-6 text-center text-sm bg-destructive/10 border border-destructive/40 text-destructive">
         No se pudo cargar la lista de asistencia. Por favor recarga la página.
       </div>
     );
@@ -249,30 +230,21 @@ export function ListaAsistencia({
   return (
     <div className="space-y-4">
       {/* Counter bar + save indicator */}
-      <div
-        className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl"
-        style={{
-          background: "oklch(0.18 0.032 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-        }}
-      >
+      <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-2xl bg-card border border-border">
         <div className="flex items-center gap-2">
           <Users
             size={16}
             strokeWidth={1.8}
-            style={{ color: "oklch(0.72 0.165 72)" }}
+            className="text-primary"
             aria-hidden
           />
-          <span className="text-sm" style={{ color: "oklch(0.75 0.06 235)" }}>
-            Asistentes
-          </span>
+          <span className="text-sm text-foreground">Asistentes</span>
         </div>
 
         <div className="flex items-center gap-3">
           {mutation.isPending && (
             <span
-              className="text-xs animate-pulse"
-              style={{ color: "oklch(0.62 0.06 235)" }}
+              className="text-xs animate-pulse text-muted-foreground"
               aria-live="polite"
             >
               Guardando…
@@ -280,8 +252,7 @@ export function ListaAsistencia({
           )}
           {mutation.isError && (
             <span
-              className="text-xs"
-              style={{ color: "oklch(0.60 0.21 25)" }}
+              className="text-xs text-destructive"
               role="alert"
             >
               Error al guardar
@@ -289,42 +260,23 @@ export function ListaAsistencia({
           )}
 
           <span
-            className="stat-number text-2xl tabular-nums"
+            className="stat-number text-2xl tabular"
             aria-live="polite"
             aria-label={`${totalPresentes} de ${totalParticipantes} presentes`}
           >
             {isLoading ? (
-              <Skeleton
-                className="h-7 w-16 rounded inline-block"
-                style={{ background: "oklch(0.22 0.04 248)" }}
-              />
+              <Skeleton className="h-7 w-16 rounded inline-block bg-muted" />
             ) : (
               <span>
-                <span style={{ color: "oklch(0.72 0.165 72)" }}>
-                  {totalPresentes}
-                </span>
-                <span
-                  className="text-base font-normal mx-1"
-                  style={{ color: "oklch(0.45 0.04 248)" }}
-                >
-                  /
-                </span>
-                <span style={{ color: "oklch(0.62 0.06 235)" }}>
-                  {totalParticipantes}
-                </span>
+                <span className="text-success">{totalPresentes}</span>
+                <span className="text-base font-normal mx-1 text-muted-foreground">/</span>
+                <span className="text-muted-foreground">{totalParticipantes}</span>
               </span>
             )}
           </span>
 
           {!isLoading && (
-            <span
-              className="text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{
-                background: "oklch(0.72 0.165 72 / 0.12)",
-                border: "1px solid oklch(0.72 0.165 72 / 0.30)",
-                color: "oklch(0.72 0.165 72)",
-              }}
-            >
+            <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-primary/10 border border-primary/30 text-primary">
               {totalParticipantes > 0
                 ? `${Math.round((totalPresentes / totalParticipantes) * 100)}%`
                 : "—"}
@@ -338,8 +290,7 @@ export function ListaAsistencia({
         <Search
           size={15}
           strokeWidth={1.8}
-          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: "oklch(0.45 0.04 248)" }}
+          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
           aria-hidden
         />
         <Input
@@ -347,12 +298,7 @@ export function ListaAsistencia({
           placeholder="Buscar por nombre, apellidos o escuela…"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="pl-9 h-10"
-          style={{
-            background: "oklch(0.18 0.032 248)",
-            border: "1px solid oklch(0.28 0.055 248)",
-            color: "oklch(0.88 0.02 80)",
-          }}
+          className="pl-9 h-10 bg-surface-alt border-border text-foreground focus:border-primary focus:ring-primary"
           aria-label="Buscar participante"
         />
       </div>
@@ -387,16 +333,7 @@ export function ListaAsistencia({
             return (
               <li
                 key={item.inscripcion.id}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl transition-colors"
-                style={{
-                  background: item.presente
-                    ? "oklch(0.52 0.17 152 / 0.07)"
-                    : "oklch(0.18 0.032 248)",
-                  border: item.presente
-                    ? "1px solid oklch(0.52 0.17 152 / 0.25)"
-                    : "1px solid oklch(0.28 0.055 248)",
-                  minHeight: "64px",
-                }}
+                className={`attendance-item${item.presente ? " presente" : ""}`}
               >
                 {/* Toggle button */}
                 <BotonAsistencia
@@ -409,39 +346,24 @@ export function ListaAsistencia({
                 {/* Participant info */}
                 <div className="flex-1 min-w-0">
                   <p
-                    className="font-semibold text-sm sm:text-base leading-snug truncate"
-                    style={{
-                      color: item.presente
-                        ? "oklch(0.92 0.02 80)"
-                        : "oklch(0.78 0.04 240)",
-                    }}
+                    className={`font-semibold text-sm sm:text-base leading-snug truncate ${
+                      item.presente ? "text-foreground" : "text-muted-foreground"
+                    }`}
                   >
                     {nombreCompleto}
                   </p>
-                  <p
-                    className="text-xs mt-0.5 truncate"
-                    style={{ color: "oklch(0.52 0.05 240)" }}
-                  >
+                  <p className="text-xs mt-0.5 truncate text-muted-foreground">
                     {p.escuela}
                   </p>
                 </div>
 
                 {/* Status badge */}
                 <span
-                  className="shrink-0 text-xs px-2.5 py-1 rounded-full font-medium hidden sm:inline-flex"
-                  style={
+                  className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium hidden sm:inline-flex ${
                     item.presente
-                      ? {
-                          background: "oklch(0.52 0.17 152 / 0.12)",
-                          border: "1px solid oklch(0.52 0.17 152 / 0.30)",
-                          color: "oklch(0.72 0.12 152)",
-                        }
-                      : {
-                          background: "oklch(0.21 0.035 248)",
-                          border: "1px solid oklch(0.28 0.055 248)",
-                          color: "oklch(0.45 0.04 248)",
-                        }
-                  }
+                      ? "bg-success/10 border border-success/30 text-success"
+                      : "bg-muted border border-border text-muted-foreground"
+                  }`}
                   aria-hidden
                 >
                   {item.presente ? "Presente" : "Ausente"}
@@ -454,10 +376,7 @@ export function ListaAsistencia({
 
       {/* Read-only notice */}
       {readOnly && (
-        <p
-          className="text-center text-xs mt-2"
-          style={{ color: "oklch(0.45 0.04 248)" }}
-        >
+        <p className="text-center text-xs mt-2 text-muted-foreground">
           Modo solo lectura — no puedes modificar la asistencia
         </p>
       )}

@@ -19,27 +19,6 @@ const credentialsSchema = z.object({
 
 type CredentialsData = z.infer<typeof credentialsSchema>;
 
-// ── Style helpers ───────────────────────────────────────────────────────────────
-
-function inputStyle(hasError: boolean): React.CSSProperties {
-  return {
-    background: "oklch(0.14 0.028 248)",
-    borderColor: hasError ? "oklch(0.60 0.21 25)" : "oklch(0.28 0.055 248)",
-    color: "oklch(0.96 0.01 80)",
-  };
-}
-
-const errorBannerStyle: React.CSSProperties = {
-  background: "oklch(0.60 0.21 25 / 0.12)",
-  border: "1px solid oklch(0.60 0.21 25 / 0.4)",
-  color: "oklch(0.75 0.15 25)",
-};
-
-const btnGoldTextStyle: React.CSSProperties = {
-  color: "oklch(0.13 0.028 248)",
-  border: "none",
-};
-
 // ── Login Form ──────────────────────────────────────────────────────────────────
 
 export default function LoginForm() {
@@ -80,8 +59,7 @@ export default function LoginForm() {
       <div className="space-y-2">
         <Label
           htmlFor="cred-email"
-          className="text-sm font-medium"
-          style={{ color: "oklch(0.75 0.06 235)" }}
+          className="text-sm font-medium text-muted-foreground"
         >
           Correo electrónico
         </Label>
@@ -91,11 +69,12 @@ export default function LoginForm() {
           autoComplete="email"
           placeholder="usuario@cinvestav.mx"
           {...register("email")}
-          style={inputStyle(!!errors.email)}
-          className="h-11 transition-colors focus:border-primary"
+          className={`h-11 rounded-lg bg-surface-alt border-border transition-colors focus:ring-primary ${
+            errors.email ? "border-destructive focus:ring-destructive" : ""
+          }`}
         />
         {errors.email && (
-          <p className="text-xs" style={{ color: "oklch(0.60 0.21 25)" }}>
+          <p className="text-xs text-destructive">
             {errors.email.message}
           </p>
         )}
@@ -105,8 +84,7 @@ export default function LoginForm() {
       <div className="space-y-2">
         <Label
           htmlFor="cred-password"
-          className="text-sm font-medium"
-          style={{ color: "oklch(0.75 0.06 235)" }}
+          className="text-sm font-medium text-muted-foreground"
         >
           Contraseña
         </Label>
@@ -116,18 +94,19 @@ export default function LoginForm() {
           autoComplete="current-password"
           placeholder="••••••••"
           {...register("password")}
-          style={inputStyle(!!errors.password)}
-          className="h-11 transition-colors focus:border-primary"
+          className={`h-11 rounded-lg bg-surface-alt border-border transition-colors focus:ring-primary ${
+            errors.password ? "border-destructive focus:ring-destructive" : ""
+          }`}
         />
         {errors.password && (
-          <p className="text-xs" style={{ color: "oklch(0.60 0.21 25)" }}>
+          <p className="text-xs text-destructive">
             {errors.password.message}
           </p>
         )}
       </div>
 
       {error && (
-        <div className="rounded-lg px-4 py-3 text-sm" style={errorBannerStyle}>
+        <div className="rounded-lg px-4 py-3 text-sm bg-destructive/10 border border-destructive/40 text-destructive">
           {error}
         </div>
       )}
@@ -135,8 +114,7 @@ export default function LoginForm() {
       <Button
         type="submit"
         disabled={loading}
-        className="w-full h-11 font-semibold text-sm btn-gold mt-2"
-        style={btnGoldTextStyle}
+        className="w-full h-11 rounded-xl font-semibold text-sm btn-primary mt-2"
       >
         {loading ? "Verificando…" : "Entrar al sistema"}
       </Button>

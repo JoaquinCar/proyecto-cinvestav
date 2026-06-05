@@ -36,25 +36,16 @@ export function EdicionCard({ edicion }: EdicionCardProps) {
   return (
     <Link
       href={`/ediciones/${edicion.id}`}
-      className="group block rounded-xl p-6 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2"
-      style={{
-        background: "oklch(0.18 0.032 248)",
-        border: edicion.activa
-          ? "1px solid oklch(0.72 0.165 72 / 0.45)"
-          : "1px solid oklch(0.28 0.055 248)",
-        boxShadow: edicion.activa
-          ? "0 0 24px oklch(0.72 0.165 72 / 0.07)"
-          : "none",
-        // ring for focus-visible
-        ["--tw-ring-color" as string]: "oklch(0.72 0.165 72)",
-      }}
+      className={`group block bg-card border rounded-2xl p-6 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 ring-primary hover:border-primary/40 hover:bg-muted ${
+        edicion.activa ? "border-success/45" : "border-border"
+      }`}
       aria-label={`Ver edición ${edicion.anio}: ${edicion.nombre}`}
     >
       {/* Top row: year + active badge */}
       <div className="flex items-start justify-between mb-4">
         {/* Large year — stat-number style */}
         <div
-          className="stat-number leading-none"
+          className="stat-number leading-none tabular"
           style={{ fontSize: "clamp(3rem, 6vw, 3.75rem)" }}
           aria-label={`Año ${edicion.anio}`}
         >
@@ -63,26 +54,12 @@ export function EdicionCard({ edicion }: EdicionCardProps) {
 
         <div className="flex flex-col items-end gap-2 ml-3">
           {edicion.activa ? (
-            <span
-              className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{
-                background: "oklch(0.72 0.165 72 / 0.12)",
-                border: "1px solid oklch(0.72 0.165 72 / 0.4)",
-                color: "oklch(0.72 0.165 72)",
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-success/10 border border-success/40 text-success">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               Activa
             </span>
           ) : (
-            <span
-              className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-              style={{
-                background: "oklch(0.21 0.035 248)",
-                border: "1px solid oklch(0.28 0.055 248)",
-                color: "oklch(0.55 0.05 240)",
-              }}
-            >
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-muted border border-border text-muted-foreground">
               <span className="w-1.5 h-1.5 rounded-full bg-current" />
               Inactiva
             </span>
@@ -92,40 +69,30 @@ export function EdicionCard({ edicion }: EdicionCardProps) {
           <ChevronRight
             size={16}
             strokeWidth={2}
-            className="opacity-0 group-hover:opacity-100 translate-x-0 group-hover:translate-x-1 transition-all duration-200"
-            style={{ color: "oklch(0.72 0.165 72)" }}
+            className="opacity-0 group-hover:opacity-100 translate-x-0 group-hover:translate-x-1 transition-all duration-200 text-primary"
             aria-hidden
           />
         </div>
       </div>
 
-      {/* Gold rule */}
-      <div className="gold-rule mb-4" />
+      {/* Rule */}
+      <div className="h-px bg-border mb-4" />
 
       {/* Name */}
-      <p
-        className="font-display text-lg font-medium leading-snug mb-4 line-clamp-2"
-        style={{ color: "oklch(0.92 0.01 80)" }}
-      >
+      <p className="font-display text-lg font-medium leading-snug mb-4 line-clamp-2 text-foreground">
         {edicion.nombre}
       </p>
 
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* Date range */}
-        <div
-          className="flex items-center gap-1.5 text-xs"
-          style={{ color: "oklch(0.62 0.06 235)" }}
-        >
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar size={13} strokeWidth={1.8} aria-hidden />
           <span>{formatRange(edicion.fechaInicio, edicion.fechaFin)}</span>
         </div>
 
         {/* Inscripciones */}
-        <div
-          className="flex items-center gap-1.5 text-xs"
-          style={{ color: "oklch(0.62 0.06 235)" }}
-        >
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Users size={13} strokeWidth={1.8} aria-hidden />
           <span>
             {inscripciones} {inscripciones === 1 ? "participante" : "participantes"}
@@ -134,13 +101,9 @@ export function EdicionCard({ edicion }: EdicionCardProps) {
 
         {/* Clases count */}
         {clases > 0 && (
-          <div
-            className="flex items-center gap-1.5 text-xs"
-            style={{ color: "oklch(0.62 0.06 235)" }}
-          >
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span
-              className="inline-block w-1 h-1 rounded-full"
-              style={{ background: "oklch(0.45 0.04 248)" }}
+              className="inline-block w-1 h-1 rounded-full bg-border"
               aria-hidden
             />
             <span>{clases} {clases === 1 ? "clase" : "clases"}</span>

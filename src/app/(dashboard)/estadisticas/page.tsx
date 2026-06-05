@@ -25,74 +25,44 @@ export default async function EstadisticasPage() {
   return (
     <div className="space-y-8 max-w-4xl">
       <div className="animate-fade-up">
-        <h1
-          className="font-display text-3xl font-light"
-          style={{ color: "oklch(0.96 0.01 80)" }}
-        >
+        <h1 className="font-display text-3xl font-semibold text-foreground">
           Estadísticas{" "}
-          <em style={{ color: "oklch(0.72 0.165 72)" }}>históricas</em>
+          <em className="text-primary not-italic font-semibold">históricas</em>
         </h1>
-        <p className="mt-1 text-sm" style={{ color: "oklch(0.62 0.06 235)" }}>
+        <p className="mt-1 text-sm text-muted-foreground">
           Comparativo año con año · todas las ediciones del programa
         </p>
       </div>
 
-      <div className="gold-rule animate-fade-up animate-fade-up-delay-1" />
+      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
-      <div
-        className="rounded-xl p-6 animate-fade-up animate-fade-up-delay-1"
-        style={{
-          background: "oklch(0.18 0.032 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-        }}
-      >
-        <h2
-          className="text-sm font-semibold mb-1"
-          style={{ color: "oklch(0.82 0.04 240)" }}
-        >
+      <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up animate-fade-up-delay-1">
+        <h2 className="text-sm font-semibold mb-1 text-foreground">
           Crecimiento histórico
         </h2>
-        <p className="text-xs mb-6" style={{ color: "oklch(0.55 0.04 240)" }}>
+        <p className="text-xs mb-6 text-muted-foreground">
           Participantes y sesiones por edición
         </p>
         <GraficaHistorico data={ediciones} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-up animate-fade-up-delay-2">
-        <div
-          className="rounded-xl p-6"
-          style={{
-            background: "oklch(0.18 0.032 248)",
-            border: "1px solid oklch(0.28 0.055 248)",
-          }}
-        >
-          <h2
-            className="text-sm font-semibold mb-4"
-            style={{ color: "oklch(0.82 0.04 240)" }}
-          >
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h2 className="text-sm font-semibold mb-4 text-foreground">
             Escuelas más constantes
           </h2>
           {escuelas.length === 0 ? (
-            <p className="text-sm" style={{ color: "oklch(0.55 0.04 240)" }}>
+            <p className="text-sm text-muted-foreground">
               Sin datos — crea más de una edición
             </p>
           ) : (
             <div className="space-y-2">
               {escuelas.slice(0, 10).map((e, i) => (
                 <div key={i} className="flex items-center justify-between gap-3">
-                  <span
-                    className="text-sm truncate"
-                    style={{ color: "oklch(0.82 0.04 240)" }}
-                  >
+                  <span className="text-sm truncate text-foreground">
                     {e.escuela}
                   </span>
-                  <span
-                    className="text-xs shrink-0 px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "oklch(0.72 0.165 72 / 0.1)",
-                      color: "oklch(0.72 0.12 72)",
-                    }}
-                  >
+                  <span className="text-xs shrink-0 px-2 py-0.5 rounded-full bg-secondary/10 text-secondary-foreground tabular">
                     {e.ediciones} edición{e.ediciones !== 1 ? "es" : ""}
                   </span>
                 </div>
@@ -101,21 +71,12 @@ export default async function EstadisticasPage() {
           )}
         </div>
 
-        <div
-          className="rounded-xl p-6"
-          style={{
-            background: "oklch(0.18 0.032 248)",
-            border: "1px solid oklch(0.28 0.055 248)",
-          }}
-        >
-          <h2
-            className="text-sm font-semibold mb-4"
-            style={{ color: "oklch(0.82 0.04 240)" }}
-          >
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h2 className="text-sm font-semibold mb-4 text-foreground">
             Participantes recurrentes
           </h2>
           {participantes.length === 0 ? (
-            <p className="text-sm" style={{ color: "oklch(0.55 0.04 240)" }}>
+            <p className="text-sm text-muted-foreground">
               Sin participantes en múltiples ediciones aún
             </p>
           ) : (
@@ -123,26 +84,14 @@ export default async function EstadisticasPage() {
               {participantes.slice(0, 10).map((p, i) => (
                 <div key={i} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p
-                      className="text-sm truncate"
-                      style={{ color: "oklch(0.82 0.04 240)" }}
-                    >
+                    <p className="text-sm truncate text-foreground">
                       {p.nombre} {p.apellidos}
                     </p>
-                    <p
-                      className="text-xs truncate"
-                      style={{ color: "oklch(0.55 0.04 240)" }}
-                    >
+                    <p className="text-xs truncate text-muted-foreground">
                       {p.escuela}
                     </p>
                   </div>
-                  <span
-                    className="text-xs shrink-0 px-2 py-0.5 rounded-full"
-                    style={{
-                      background: "oklch(0.52 0.17 152 / 0.1)",
-                      color: "oklch(0.72 0.12 152)",
-                    }}
-                  >
+                  <span className="text-xs shrink-0 px-2 py-0.5 rounded-full bg-success/10 text-success tabular">
                     {p.ediciones} ediciones
                   </span>
                 </div>

@@ -1,27 +1,19 @@
 import type { Metadata } from "next";
-import { Crimson_Pro, Outfit, JetBrains_Mono } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
-const crimsonPro = Crimson_Pro({
-  variable: "--font-crimson",
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
-  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -42,11 +34,12 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${crimsonPro.variable} ${outfit.variable} ${jetbrainsMono.variable} h-full`}
+      className={`${fredoka.variable} ${nunito.variable} h-full`}
+      suppressHydrationWarning
     >
       <body className="min-h-full antialiased">
-          <Providers>{children}</Providers>
-        </body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

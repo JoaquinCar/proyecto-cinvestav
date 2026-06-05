@@ -52,6 +52,30 @@ export default async function ParticipantesEdicionPage({
     )
   ).length;
 
+  const statItems = [
+    {
+      label: "Inscritos",
+      value: participantes.length,
+      icon: Users,
+      colorClass: "text-primary",
+      bgClass: "bg-primary/10",
+    },
+    {
+      label: "Con constancia",
+      value: totalConstancias,
+      icon: Award,
+      colorClass: "text-success",
+      bgClass: "bg-success/10",
+    },
+    {
+      label: "Sin constancia",
+      value: participantes.length - totalConstancias,
+      icon: GraduationCap,
+      colorClass: "text-secondary",
+      bgClass: "bg-secondary/10",
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-24">
       {/* Header */}
@@ -68,61 +92,27 @@ export default async function ParticipantesEdicionPage({
         />
       </div>
 
-      <div className="gold-rule animate-fade-up animate-fade-up-delay-1" />
+      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
       {/* Mini-stats */}
-      <div
-        className="grid grid-cols-3 gap-3 animate-fade-up animate-fade-up-delay-1"
-      >
-        {[
-          {
-            label: "Inscritos",
-            value: participantes.length,
-            icon: Users,
-            color: "oklch(0.72 0.165 72)",
-            bg: "oklch(0.72 0.165 72 / 0.1)",
-          },
-          {
-            label: "Con constancia",
-            value: totalConstancias,
-            icon: Award,
-            color: "oklch(0.52 0.17 152)",
-            bg: "oklch(0.52 0.17 152 / 0.1)",
-          },
-          {
-            label: "Sin constancia",
-            value: participantes.length - totalConstancias,
-            icon: GraduationCap,
-            color: "oklch(0.64 0.12 220)",
-            bg: "oklch(0.64 0.12 220 / 0.1)",
-          },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
+      <div className="grid grid-cols-3 gap-3 animate-fade-up animate-fade-up-delay-1">
+        {statItems.map(({ label, value, icon: Icon, colorClass, bgClass }) => (
           <div
             key={label}
-            className="rounded-xl p-4 flex flex-col gap-2"
-            style={{
-              background: "oklch(0.18 0.032 248)",
-              border: "1px solid oklch(0.28 0.055 248)",
-            }}
+            className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2"
           >
             <div className="flex items-center justify-between">
               <span
-                className="text-xs font-medium tracking-wide uppercase"
-                style={{
-                  color: "oklch(0.55 0.05 240)",
-                  letterSpacing: "0.06em",
-                }}
+                className="text-xs font-medium tracking-wide uppercase text-muted-foreground"
+                style={{ letterSpacing: "0.06em" }}
               >
                 {label}
               </span>
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: bg }}
-              >
-                <Icon size={14} strokeWidth={2} style={{ color }} />
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${bgClass}`}>
+                <Icon size={14} strokeWidth={2} className={colorClass} />
               </div>
             </div>
-            <div className="stat-number text-4xl">{value}</div>
+            <div className="stat-number text-4xl tabular">{value}</div>
           </div>
         ))}
       </div>

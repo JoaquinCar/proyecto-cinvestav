@@ -7,70 +7,36 @@ export default function LoadingParticipantes() {
       {/* Header skeleton */}
       <div className="flex items-start justify-between mb-6">
         <div className="space-y-2">
-          <Skeleton
-            className="h-8 w-64 rounded-lg"
-            style={{ background: "oklch(0.20 0.035 248)" }}
-          />
-          <Skeleton
-            className="h-4 w-40 rounded"
-            style={{ background: "oklch(0.20 0.035 248)" }}
-          />
+          <Skeleton className="h-8 w-64 rounded-lg bg-muted" />
+          <Skeleton className="h-4 w-40 rounded bg-muted" />
         </div>
-        <Skeleton
-          className="hidden sm:block h-9 w-40 rounded-lg"
-          style={{ background: "oklch(0.20 0.035 248)" }}
-        />
+        <Skeleton className="hidden sm:block h-11 w-40 rounded-xl bg-muted" />
       </div>
 
-      {/* Gold rule skeleton */}
-      <div
-        className="h-0.5 rounded"
-        style={{ background: "oklch(0.22 0.038 248)" }}
-      />
+      {/* Rule skeleton */}
+      <Skeleton className="h-px w-full bg-muted" />
 
       {/* Mini-stats skeleton */}
       <div className="grid grid-cols-3 gap-3">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="rounded-xl p-4 space-y-3"
-            style={{
-              background: "oklch(0.18 0.032 248)",
-              border: "1px solid oklch(0.28 0.055 248)",
-            }}
+            className="bg-card border border-border rounded-2xl p-4 space-y-3"
           >
             <div className="flex items-center justify-between">
-              <Skeleton
-                className="h-3 w-20 rounded"
-                style={{ background: "oklch(0.22 0.04 248)" }}
-              />
-              <Skeleton
-                className="h-7 w-7 rounded-lg"
-                style={{ background: "oklch(0.22 0.04 248)" }}
-              />
+              <Skeleton className="h-3 w-20 rounded bg-muted" />
+              <Skeleton className="h-7 w-7 rounded-lg bg-muted" />
             </div>
-            <Skeleton
-              className="h-9 w-12 rounded"
-              style={{ background: "oklch(0.22 0.04 248)" }}
-            />
+            <Skeleton className="h-9 w-12 rounded bg-muted" />
           </div>
         ))}
       </div>
 
       {/* Search skeleton */}
-      <Skeleton
-        className="h-11 w-full rounded-lg"
-        style={{ background: "oklch(0.18 0.032 248)" }}
-      />
+      <Skeleton className="h-11 w-full rounded-lg bg-muted" />
 
       {/* List skeleton */}
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "oklch(0.18 0.032 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-        }}
-      >
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <TableSkeleton rows={6} />
       </div>
     </div>

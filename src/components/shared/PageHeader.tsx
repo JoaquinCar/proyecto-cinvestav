@@ -10,12 +10,11 @@ export function PageHeader({ title, subtitle, action }: PageHeaderProps) {
   return (
     <div className="flex items-start justify-between mb-6">
       <div>
-        <h1 className="font-display text-3xl font-light"
-          style={{ color: "oklch(0.96 0.01 80)" }}>
+        <h1 className="font-display text-3xl font-semibold text-foreground">
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-1 text-sm" style={{ color: "oklch(0.62 0.06 235)" }}>
+          <p className="mt-1 text-sm text-muted-foreground">
             {subtitle}
           </p>
         )}

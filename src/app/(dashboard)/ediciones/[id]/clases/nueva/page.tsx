@@ -36,20 +36,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-// ── Style helpers ─────────────────────────────────────────────────────────────
-
-function fieldStyle(hasError: boolean): React.CSSProperties {
-  return {
-    background: "oklch(0.16 0.030 248)",
-    borderColor: hasError ? "oklch(0.60 0.21 25)" : "oklch(0.28 0.055 248)",
-    color: "oklch(0.96 0.01 80)",
-  };
-}
-
-const labelStyle: React.CSSProperties = { color: "oklch(0.75 0.06 235)" };
-const errorStyle: React.CSSProperties = { color: "oklch(0.65 0.18 25)" };
-const hintStyle:  React.CSSProperties = { color: "oklch(0.55 0.04 240)" };
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NuevaClasePage({
@@ -104,8 +90,7 @@ export default function NuevaClasePage({
       <div className="animate-fade-up">
         <Link
           href={`/ediciones/${edicionId}/clases`}
-          className="inline-flex items-center gap-1.5 text-sm mb-5 transition-colors"
-          style={{ color: "oklch(0.62 0.06 235)" }}
+          className="inline-flex items-center gap-1.5 text-sm mb-5 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Volver a Clases"
         >
           <ArrowLeft size={15} strokeWidth={2} aria-hidden />
@@ -113,42 +98,32 @@ export default function NuevaClasePage({
         </Link>
 
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "oklch(0.72 0.165 72 / 0.12)" }}
-          >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10">
             <BookOpen
               size={20}
               strokeWidth={1.8}
-              style={{ color: "oklch(0.72 0.165 72)" }}
+              className="text-primary"
               aria-hidden
             />
           </div>
           <div>
-            <h1
-              className="font-display text-3xl font-light"
-              style={{ color: "oklch(0.96 0.01 80)" }}
-            >
+            <h1 className="font-display text-3xl font-semibold text-foreground">
               Nueva{" "}
-              <em style={{ color: "oklch(0.72 0.165 72)", fontStyle: "normal" }}>Clase</em>
+              <em className="text-primary not-italic font-semibold">Clase</em>
             </h1>
-            <p className="text-sm mt-0.5" style={hintStyle}>
+            <p className="text-sm mt-0.5 text-muted-foreground">
               Agrega una nueva clase al catálogo de esta edición
             </p>
           </div>
         </div>
       </div>
 
-      <div className="gold-rule animate-fade-up animate-fade-up-delay-1" />
+      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
       {/* Form card */}
       <div
-        className="animate-fade-up animate-fade-up-delay-2 rounded-xl p-6 sm:p-8"
-        style={{
-          background: "oklch(0.18 0.032 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-          maxWidth: "38rem",
-        }}
+        className="animate-fade-up animate-fade-up-delay-2 bg-card border border-border rounded-2xl p-6 sm:p-8"
+        style={{ maxWidth: "38rem" }}
       >
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -160,8 +135,7 @@ export default function NuevaClasePage({
           <div className="space-y-2">
             <Label
               htmlFor="nombre"
-              className="text-sm font-medium flex items-center gap-1.5"
-              style={labelStyle}
+              className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
             >
               <BookOpen size={13} strokeWidth={2} aria-hidden />
               Nombre de la clase
@@ -171,12 +145,11 @@ export default function NuevaClasePage({
               type="text"
               placeholder="Ej: Astronomía, Robótica, Genética…"
               {...register("nombre")}
-              style={fieldStyle(!!errors.nombre)}
-              className="h-11 transition-colors focus:border-primary"
+              className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.nombre ? "border-destructive focus:ring-destructive" : ""}`}
               aria-describedby={errors.nombre ? "nombre-error" : undefined}
             />
             {errors.nombre && (
-              <p id="nombre-error" className="text-xs" style={errorStyle} role="alert">
+              <p id="nombre-error" className="text-xs text-destructive" role="alert">
                 {errors.nombre.message}
               </p>
             )}
@@ -186,8 +159,7 @@ export default function NuevaClasePage({
           <div className="space-y-2">
             <Label
               htmlFor="investigador"
-              className="text-sm font-medium flex items-center gap-1.5"
-              style={labelStyle}
+              className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
             >
               <User size={13} strokeWidth={2} aria-hidden />
               Investigador responsable
@@ -197,16 +169,15 @@ export default function NuevaClasePage({
               type="text"
               placeholder="Dr. / Dra. Nombre Apellido"
               {...register("investigador")}
-              style={fieldStyle(!!errors.investigador)}
-              className="h-11 transition-colors focus:border-primary"
+              className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.investigador ? "border-destructive focus:ring-destructive" : ""}`}
               aria-describedby={errors.investigador ? "investigador-error" : "investigador-hint"}
             />
             {errors.investigador ? (
-              <p id="investigador-error" className="text-xs" style={errorStyle} role="alert">
+              <p id="investigador-error" className="text-xs text-destructive" role="alert">
                 {errors.investigador.message}
               </p>
             ) : (
-              <p id="investigador-hint" className="text-xs" style={hintStyle}>
+              <p id="investigador-hint" className="text-xs text-muted-foreground">
                 Nombre completo del investigador CINVESTAV que imparte la clase
               </p>
             )}
@@ -216,15 +187,11 @@ export default function NuevaClasePage({
           <div className="space-y-2">
             <Label
               htmlFor="descripcion"
-              className="text-sm font-medium flex items-center gap-1.5"
-              style={labelStyle}
+              className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
             >
               <AlignLeft size={13} strokeWidth={2} aria-hidden />
               Descripción
-              <span
-                className="text-xs font-normal"
-                style={{ color: "oklch(0.45 0.04 248)" }}
-              >
+              <span className="text-xs font-normal text-muted-foreground/60">
                 (opcional)
               </span>
             </Label>
@@ -233,16 +200,15 @@ export default function NuevaClasePage({
               placeholder="Breve descripción de los temas que se abordarán en esta clase…"
               rows={4}
               {...register("descripcion")}
-              style={fieldStyle(!!errors.descripcion)}
-              className="resize-none transition-colors focus:border-primary"
+              className={`rounded-lg bg-muted border-border resize-none transition-colors focus:ring-primary ${errors.descripcion ? "border-destructive focus:ring-destructive" : ""}`}
               aria-describedby={errors.descripcion ? "descripcion-error" : "descripcion-hint"}
             />
             {errors.descripcion ? (
-              <p id="descripcion-error" className="text-xs" style={errorStyle} role="alert">
+              <p id="descripcion-error" className="text-xs text-destructive" role="alert">
                 {errors.descripcion.message}
               </p>
             ) : (
-              <p id="descripcion-hint" className="text-xs" style={hintStyle}>
+              <p id="descripcion-hint" className="text-xs text-muted-foreground">
                 Esta descripción es opcional y puede editarse después
               </p>
             )}
@@ -251,13 +217,8 @@ export default function NuevaClasePage({
           {/* Server error */}
           {serverError && (
             <div
-              className="rounded-lg px-4 py-3 text-sm"
+              className="rounded-lg px-4 py-3 text-sm text-destructive bg-destructive/10 border border-destructive/40"
               role="alert"
-              style={{
-                background: "oklch(0.60 0.21 25 / 0.12)",
-                border: "1px solid oklch(0.60 0.21 25 / 0.4)",
-                color: "oklch(0.75 0.15 25)",
-              }}
             >
               {serverError}
             </div>
@@ -267,12 +228,7 @@ export default function NuevaClasePage({
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
             <Link
               href={`/ediciones/${edicionId}/clases`}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                background: "oklch(0.21 0.035 248)",
-                border: "1px solid oklch(0.28 0.055 248)",
-                color: "oklch(0.68 0.05 240)",
-              }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-medium bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
             >
               Cancelar
             </Link>
@@ -280,8 +236,7 @@ export default function NuevaClasePage({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ color: "oklch(0.13 0.028 248)" }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               aria-busy={loading}
             >
               {loading ? (

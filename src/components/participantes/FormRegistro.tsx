@@ -48,19 +48,6 @@ const GRADOS = [
   "6° primaria",
 ] as const;
 
-// ── Helpers de estilo ─────────────────────────────────────────────────────────
-
-function fieldStyle(hasError: boolean): React.CSSProperties {
-  return {
-    background: "oklch(0.16 0.030 248)",
-    borderColor: hasError ? "oklch(0.60 0.21 25)" : "oklch(0.28 0.055 248)",
-    color: "oklch(0.96 0.01 80)",
-  };
-}
-
-const labelStyle: React.CSSProperties = { color: "oklch(0.75 0.06 235)" };
-const errorStyle: React.CSSProperties = { color: "oklch(0.60 0.21 25)" };
-
 // ── Funciones API ─────────────────────────────────────────────────────────────
 
 async function crearParticipante(data: FormValues): Promise<Participante> {
@@ -183,7 +170,7 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       {/* Búsqueda de participante existente */}
       {!modoExistente && (
         <div className="space-y-2">
-          <Label className="text-sm font-medium" style={labelStyle}>
+          <Label className="text-sm font-medium text-foreground">
             ¿El participante ya estuvo en ediciones anteriores?
           </Label>
           <BusquedaParticipante
@@ -191,7 +178,7 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
             onSelect={handleSelectExistente}
             placeholder="Buscar por nombre o apellidos…"
           />
-          <p className="text-xs" style={{ color: "oklch(0.52 0.05 240)" }}>
+          <p className="text-xs text-muted-foreground">
             Si ya participó antes, selecciónalo para evitar duplicados.
             Si es nuevo, llena el formulario de abajo.
           </p>
@@ -200,44 +187,25 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
 
       {/* Banner: participante existente seleccionado */}
       {modoExistente && participanteExistente && (
-        <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "oklch(0.72 0.165 72 / 0.08)",
-            border: "1px solid oklch(0.72 0.165 72 / 0.3)",
-          }}
-        >
-          <div
-            className="mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "oklch(0.72 0.165 72 / 0.15)" }}
-          >
-            <UserCheck size={16} style={{ color: "oklch(0.72 0.165 72)" }} />
+        <div className="flex items-start gap-3 rounded-xl px-4 py-3 bg-secondary/10 border border-secondary/30">
+          <div className="mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-secondary/15">
+            <UserCheck size={16} className="text-secondary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <p
-              className="text-sm font-medium"
-              style={{ color: "oklch(0.85 0.08 72)" }}
-            >
+            <p className="text-sm font-medium text-foreground">
               Participante encontrado
             </p>
-            <p
-              className="text-sm mt-0.5 truncate"
-              style={{ color: "oklch(0.72 0.165 72)" }}
-            >
+            <p className="text-sm mt-0.5 truncate text-secondary-foreground">
               {participanteExistente.nombre} {participanteExistente.apellidos}
             </p>
-            <p
-              className="text-xs mt-0.5 truncate"
-              style={{ color: "oklch(0.62 0.06 235)" }}
-            >
+            <p className="text-xs mt-0.5 truncate text-muted-foreground">
               {participanteExistente.escuela} · {participanteExistente.grado}
             </p>
           </div>
           <button
             type="button"
             onClick={handleDescartarExistente}
-            className="text-xs underline underline-offset-2 shrink-0 mt-0.5 transition-opacity hover:opacity-70"
-            style={{ color: "oklch(0.62 0.06 235)" }}
+            className="text-xs underline underline-offset-2 shrink-0 mt-0.5 transition-opacity hover:opacity-70 text-muted-foreground"
           >
             Cambiar
           </button>
@@ -247,21 +215,21 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       {/* Separador visual */}
       {!modoExistente && (
         <div className="flex items-center gap-3">
-          <div className="flex-1 h-px" style={{ background: "oklch(0.22 0.038 248)" }} />
-          <span className="text-xs uppercase tracking-widest" style={{ color: "oklch(0.45 0.04 248)" }}>
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">
             O registra nuevo
           </span>
-          <div className="flex-1 h-px" style={{ background: "oklch(0.22 0.038 248)" }} />
+          <div className="flex-1 h-px bg-border" />
         </div>
       )}
 
-      {/* Campos del formulario (siempre visibles para nuevo; en solo lectura implícito para existente) */}
+      {/* Campos del formulario */}
       <fieldset disabled={modoExistente} className="space-y-4">
         {/* Nombre + Apellidos — row en desktop */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="reg-nombre" className="text-sm font-medium" style={labelStyle}>
-              Nombre(s) <span style={{ color: "oklch(0.60 0.21 25)" }}>*</span>
+            <Label htmlFor="reg-nombre" className="text-sm font-medium text-foreground">
+              Nombre(s) <span className="text-destructive">*</span>
             </Label>
             <Input
               id="reg-nombre"
@@ -269,17 +237,20 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
               autoComplete="given-name"
               placeholder="Ej. María"
               {...register("nombre")}
-              style={fieldStyle(!!errors.nombre)}
-              className="h-11 transition-colors"
+              className={[
+                "h-11 rounded-xl bg-muted border transition-colors",
+                "focus-visible:ring-primary",
+                errors.nombre ? "border-destructive" : "border-border",
+              ].join(" ")}
             />
             {errors.nombre && (
-              <p className="text-xs" style={errorStyle}>{errors.nombre.message}</p>
+              <p className="text-xs text-destructive">{errors.nombre.message}</p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="reg-apellidos" className="text-sm font-medium" style={labelStyle}>
-              Apellidos <span style={{ color: "oklch(0.60 0.21 25)" }}>*</span>
+            <Label htmlFor="reg-apellidos" className="text-sm font-medium text-foreground">
+              Apellidos <span className="text-destructive">*</span>
             </Label>
             <Input
               id="reg-apellidos"
@@ -287,11 +258,14 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
               autoComplete="family-name"
               placeholder="Ej. García López"
               {...register("apellidos")}
-              style={fieldStyle(!!errors.apellidos)}
-              className="h-11 transition-colors"
+              className={[
+                "h-11 rounded-xl bg-muted border transition-colors",
+                "focus-visible:ring-primary",
+                errors.apellidos ? "border-destructive" : "border-border",
+              ].join(" ")}
             />
             {errors.apellidos && (
-              <p className="text-xs" style={errorStyle}>{errors.apellidos.message}</p>
+              <p className="text-xs text-destructive">{errors.apellidos.message}</p>
             )}
           </div>
         </div>
@@ -299,8 +273,8 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
         {/* Edad + Grado — row */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="reg-edad" className="text-sm font-medium" style={labelStyle}>
-              Edad <span style={{ color: "oklch(0.60 0.21 25)" }}>*</span>
+            <Label htmlFor="reg-edad" className="text-sm font-medium text-foreground">
+              Edad <span className="text-destructive">*</span>
             </Label>
             <Input
               id="reg-edad"
@@ -309,17 +283,20 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
               max={18}
               placeholder="10"
               {...register("edad", { valueAsNumber: true })}
-              style={fieldStyle(!!errors.edad)}
-              className="h-11 transition-colors"
+              className={[
+                "h-11 rounded-xl bg-muted border tabular transition-colors",
+                "focus-visible:ring-primary",
+                errors.edad ? "border-destructive" : "border-border",
+              ].join(" ")}
             />
             {errors.edad && (
-              <p className="text-xs" style={errorStyle}>{errors.edad.message}</p>
+              <p className="text-xs text-destructive">{errors.edad.message}</p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium" style={labelStyle}>
-              Grado <span style={{ color: "oklch(0.60 0.21 25)" }}>*</span>
+            <Label className="text-sm font-medium text-foreground">
+              Grado <span className="text-destructive">*</span>
             </Label>
             <Controller
               name="grado"
@@ -327,8 +304,11 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger
-                    className="h-11 w-full"
-                    style={fieldStyle(!!errors.grado)}
+                    className={[
+                      "h-11 w-full rounded-xl bg-muted border",
+                      "focus:ring-primary",
+                      errors.grado ? "border-destructive" : "border-border",
+                    ].join(" ")}
                     aria-label="Seleccionar grado"
                   >
                     <SelectValue placeholder="Selecciona…" />
@@ -344,26 +324,29 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
               )}
             />
             {errors.grado && (
-              <p className="text-xs" style={errorStyle}>{errors.grado.message}</p>
+              <p className="text-xs text-destructive">{errors.grado.message}</p>
             )}
           </div>
         </div>
 
         {/* Escuela */}
         <div className="space-y-1.5">
-          <Label htmlFor="reg-escuela" className="text-sm font-medium" style={labelStyle}>
-            Escuela <span style={{ color: "oklch(0.60 0.21 25)" }}>*</span>
+          <Label htmlFor="reg-escuela" className="text-sm font-medium text-foreground">
+            Escuela <span className="text-destructive">*</span>
           </Label>
           <Input
             id="reg-escuela"
             type="text"
             placeholder="Ej. Primaria José María Morelos"
             {...register("escuela")}
-            style={fieldStyle(!!errors.escuela)}
-            className="h-11 transition-colors"
+            className={[
+              "h-11 rounded-xl bg-muted border transition-colors",
+              "focus-visible:ring-primary",
+              errors.escuela ? "border-destructive" : "border-border",
+            ].join(" ")}
           />
           {errors.escuela && (
-            <p className="text-xs" style={errorStyle}>{errors.escuela.message}</p>
+            <p className="text-xs text-destructive">{errors.escuela.message}</p>
           )}
         </div>
       </fieldset>
@@ -372,8 +355,7 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       <Button
         type="submit"
         disabled={isLoading}
-        className="w-full h-12 font-semibold text-sm btn-gold mt-2"
-        style={{ color: "oklch(0.13 0.028 248)", border: "none" }}
+        className="w-full h-12 font-semibold text-sm rounded-xl btn-primary mt-2"
       >
         {isLoading ? (
           <span className="flex items-center gap-2">

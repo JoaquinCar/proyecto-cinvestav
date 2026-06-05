@@ -35,8 +35,7 @@ export default async function EdicionesPage() {
             isAdmin ? (
               <Link
                 href="/ediciones/nueva"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all"
-                style={{ color: "oklch(0.13 0.028 248)" }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px]"
                 aria-label="Crear nueva edición"
               >
                 <Plus size={16} strokeWidth={2.5} aria-hidden />
@@ -47,7 +46,7 @@ export default async function EdicionesPage() {
         />
       </div>
 
-      <div className="gold-rule animate-fade-up animate-fade-up-delay-1" />
+      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
       {/* Cards grid */}
       {sorted.length === 0 ? (
@@ -63,8 +62,7 @@ export default async function EdicionesPage() {
               isAdmin ? (
                 <Link
                   href="/ediciones/nueva"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all"
-                  style={{ color: "oklch(0.13 0.028 248)" }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px]"
                 >
                   <Plus size={15} strokeWidth={2.5} aria-hidden />
                   Crear primera edición

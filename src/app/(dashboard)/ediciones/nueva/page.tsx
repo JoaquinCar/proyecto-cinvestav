@@ -56,20 +56,6 @@ const formSchema = z
 
 type FormData = z.infer<typeof formSchema>;
 
-// ── Style helpers ─────────────────────────────────────────────────────────────
-
-function fieldStyle(hasError: boolean): React.CSSProperties {
-  return {
-    background: "oklch(0.16 0.030 248)",
-    borderColor: hasError ? "oklch(0.60 0.21 25)" : "oklch(0.28 0.055 248)",
-    color: "oklch(0.96 0.01 80)",
-  };
-}
-
-const labelStyle: React.CSSProperties = { color: "oklch(0.75 0.06 235)" };
-const errorStyle: React.CSSProperties = { color: "oklch(0.65 0.18 25)" };
-const hintStyle: React.CSSProperties = { color: "oklch(0.55 0.04 240)" };
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NuevaEdicionPage() {
@@ -136,8 +122,7 @@ export default function NuevaEdicionPage() {
       <div className="animate-fade-up">
         <Link
           href="/ediciones"
-          className="inline-flex items-center gap-1.5 text-sm mb-5 transition-colors"
-          style={{ color: "oklch(0.62 0.06 235)" }}
+          className="inline-flex items-center gap-1.5 text-sm mb-5 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Volver a Ediciones"
         >
           <ArrowLeft size={15} strokeWidth={2} aria-hidden />
@@ -145,41 +130,31 @@ export default function NuevaEdicionPage() {
         </Link>
 
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "oklch(0.72 0.165 72 / 0.12)" }}
-          >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10">
             <FlaskConical
               size={20}
               strokeWidth={1.8}
-              style={{ color: "oklch(0.72 0.165 72)" }}
+              className="text-primary"
               aria-hidden
             />
           </div>
           <div>
-            <h1
-              className="font-display text-3xl font-light"
-              style={{ color: "oklch(0.96 0.01 80)" }}
-            >
-              Nueva <em style={{ color: "oklch(0.72 0.165 72)" }}>Edición</em>
+            <h1 className="font-display text-3xl font-semibold text-foreground">
+              Nueva <em className="text-primary not-italic font-semibold">Edición</em>
             </h1>
-            <p className="text-sm mt-0.5" style={hintStyle}>
+            <p className="text-sm mt-0.5 text-muted-foreground">
               Registra una nueva instancia anual del programa
             </p>
           </div>
         </div>
       </div>
 
-      <div className="gold-rule animate-fade-up animate-fade-up-delay-1" />
+      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
       {/* Form card */}
       <div
-        className="animate-fade-up animate-fade-up-delay-2 rounded-xl p-6 sm:p-8"
-        style={{
-          background: "oklch(0.18 0.032 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-          maxWidth: "42rem",
-        }}
+        className="animate-fade-up animate-fade-up-delay-2 bg-card border border-border rounded-2xl p-6 sm:p-8"
+        style={{ maxWidth: "42rem" }}
       >
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -193,8 +168,7 @@ export default function NuevaEdicionPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="anio"
-                className="text-sm font-medium flex items-center gap-1.5"
-                style={labelStyle}
+                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
               >
                 <Hash size={13} strokeWidth={2} aria-hidden />
                 Año
@@ -207,12 +181,11 @@ export default function NuevaEdicionPage() {
                 max={2100}
                 placeholder="2026"
                 {...register("anio", { valueAsNumber: true })}
-                style={fieldStyle(!!errors.anio)}
-                className="h-11 transition-colors focus:border-primary"
+                className={`h-11 rounded-lg bg-muted border-border tabular transition-colors focus:ring-primary ${errors.anio ? "border-destructive focus:ring-destructive" : ""}`}
                 aria-describedby={errors.anio ? "anio-error" : undefined}
               />
               {errors.anio && (
-                <p id="anio-error" className="text-xs" style={errorStyle} role="alert">
+                <p id="anio-error" className="text-xs text-destructive" role="alert">
                   {errors.anio.message}
                 </p>
               )}
@@ -222,8 +195,7 @@ export default function NuevaEdicionPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="nombre"
-                className="text-sm font-medium"
-                style={labelStyle}
+                className="text-sm font-medium text-muted-foreground"
               >
                 Nombre de la edición
               </Label>
@@ -232,12 +204,11 @@ export default function NuevaEdicionPage() {
                 type="text"
                 placeholder="Pasaporte Científico 2026"
                 {...register("nombre")}
-                style={fieldStyle(!!errors.nombre)}
-                className="h-11 transition-colors focus:border-primary"
+                className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.nombre ? "border-destructive focus:ring-destructive" : ""}`}
                 aria-describedby={errors.nombre ? "nombre-error" : undefined}
               />
               {errors.nombre && (
-                <p id="nombre-error" className="text-xs" style={errorStyle} role="alert">
+                <p id="nombre-error" className="text-xs text-destructive" role="alert">
                   {errors.nombre.message}
                 </p>
               )}
@@ -250,8 +221,7 @@ export default function NuevaEdicionPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="fechaInicio"
-                className="text-sm font-medium flex items-center gap-1.5"
-                style={labelStyle}
+                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
               >
                 <Calendar size={13} strokeWidth={2} aria-hidden />
                 Fecha de inicio
@@ -260,12 +230,11 @@ export default function NuevaEdicionPage() {
                 id="fechaInicio"
                 type="date"
                 {...register("fechaInicio")}
-                style={fieldStyle(!!errors.fechaInicio)}
-                className="h-11 transition-colors focus:border-primary"
+                className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.fechaInicio ? "border-destructive focus:ring-destructive" : ""}`}
                 aria-describedby={errors.fechaInicio ? "fechaInicio-error" : undefined}
               />
               {errors.fechaInicio && (
-                <p id="fechaInicio-error" className="text-xs" style={errorStyle} role="alert">
+                <p id="fechaInicio-error" className="text-xs text-destructive" role="alert">
                   {errors.fechaInicio.message}
                 </p>
               )}
@@ -275,8 +244,7 @@ export default function NuevaEdicionPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="fechaFin"
-                className="text-sm font-medium flex items-center gap-1.5"
-                style={labelStyle}
+                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
               >
                 <Calendar size={13} strokeWidth={2} aria-hidden />
                 Fecha de fin
@@ -285,12 +253,11 @@ export default function NuevaEdicionPage() {
                 id="fechaFin"
                 type="date"
                 {...register("fechaFin")}
-                style={fieldStyle(!!errors.fechaFin)}
-                className="h-11 transition-colors focus:border-primary"
+                className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.fechaFin ? "border-destructive focus:ring-destructive" : ""}`}
                 aria-describedby={errors.fechaFin ? "fechaFin-error" : undefined}
               />
               {errors.fechaFin && (
-                <p id="fechaFin-error" className="text-xs" style={errorStyle} role="alert">
+                <p id="fechaFin-error" className="text-xs text-destructive" role="alert">
                   {errors.fechaFin.message}
                 </p>
               )}
@@ -298,11 +265,7 @@ export default function NuevaEdicionPage() {
           </div>
 
           {/* Separator */}
-          <div
-            className="h-px"
-            style={{ background: "oklch(0.24 0.04 248)" }}
-            role="separator"
-          />
+          <div className="h-px bg-border" role="separator" />
 
           {/* Row 3: Asistencias + Porcentaje */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -310,8 +273,7 @@ export default function NuevaEdicionPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="minAsistencias"
-                className="text-sm font-medium flex items-center gap-1.5"
-                style={labelStyle}
+                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
               >
                 <Hash size={13} strokeWidth={2} aria-hidden />
                 Mínimo de asistencias
@@ -323,8 +285,7 @@ export default function NuevaEdicionPage() {
                 min={1}
                 placeholder="5"
                 {...register("minAsistencias", { valueAsNumber: true })}
-                style={fieldStyle(!!errors.minAsistencias)}
-                className="h-11 transition-colors focus:border-primary"
+                className={`h-11 rounded-lg bg-muted border-border tabular transition-colors focus:ring-primary ${errors.minAsistencias ? "border-destructive focus:ring-destructive" : ""}`}
                 aria-describedby={
                   errors.minAsistencias ? "minAsistencias-error" : "minAsistencias-hint"
                 }
@@ -332,14 +293,13 @@ export default function NuevaEdicionPage() {
               {errors.minAsistencias ? (
                 <p
                   id="minAsistencias-error"
-                  className="text-xs"
-                  style={errorStyle}
+                  className="text-xs text-destructive"
                   role="alert"
                 >
                   {errors.minAsistencias.message}
                 </p>
               ) : (
-                <p id="minAsistencias-hint" className="text-xs" style={hintStyle}>
+                <p id="minAsistencias-hint" className="text-xs text-muted-foreground">
                   Sesiones requeridas para obtener constancia
                 </p>
               )}
@@ -349,15 +309,11 @@ export default function NuevaEdicionPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="porcentajeMinimo"
-                className="text-sm font-medium flex items-center gap-1.5"
-                style={labelStyle}
+                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
               >
                 <Percent size={13} strokeWidth={2} aria-hidden />
                 Porcentaje mínimo
-                <span
-                  className="text-xs font-normal"
-                  style={{ color: "oklch(0.45 0.04 248)" }}
-                >
+                <span className="text-xs font-normal text-muted-foreground/60">
                   (opcional)
                 </span>
               </Label>
@@ -372,8 +328,7 @@ export default function NuevaEdicionPage() {
                 {...register("porcentajeMinimo", {
                   setValueAs: (v) => (v === "" || v == null ? null : Number(v)),
                 })}
-                style={fieldStyle(!!errors.porcentajeMinimo)}
-                className="h-11 transition-colors focus:border-primary"
+                className={`h-11 rounded-lg bg-muted border-border tabular transition-colors focus:ring-primary ${errors.porcentajeMinimo ? "border-destructive focus:ring-destructive" : ""}`}
                 aria-describedby={
                   errors.porcentajeMinimo ? "porcentaje-error" : "porcentaje-hint"
                 }
@@ -381,14 +336,13 @@ export default function NuevaEdicionPage() {
               {errors.porcentajeMinimo ? (
                 <p
                   id="porcentaje-error"
-                  className="text-xs"
-                  style={errorStyle}
+                  className="text-xs text-destructive"
                   role="alert"
                 >
                   {errors.porcentajeMinimo.message}
                 </p>
               ) : (
-                <p id="porcentaje-hint" className="text-xs" style={hintStyle}>
+                <p id="porcentaje-hint" className="text-xs text-muted-foreground">
                   Deja vacío para usar solo conteo absoluto
                 </p>
               )}
@@ -396,13 +350,7 @@ export default function NuevaEdicionPage() {
           </div>
 
           {/* Row 4: Asistencia global toggle */}
-          <div
-            className="flex items-start gap-3 p-4 rounded-lg"
-            style={{
-              background: "oklch(0.16 0.030 248)",
-              border: "1px solid oklch(0.24 0.04 248)",
-            }}
-          >
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-muted border border-border">
             <Controller
               name="asistenciaGlobal"
               control={control}
@@ -413,27 +361,20 @@ export default function NuevaEdicionPage() {
                   onCheckedChange={field.onChange}
                   className="mt-0.5 shrink-0"
                   aria-describedby="asistenciaGlobal-desc"
-                  style={
-                    {
-                      "--checkbox-bg": "oklch(0.72 0.165 72)",
-                    } as React.CSSProperties
-                  }
                 />
               )}
             />
             <div>
               <Label
                 htmlFor="asistenciaGlobal"
-                className="text-sm font-medium flex items-center gap-1.5 cursor-pointer"
-                style={{ color: "oklch(0.88 0.02 80)" }}
+                className="text-sm font-medium flex items-center gap-1.5 cursor-pointer text-foreground"
               >
                 <Globe size={13} strokeWidth={2} aria-hidden />
                 Asistencia global
               </Label>
               <p
                 id="asistenciaGlobal-desc"
-                className="text-xs mt-1 leading-relaxed"
-                style={hintStyle}
+                className="text-xs mt-1 leading-relaxed text-muted-foreground"
               >
                 Las asistencias se cuentan en todas las sesiones de la edición,
                 independientemente de la clase. Desactiva para contar por clase.
@@ -444,13 +385,8 @@ export default function NuevaEdicionPage() {
           {/* Server error */}
           {serverError && (
             <div
-              className="rounded-lg px-4 py-3 text-sm"
+              className="rounded-lg px-4 py-3 text-sm text-destructive bg-destructive/10 border border-destructive/40"
               role="alert"
-              style={{
-                background: "oklch(0.60 0.21 25 / 0.12)",
-                border: "1px solid oklch(0.60 0.21 25 / 0.4)",
-                color: "oklch(0.75 0.15 25)",
-              }}
             >
               {serverError}
             </div>
@@ -460,12 +396,7 @@ export default function NuevaEdicionPage() {
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
             <Link
               href="/ediciones"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                background: "oklch(0.21 0.035 248)",
-                border: "1px solid oklch(0.28 0.055 248)",
-                color: "oklch(0.68 0.05 240)",
-              }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-medium bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
             >
               Cancelar
             </Link>
@@ -473,8 +404,7 @@ export default function NuevaEdicionPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ color: "oklch(0.13 0.028 248)" }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               aria-busy={loading}
             >
               {loading ? (

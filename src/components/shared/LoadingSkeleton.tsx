@@ -2,13 +2,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-xl p-6 space-y-3"
-      style={{
-        background: "oklch(0.18 0.032 248)",
-        border: "1px solid oklch(0.28 0.055 248)",
-      }}>
-      <Skeleton className="h-3 w-24" style={{ background: "oklch(0.22 0.04 248)" }} />
-      <Skeleton className="h-10 w-16" style={{ background: "oklch(0.22 0.04 248)" }} />
+    <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
+      <Skeleton className="h-3 w-24 bg-muted" />
+      <Skeleton className="h-10 w-16 bg-muted" />
     </div>
   );
 }
@@ -19,8 +15,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <Skeleton
           key={i}
-          className="h-12 w-full rounded-lg"
-          style={{ background: "oklch(0.18 0.032 248)" }}
+          className="h-12 w-full rounded-lg bg-muted"
         />
       ))}
     </div>

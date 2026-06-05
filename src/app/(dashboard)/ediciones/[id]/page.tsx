@@ -46,9 +46,9 @@ export default async function EdicionDetallePage({
   const clases = edicion._count?.clases ?? 0;
 
   const stats = [
-    { label: "Participantes", value: inscripciones, icon: Users,          color: "oklch(0.72 0.165 72)", bg: "oklch(0.72 0.165 72 / 0.1)" },
-    { label: "Clases",        value: clases,         icon: BookOpen,       color: "oklch(0.52 0.17  152)", bg: "oklch(0.52 0.17 152 / 0.1)" },
-    { label: "Sesiones",      value: "—",            icon: ClipboardCheck, color: "oklch(0.64 0.12  220)", bg: "oklch(0.64 0.12 220 / 0.1)" },
+    { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
+    { label: "Clases",        value: clases,         icon: BookOpen,       colorClass: "text-success",   bgClass: "bg-success/10"  },
+    { label: "Sesiones",      value: "—",            icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
   ];
 
   const quickLinks = [
@@ -62,8 +62,7 @@ export default async function EdicionDetallePage({
       <div className="animate-fade-up">
         <Link
           href="/ediciones"
-          className="inline-flex items-center gap-1.5 text-sm mb-5 transition-colors"
-          style={{ color: "oklch(0.62 0.06 235)" }}
+          className="inline-flex items-center gap-1.5 text-sm mb-5 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft size={15} strokeWidth={2} aria-hidden />
           Ediciones
@@ -72,38 +71,32 @@ export default async function EdicionDetallePage({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0">
             <div
-              className="stat-number shrink-0 leading-none hidden sm:block"
+              className="stat-number shrink-0 leading-none hidden sm:block tabular"
               style={{ fontSize: "4.5rem" }}
             >
               {edicion.anio}
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="sm:hidden font-display text-2xl font-light" style={{ color: "oklch(0.72 0.165 72)" }}>
+                <span className="sm:hidden font-display text-2xl font-semibold tabular text-foreground">
                   {edicion.anio}
                 </span>
                 {edicion.activa ? (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ background: "oklch(0.72 0.165 72 / 0.12)", border: "1px solid oklch(0.72 0.165 72 / 0.4)", color: "oklch(0.72 0.165 72)" }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-success/10 border border-success/40 text-success">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                     Activa
                   </span>
                 ) : (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ background: "oklch(0.21 0.035 248)", border: "1px solid oklch(0.28 0.055 248)", color: "oklch(0.55 0.05 240)" }}
-                  >
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-muted border border-border text-muted-foreground">
                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
                     Inactiva
                   </span>
                 )}
               </div>
-              <h1 className="font-display text-2xl sm:text-3xl font-light leading-snug" style={{ color: "oklch(0.96 0.01 80)" }}>
+              <h1 className="font-display text-2xl sm:text-3xl font-semibold leading-snug text-foreground">
                 {edicion.nombre}
               </h1>
-              <div className="flex items-center gap-1.5 mt-2 text-sm" style={{ color: "oklch(0.62 0.06 235)" }}>
+              <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
                 <Calendar size={14} strokeWidth={1.8} aria-hidden />
                 <span>{formatDate(edicion.fechaInicio)} — {formatDate(edicion.fechaFin)}</span>
               </div>
@@ -116,8 +109,7 @@ export default async function EdicionDetallePage({
                 <form action={`/api/ediciones/${edicion.id}/activar`} method="POST">
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors"
-                    style={{ background: "oklch(0.52 0.17 152 / 0.12)", border: "1px solid oklch(0.52 0.17 152 / 0.35)", color: "oklch(0.72 0.12 152)" }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-success/10 border border-success/40 text-success hover:bg-success/20 transition-colors min-h-[44px]"
                   >
                     <Zap size={14} strokeWidth={2} aria-hidden />
                     Activar
@@ -126,16 +118,14 @@ export default async function EdicionDetallePage({
               )}
               <Link
                 href={`/ediciones/${edicion.id}/editar`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ background: "oklch(0.21 0.035 248)", border: "1px solid oklch(0.28 0.055 248)", color: "oklch(0.75 0.06 235)" }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
               >
                 <Pencil size={14} strokeWidth={2} aria-hidden />
                 Editar
               </Link>
               <Link
                 href={`/ediciones/${edicion.id}/eliminar`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ background: "oklch(0.60 0.21 25 / 0.08)", border: "1px solid oklch(0.60 0.21 25 / 0.3)", color: "oklch(0.72 0.16 25)" }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-destructive/10 border border-destructive/40 text-destructive hover:bg-destructive/20 transition-colors min-h-[44px]"
               >
                 <Trash2 size={14} strokeWidth={2} aria-hidden />
                 Eliminar
@@ -145,40 +135,40 @@ export default async function EdicionDetallePage({
         </div>
       </div>
 
-      <div className="gold-rule animate-fade-up animate-fade-up-delay-1" />
+      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-up animate-fade-up-delay-2">
-        {stats.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="rounded-xl p-5" style={{ background: "oklch(0.18 0.032 248)", border: "1px solid oklch(0.28 0.055 248)" }}>
+        {stats.map(({ label, value, icon: Icon, colorClass, bgClass }) => (
+          <div key={label} className="bg-card border border-border rounded-2xl p-5">
             <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "oklch(0.55 0.05 240)", letterSpacing: "0.07em" }}>{label}</p>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: bg }}>
-                <Icon size={16} strokeWidth={2} style={{ color }} aria-hidden />
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground" style={{ letterSpacing: "0.07em" }}>{label}</p>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${bgClass}`}>
+                <Icon size={16} strokeWidth={2} className={colorClass} aria-hidden />
               </div>
             </div>
-            <div className="stat-number text-5xl">{value}</div>
+            <div className="stat-number text-5xl tabular">{value}</div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl p-6 animate-fade-up animate-fade-up-delay-3" style={{ background: "oklch(0.18 0.032 248)", border: "1px solid oklch(0.28 0.055 248)" }}>
-        <h2 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: "oklch(0.62 0.06 235)", letterSpacing: "0.07em" }}>
+      <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up animate-fade-up-delay-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide mb-4 text-muted-foreground" style={{ letterSpacing: "0.07em" }}>
           Configuracion de constancias
         </h2>
         <dl className="grid grid-cols-1 sm:grid-cols-3 gap-y-4 gap-x-8">
           <div>
-            <dt className="text-xs mb-1" style={{ color: "oklch(0.55 0.05 240)" }}>Minimo de asistencias</dt>
-            <dd className="font-display text-3xl font-light" style={{ color: "oklch(0.72 0.165 72)" }}>{edicion.minAsistencias}</dd>
+            <dt className="text-xs mb-1 text-muted-foreground">Minimo de asistencias</dt>
+            <dd className="font-display text-3xl font-semibold tabular text-primary">{edicion.minAsistencias}</dd>
           </div>
           <div>
-            <dt className="text-xs mb-1" style={{ color: "oklch(0.55 0.05 240)" }}>Porcentaje minimo</dt>
-            <dd className="font-display text-3xl font-light" style={{ color: "oklch(0.64 0.12 220)" }}>
+            <dt className="text-xs mb-1 text-muted-foreground">Porcentaje minimo</dt>
+            <dd className="font-display text-3xl font-semibold tabular text-foreground">
               {edicion.porcentajeMinimo != null ? `${edicion.porcentajeMinimo}%` : "—"}
             </dd>
           </div>
           <div>
-            <dt className="text-xs mb-1" style={{ color: "oklch(0.55 0.05 240)" }}>Tipo de asistencia</dt>
-            <dd className="text-sm font-medium mt-1" style={{ color: "oklch(0.82 0.04 240)" }}>
+            <dt className="text-xs mb-1 text-muted-foreground">Tipo de asistencia</dt>
+            <dd className="text-sm font-medium mt-1 text-foreground">
               {edicion.asistenciaGlobal ? "Global (todas las sesiones)" : "Por clase"}
             </dd>
           </div>
@@ -186,7 +176,7 @@ export default async function EdicionDetallePage({
       </div>
 
       <div className="animate-fade-up animate-fade-up-delay-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: "oklch(0.62 0.06 235)", letterSpacing: "0.07em" }}>
+        <h2 className="text-sm font-semibold uppercase tracking-wide mb-3 text-muted-foreground" style={{ letterSpacing: "0.07em" }}>
           Accesos rapidos
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -194,22 +184,20 @@ export default async function EdicionDetallePage({
             <Link
               key={href}
               href={href}
-              className="group flex items-center justify-between gap-3 px-5 py-4 rounded-xl transition-all duration-200"
-              style={{ background: "oklch(0.18 0.032 248)", border: "1px solid oklch(0.28 0.055 248)" }}
+              className="group flex items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-card border border-border hover:border-primary/40 hover:bg-muted transition-all duration-200 min-h-[44px]"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "oklch(0.72 0.165 72 / 0.1)" }}>
-                  <Icon size={17} strokeWidth={1.8} style={{ color: "oklch(0.72 0.165 72)" }} aria-hidden />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+                  <Icon size={17} strokeWidth={1.8} className="text-primary" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "oklch(0.88 0.02 80)" }}>{label}</p>
-                  <p className="text-xs truncate" style={{ color: "oklch(0.55 0.05 240)" }}>{detail}</p>
+                  <p className="text-sm font-medium truncate text-foreground">{label}</p>
+                  <p className="text-xs truncate text-muted-foreground">{detail}</p>
                 </div>
               </div>
               <ChevronRight
                 size={15} strokeWidth={2}
-                className="shrink-0 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200"
-                style={{ color: "oklch(0.72 0.165 72)" }}
+                className="shrink-0 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 text-primary"
                 aria-hidden
               />
             </Link>

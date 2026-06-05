@@ -52,12 +52,7 @@ export function BotonConstancia({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 min-h-[44px] sm:min-h-0"
-        style={{
-          background: "oklch(0.52 0.17 152 / 0.12)",
-          border: "1px solid oklch(0.52 0.17 152 / 0.35)",
-          color: "oklch(0.72 0.12 152)",
-        }}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 min-h-[44px] sm:min-h-0 bg-success/10 border border-success/40 text-success"
       >
         <Download size={13} />
         Descargar Constancia
@@ -67,16 +62,9 @@ export function BotonConstancia({
 
   if (!elegible) {
     return (
-      <div
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
-        style={{
-          background: "oklch(0.72 0.165 72 / 0.06)",
-          border: "1px solid oklch(0.72 0.165 72 / 0.18)",
-          color: "oklch(0.62 0.06 235)",
-        }}
-      >
-        <Award size={12} style={{ color: "oklch(0.72 0.165 72 / 0.5)" }} />
-        {asistencias}/{minimo} asistencias
+      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-secondary/6 border border-secondary/18 text-muted-foreground">
+        <Award size={12} className="text-secondary/50" />
+        <span className="tabular">{asistencias}/{minimo}</span> asistencias
       </div>
     );
   }
@@ -87,12 +75,7 @@ export function BotonConstancia({
         type="button"
         onClick={handleGenerar}
         disabled={loading}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50 min-h-[44px] sm:min-h-0"
-        style={{
-          background: "oklch(0.72 0.165 72 / 0.12)",
-          border: "1px solid oklch(0.72 0.165 72 / 0.35)",
-          color: "oklch(0.82 0.12 72)",
-        }}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50 min-h-[44px] sm:min-h-0 bg-secondary/12 border border-secondary/35 text-secondary-foreground"
       >
         {loading ? (
           <Loader2 size={13} className="animate-spin" />
@@ -102,9 +85,7 @@ export function BotonConstancia({
         {loading ? "Generando…" : "Generar Constancia"}
       </button>
       {error && (
-        <p className="text-xs" style={{ color: "oklch(0.60 0.21 25)" }}>
-          {error}
-        </p>
+        <p className="text-xs text-destructive">{error}</p>
       )}
     </div>
   );

@@ -59,14 +59,7 @@ function BadgeAnterior({ anios }: { anios: number[] }) {
       ? `Ya participó en ${anios[0]}`
       : `Participó en ${anios.join(", ")}`;
   return (
-    <span
-      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
-      style={{
-        background: "oklch(0.72 0.165 72 / 0.12)",
-        border: "1px solid oklch(0.72 0.165 72 / 0.35)",
-        color: "oklch(0.72 0.165 72)",
-      }}
-    >
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-secondary/12 border border-secondary/35 text-secondary-foreground">
       <Clock size={10} />
       {label}
     </span>
@@ -131,8 +124,7 @@ export function BusquedaParticipante({
       <div className="relative">
         <Search
           size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: "oklch(0.55 0.05 240)" }}
+          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
         />
         <Input
           type="text"
@@ -140,12 +132,7 @@ export function BusquedaParticipante({
           onChange={handleChange}
           onFocus={() => query.trim().length >= 2 && setOpen(true)}
           placeholder={placeholder}
-          className="pl-9 pr-9 h-11 text-sm"
-          style={{
-            background: "oklch(0.18 0.032 248)",
-            borderColor: "oklch(0.28 0.055 248)",
-            color: "oklch(0.96 0.01 80)",
-          }}
+          className="pl-9 pr-9 h-11 text-sm rounded-xl bg-muted border border-border focus-visible:ring-primary"
           aria-label="Buscar participante"
           aria-autocomplete="list"
           aria-expanded={showDropdown}
@@ -154,8 +141,7 @@ export function BusquedaParticipante({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition-colors hover:bg-white/10"
-            style={{ color: "oklch(0.55 0.05 240)" }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition-colors hover:bg-muted text-muted-foreground"
             aria-label="Limpiar búsqueda"
           >
             <X size={14} />
@@ -167,28 +153,17 @@ export function BusquedaParticipante({
       {showDropdown && (
         <div
           role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-xl overflow-hidden"
-          style={{
-            background: "oklch(0.18 0.032 248)",
-            border: "1px solid oklch(0.28 0.055 248)",
-            boxShadow: "0 8px 32px oklch(0.08 0.02 248 / 0.6)",
-          }}
+          className="absolute z-50 mt-1 w-full rounded-2xl overflow-hidden bg-card border border-border shadow-lg"
         >
           {isFetching && (
-            <div
-              className="flex items-center gap-2 px-4 py-3 text-sm"
-              style={{ color: "oklch(0.62 0.06 235)" }}
-            >
+            <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
               <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
               Buscando…
             </div>
           )}
 
           {!isFetching && resultados.length === 0 && (
-            <div
-              className="px-4 py-3 text-sm"
-              style={{ color: "oklch(0.62 0.06 235)" }}
-            >
+            <div className="px-4 py-3 text-sm text-muted-foreground">
               No se encontraron participantes con ese nombre
             </div>
           )}
@@ -202,24 +177,15 @@ export function BusquedaParticipante({
                   <li key={p.id} role="option">
                     <button
                       type="button"
-                      className="attendance-item w-full text-left rounded-none border-x-0 border-b border-t-0 last:border-b-0 px-4 py-3 min-h-0 gap-3"
-                      style={{
-                        borderColor: "oklch(0.22 0.038 248)",
-                      }}
+                      className="attendance-item w-full text-left rounded-none border-x-0 border-b border-t-0 last:border-b-0 px-4 py-3 min-h-0 gap-3 border-border"
                       onClick={() => handleSelect(p)}
                     >
                       <div className="flex-1 min-w-0">
-                        <div
-                          className="text-sm font-medium truncate"
-                          style={{ color: "oklch(0.92 0.01 80)" }}
-                        >
+                        <div className="text-sm font-medium truncate text-foreground">
                           {p.nombre} {p.apellidos}
                         </div>
-                        <div
-                          className="text-xs mt-0.5 truncate"
-                          style={{ color: "oklch(0.62 0.06 235)" }}
-                        >
-                          {p.escuela} · {p.grado} · {p.edad} años
+                        <div className="text-xs mt-0.5 truncate text-muted-foreground">
+                          {p.escuela} · {p.grado} · <span className="tabular">{p.edad}</span> años
                         </div>
                         {aniosAnteriores.length > 0 && (
                           <div className="mt-1.5">

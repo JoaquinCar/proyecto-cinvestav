@@ -45,14 +45,34 @@ export default async function ClasesEdicionPage({
 
   const totalSesiones = clases.reduce((acc, c) => acc + c._count.sesiones, 0);
 
+  const statItems = [
+    {
+      label: "Total de clases",
+      value: clases.length,
+      colorClass: "text-primary",
+      bgClass: "bg-primary/10",
+    },
+    {
+      label: "Total de sesiones",
+      value: totalSesiones,
+      colorClass: "text-success",
+      bgClass: "bg-success/10",
+    },
+    {
+      label: "Investigadores",
+      value: new Set(clases.map((c) => c.investigador)).size,
+      colorClass: "text-secondary",
+      bgClass: "bg-secondary/10",
+    },
+  ];
+
   return (
     <div className="space-y-8 pb-16">
       {/* Back link */}
       <div className="animate-fade-up">
         <Link
           href={`/ediciones/${edicion.id}`}
-          className="inline-flex items-center gap-1.5 text-sm mb-5 transition-colors"
-          style={{ color: "oklch(0.62 0.06 235)" }}
+          className="inline-flex items-center gap-1.5 text-sm mb-5 text-muted-foreground hover:text-foreground transition-colors"
           aria-label={`Volver a ${edicion.nombre}`}
         >
           <ArrowLeft size={15} strokeWidth={2} aria-hidden />
@@ -66,8 +86,7 @@ export default async function ClasesEdicionPage({
             isAdmin ? (
               <Link
                 href={`/ediciones/${edicion.id}/clases/nueva`}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all"
-                style={{ color: "oklch(0.13 0.028 248)" }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px]"
                 aria-label="Crear nueva clase"
               >
                 <Plus size={16} strokeWidth={2.5} aria-hidden />
@@ -78,56 +97,28 @@ export default async function ClasesEdicionPage({
         />
       </div>
 
-      <div className="gold-rule animate-fade-up animate-fade-up-delay-1" />
+      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
       {/* Summary stats */}
       {clases.length > 0 && (
-        <div
-          className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-fade-up animate-fade-up-delay-1"
-        >
-          {[
-            {
-              label: "Total de clases",
-              value: clases.length,
-              color: "oklch(0.72 0.165 72)",
-              bg: "oklch(0.72 0.165 72 / 0.10)",
-            },
-            {
-              label: "Total de sesiones",
-              value: totalSesiones,
-              color: "oklch(0.52 0.17 152)",
-              bg: "oklch(0.52 0.17 152 / 0.10)",
-            },
-            {
-              label: "Investigadores",
-              value: new Set(clases.map((c) => c.investigador)).size,
-              color: "oklch(0.64 0.12 220)",
-              bg: "oklch(0.64 0.12 220 / 0.10)",
-            },
-          ].map(({ label, value, color, bg }) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-fade-up animate-fade-up-delay-1">
+          {statItems.map(({ label, value, colorClass, bgClass }) => (
             <div
               key={label}
-              className="rounded-xl p-4 flex flex-col gap-2"
-              style={{
-                background: "oklch(0.18 0.032 248)",
-                border: "1px solid oklch(0.28 0.055 248)",
-              }}
+              className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2"
             >
               <div className="flex items-center justify-between">
                 <span
-                  className="text-xs font-medium tracking-wide uppercase"
-                  style={{ color: "oklch(0.55 0.05 240)", letterSpacing: "0.06em" }}
+                  className="text-xs font-medium tracking-wide uppercase text-muted-foreground"
+                  style={{ letterSpacing: "0.06em" }}
                 >
                   {label}
                 </span>
-                <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center"
-                  style={{ background: bg }}
-                >
-                  <BookOpen size={13} strokeWidth={2} style={{ color }} aria-hidden />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${bgClass}`}>
+                  <BookOpen size={13} strokeWidth={2} className={colorClass} aria-hidden />
                 </div>
               </div>
-              <div className="stat-number text-4xl">{value}</div>
+              <div className="stat-number text-4xl tabular">{value}</div>
             </div>
           ))}
         </div>
@@ -147,8 +138,7 @@ export default async function ClasesEdicionPage({
               isAdmin ? (
                 <Link
                   href={`/ediciones/${edicion.id}/clases/nueva`}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all"
-                  style={{ color: "oklch(0.13 0.028 248)" }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px]"
                 >
                   <Plus size={15} strokeWidth={2.5} aria-hidden />
                   Crear primera clase

@@ -82,28 +82,21 @@ export function ListaParticipantesClient({
       <div className="relative">
         <Search
           size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: "oklch(0.55 0.05 240)" }}
+          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
         />
         <Input
           type="text"
           value={query}
           onChange={handleSearchChange}
           placeholder="Filtrar por nombre, escuela…"
-          className="pl-9 pr-9 h-11 text-sm w-full"
-          style={{
-            background: "oklch(0.18 0.032 248)",
-            borderColor: "oklch(0.28 0.055 248)",
-            color: "oklch(0.96 0.01 80)",
-          }}
+          className="pl-9 pr-9 h-11 text-sm w-full rounded-xl bg-muted border border-border focus-visible:ring-primary"
           aria-label="Buscar en la lista"
         />
         {query && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 hover:bg-white/10 transition-colors"
-            style={{ color: "oklch(0.55 0.05 240)" }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 hover:bg-muted transition-colors text-muted-foreground"
             aria-label="Limpiar filtro"
           >
             <X size={14} />
@@ -118,27 +111,14 @@ export function ListaParticipantesClient({
       {!isFetching && (
         <>
           {participantes.length === 0 && (
-            <div
-              className="rounded-xl px-4 py-8 text-center text-sm"
-              style={{
-                background: "oklch(0.18 0.032 248)",
-                border: "1px solid oklch(0.28 0.055 248)",
-                color: "oklch(0.62 0.06 235)",
-              }}
-            >
+            <div className="rounded-xl px-4 py-8 text-center text-sm bg-card border border-border text-muted-foreground">
               No hay participantes que coincidan con &ldquo;{query}&rdquo;
             </div>
           )}
 
           {participantes.length > 0 && (
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{
-                background: "oklch(0.18 0.032 248)",
-                border: "1px solid oklch(0.28 0.055 248)",
-              }}
-            >
-              <ul role="list" className="divide-y" style={{ borderColor: "oklch(0.22 0.038 248)" }}>
+            <div className="rounded-2xl overflow-hidden bg-card border border-border">
+              <ul role="list" className="divide-y divide-border">
                 {participantes.map((p, idx) => {
                   const inscripcionActual = p.inscripciones?.find(
                     (i) => i.edicion.id === edicionId
@@ -154,13 +134,9 @@ export function ListaParticipantesClient({
                       >
                         {/* Avatar inicial */}
                         <div
-                          className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
-                          style={{
-                            background: `oklch(${0.20 + (idx % 5) * 0.02} 0.04 ${200 + (idx % 6) * 15})`,
-                            color: "oklch(0.72 0.165 72)",
-                            border: "1px solid oklch(0.28 0.055 248)",
-                          }}
+                          className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold bg-muted border border-border text-primary"
                           aria-hidden="true"
+                          data-idx={idx}
                         >
                           {p.nombre.charAt(0).toUpperCase()}
                           {p.apellidos.charAt(0).toUpperCase()}
@@ -168,27 +144,15 @@ export function ListaParticipantesClient({
 
                         {/* Datos */}
                         <div className="flex-1 min-w-0">
-                          <div
-                            className="text-sm font-medium truncate"
-                            style={{ color: "oklch(0.92 0.01 80)" }}
-                          >
+                          <div className="text-sm font-medium truncate text-foreground">
                             {p.nombre} {p.apellidos}
                           </div>
-                          <div
-                            className="text-xs mt-0.5 truncate"
-                            style={{ color: "oklch(0.62 0.06 235)" }}
-                          >
+                          <div className="text-xs mt-0.5 truncate text-muted-foreground">
                             {p.escuela}
-                            <span
-                              className="mx-1.5"
-                              style={{ color: "oklch(0.35 0.04 248)" }}
-                            >·</span>
+                            <span className="mx-1.5 text-border">·</span>
                             {p.grado}
-                            <span
-                              className="mx-1.5"
-                              style={{ color: "oklch(0.35 0.04 248)" }}
-                            >·</span>
-                            {p.edad} años
+                            <span className="mx-1.5 text-border">·</span>
+                            <span className="tabular">{p.edad}</span> años
                           </div>
                         </div>
 
@@ -201,8 +165,7 @@ export function ListaParticipantesClient({
                           )}
                           <ChevronRight
                             size={16}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ color: "oklch(0.55 0.05 240)" }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
                             aria-hidden="true"
                           />
                         </div>
@@ -213,13 +176,7 @@ export function ListaParticipantesClient({
               </ul>
 
               {/* Footer con conteo */}
-              <div
-                className="px-4 py-2.5 text-xs"
-                style={{
-                  borderTop: "1px solid oklch(0.22 0.038 248)",
-                  color: "oklch(0.52 0.05 240)",
-                }}
-              >
+              <div className="px-4 py-2.5 text-xs border-t border-border text-muted-foreground tabular">
                 {participantes.length} participante{participantes.length !== 1 ? "s" : ""}
                 {debouncedQuery && ` · resultado${participantes.length !== 1 ? "s" : ""} para "${debouncedQuery}"`}
               </div>

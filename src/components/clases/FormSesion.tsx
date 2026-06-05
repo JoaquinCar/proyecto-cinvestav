@@ -36,20 +36,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-// ── Style helpers ─────────────────────────────────────────────────────────────
-
-function fieldStyle(hasError: boolean): React.CSSProperties {
-  return {
-    background: "oklch(0.16 0.030 248)",
-    borderColor: hasError ? "oklch(0.60 0.21 25)" : "oklch(0.28 0.055 248)",
-    color: "oklch(0.96 0.01 80)",
-  };
-}
-
-const labelStyle: React.CSSProperties = { color: "oklch(0.75 0.06 235)" };
-const errorStyle: React.CSSProperties = { color: "oklch(0.65 0.18 25)" };
-const hintStyle:  React.CSSProperties = { color: "oklch(0.55 0.04 240)" };
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface FormSesionProps {
@@ -131,8 +117,7 @@ export function FormSesion({
     variant === "primary" ? (
       <button
         type="button"
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all"
-        style={{ color: "oklch(0.13 0.028 248)" }}
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px]"
         aria-label="Agregar nueva sesión"
       >
         <Plus size={16} strokeWidth={2.5} aria-hidden />
@@ -141,12 +126,7 @@ export function FormSesion({
     ) : (
       <button
         type="button"
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-        style={{
-          background: "oklch(0.21 0.035 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-          color: "oklch(0.72 0.165 72)",
-        }}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors bg-muted border border-border text-primary hover:bg-surface-alt"
         aria-label="Agregar nueva sesión"
       >
         <CalendarPlus size={13} strokeWidth={2} aria-hidden />
@@ -160,40 +140,27 @@ export function FormSesion({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={triggerButton} />
 
-      <DialogContent
-        className="sm:max-w-[28rem]"
-        style={{
-          background: "oklch(0.17 0.030 248)",
-          border: "1px solid oklch(0.28 0.055 248)",
-          color: "oklch(0.96 0.01 80)",
-        }}
-      >
+      <DialogContent className="sm:max-w-[28rem] bg-card border border-border text-foreground">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-1">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: "oklch(0.72 0.165 72 / 0.12)" }}
-            >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-secondary/10">
               <CalendarPlus
                 size={17}
                 strokeWidth={1.8}
-                style={{ color: "oklch(0.72 0.165 72)" }}
+                className="text-secondary-foreground"
                 aria-hidden
               />
             </div>
             <div>
-              <DialogTitle
-                className="font-display text-lg font-medium"
-                style={{ color: "oklch(0.96 0.01 80)" }}
-              >
+              <DialogTitle className="font-display text-lg font-semibold text-foreground">
                 Nueva Sesión
               </DialogTitle>
-              <p className="text-xs mt-0.5" style={hintStyle}>
+              <p className="text-xs mt-0.5 text-muted-foreground">
                 {claseNombre}
               </p>
             </div>
           </div>
-          <div className="gold-rule mt-3" />
+          <div className="h-px bg-border mt-3" />
         </DialogHeader>
 
         <form
@@ -204,19 +171,18 @@ export function FormSesion({
         >
           {/* Fecha */}
           <div className="space-y-2">
-            <Label htmlFor="sesion-fecha" className="text-sm font-medium" style={labelStyle}>
+            <Label htmlFor="sesion-fecha" className="text-sm font-medium text-foreground">
               Fecha de la sesión
             </Label>
             <Input
               id="sesion-fecha"
               type="date"
               {...register("fecha")}
-              style={fieldStyle(!!errors.fecha)}
-              className="h-11 transition-colors focus:border-primary"
+              className={`h-11 transition-colors bg-surface-alt border-border focus:border-primary focus:ring-primary ${errors.fecha ? "border-destructive" : ""}`}
               aria-describedby={errors.fecha ? "sesion-fecha-error" : undefined}
             />
             {errors.fecha && (
-              <p id="sesion-fecha-error" className="text-xs" style={errorStyle} role="alert">
+              <p id="sesion-fecha-error" className="text-xs text-destructive" role="alert">
                 {errors.fecha.message}
               </p>
             )}
@@ -224,9 +190,9 @@ export function FormSesion({
 
           {/* Temas */}
           <div className="space-y-2">
-            <Label htmlFor="sesion-temas" className="text-sm font-medium" style={labelStyle}>
+            <Label htmlFor="sesion-temas" className="text-sm font-medium text-foreground">
               Temas tratados
-              <span className="ml-1.5 text-xs font-normal" style={{ color: "oklch(0.45 0.04 248)" }}>
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                 (opcional)
               </span>
             </Label>
@@ -235,16 +201,15 @@ export function FormSesion({
               placeholder="Ej: Introducción al sistema solar, planetas rocosos…"
               rows={3}
               {...register("temas")}
-              style={fieldStyle(!!errors.temas)}
-              className="resize-none transition-colors focus:border-primary"
+              className={`resize-none transition-colors bg-surface-alt border-border focus:border-primary focus:ring-primary ${errors.temas ? "border-destructive" : ""}`}
               aria-describedby={errors.temas ? "sesion-temas-error" : "sesion-temas-hint"}
             />
             {errors.temas ? (
-              <p id="sesion-temas-error" className="text-xs" style={errorStyle} role="alert">
+              <p id="sesion-temas-error" className="text-xs text-destructive" role="alert">
                 {errors.temas.message}
               </p>
             ) : (
-              <p id="sesion-temas-hint" className="text-xs" style={hintStyle}>
+              <p id="sesion-temas-hint" className="text-xs text-muted-foreground">
                 Puedes actualizar los temas después desde la vista de clase
               </p>
             )}
@@ -252,9 +217,9 @@ export function FormSesion({
 
           {/* Notas */}
           <div className="space-y-2">
-            <Label htmlFor="sesion-notas" className="text-sm font-medium" style={labelStyle}>
+            <Label htmlFor="sesion-notas" className="text-sm font-medium text-foreground">
               Notas internas
-              <span className="ml-1.5 text-xs font-normal" style={{ color: "oklch(0.45 0.04 248)" }}>
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                 (opcional)
               </span>
             </Label>
@@ -263,12 +228,11 @@ export function FormSesion({
               placeholder="Observaciones, incidencias, material utilizado…"
               rows={2}
               {...register("notas")}
-              style={fieldStyle(!!errors.notas)}
-              className="resize-none transition-colors focus:border-primary"
+              className={`resize-none transition-colors bg-surface-alt border-border focus:border-primary focus:ring-primary ${errors.notas ? "border-destructive" : ""}`}
               aria-describedby={errors.notas ? "sesion-notas-error" : undefined}
             />
             {errors.notas && (
-              <p id="sesion-notas-error" className="text-xs" style={errorStyle} role="alert">
+              <p id="sesion-notas-error" className="text-xs text-destructive" role="alert">
                 {errors.notas.message}
               </p>
             )}
@@ -279,12 +243,7 @@ export function FormSesion({
             <button
               type="button"
               onClick={() => { setOpen(false); reset(); }}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                background: "oklch(0.21 0.035 248)",
-                border: "1px solid oklch(0.28 0.055 248)",
-                color: "oklch(0.68 0.05 240)",
-              }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-medium transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground min-h-[44px]"
             >
               Cancelar
             </button>
@@ -292,8 +251,7 @@ export function FormSesion({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold btn-gold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ color: "oklch(0.13 0.028 248)" }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               aria-busy={mutation.isPending}
             >
               {mutation.isPending ? (

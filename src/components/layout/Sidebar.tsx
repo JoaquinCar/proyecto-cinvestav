@@ -27,36 +27,26 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside
-      className="hidden lg:flex flex-col w-60 shrink-0 dot-grid"
-      style={{
-        background: "oklch(0.11 0.025 248)",
-        borderRight: "1px solid oklch(0.20 0.04 248)",
-      }}
-    >
+    <aside className="hidden lg:flex flex-col w-60 shrink-0 bg-[var(--color-sidebar)] border-r border-sidebar-border">
       {/* Logo area */}
-      <div className="px-6 py-7"
-        style={{ borderBottom: "1px solid oklch(0.17 0.035 248)" }}>
+      <div className="px-6 py-7 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           {/* Atom icon */}
-          <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ background: "oklch(0.72 0.165 72 / 0.15)" }}>
-            <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden>
-              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="oklch(0.72 0.165 72)" strokeWidth="1.8" fill="none"/>
-              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="oklch(0.72 0.165 72)" strokeWidth="1.8" fill="none"
+          <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-primary/10">
+            <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden className="text-primary">
+              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="currentColor" strokeWidth="1.8" fill="none"/>
+              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="currentColor" strokeWidth="1.8" fill="none"
                 transform="rotate(60 16 16)"/>
-              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="oklch(0.72 0.165 72)" strokeWidth="1.8" fill="none"
+              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="currentColor" strokeWidth="1.8" fill="none"
                 transform="rotate(120 16 16)"/>
-              <circle cx="16" cy="16" r="2.5" fill="oklch(0.72 0.165 72)"/>
+              <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
             </svg>
           </div>
           <div>
-            <div className="font-display text-base font-medium leading-tight"
-              style={{ color: "oklch(0.96 0.01 80)" }}>
+            <div className="font-display text-base font-medium leading-tight text-sidebar-foreground">
               Pasaporte
             </div>
-            <div className="text-xs leading-tight"
-              style={{ color: "oklch(0.62 0.06 235)" }}>
+            <div className="text-xs leading-tight text-muted-foreground">
               Científico
             </div>
           </div>
@@ -74,16 +64,17 @@ export default function Sidebar() {
               className={cn(
                 "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
                 active
-                  ? "sidebar-active-item"
-                  : "hover:bg-white/5"
+                  ? "bg-sidebar-accent text-sidebar-primary"
+                  : "text-muted-foreground hover:bg-muted"
               )}
-              style={{
-                color: active
-                  ? "oklch(0.72 0.165 72)"
-                  : "oklch(0.68 0.05 240)",
-                background: active ? "oklch(0.72 0.165 72 / 0.1)" : undefined,
-              }}
             >
+              {/* Left accent bar for active item */}
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary"
+                />
+              )}
               <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
               {label}
             </Link>
@@ -92,11 +83,9 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-4"
-        style={{ borderTop: "1px solid oklch(0.17 0.035 248)" }}>
+      <div className="px-3 py-4 border-t border-sidebar-border">
         <button
-          className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-white/5"
-          style={{ color: "oklch(0.55 0.05 240)" }}
+          className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
           onClick={() => signOut({ callbackUrl: "/login" })}
         >
           <LogOut size={16} strokeWidth={1.8} />

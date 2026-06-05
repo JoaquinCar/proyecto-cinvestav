@@ -19,10 +19,7 @@ interface Props {
 export function GraficaHistorico({ data }: Props) {
   if (data.length === 0) {
     return (
-      <div
-        className="h-48 flex items-center justify-center text-sm"
-        style={{ color: "oklch(0.35 0.04 248)" }}
-      >
+      <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
         Sin datos históricos — crea más de una edición para ver tendencias
       </div>
     );
@@ -31,48 +28,48 @@ export function GraficaHistorico({ data }: Props) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.24 0.04 248)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey="anio"
-          tick={{ fill: "oklch(0.62 0.06 235)", fontSize: 11 }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          tick={{ fill: "oklch(0.55 0.05 240)", fontSize: 11 }}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           allowDecimals={false}
         />
         <Tooltip
           contentStyle={{
-            background: "oklch(0.18 0.032 248)",
-            border: "1px solid oklch(0.28 0.055 248)",
-            borderRadius: "8px",
-            color: "oklch(0.96 0.01 80)",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            borderRadius: 12,
+            color: "var(--foreground)",
           }}
         />
         <Legend
           formatter={(value) => (
-            <span style={{ color: "oklch(0.62 0.06 235)", fontSize: 11 }}>{value}</span>
+            <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}>{value}</span>
           )}
         />
         <Line
           type="monotone"
           dataKey="totalParticipantes"
           name="Participantes"
-          stroke="oklch(0.72 0.165 72)"
+          stroke="var(--chart-1)"
           strokeWidth={2}
-          dot={{ fill: "oklch(0.72 0.165 72)", r: 4 }}
+          dot={{ fill: "var(--chart-1)", r: 4 }}
           activeDot={{ r: 6 }}
         />
         <Line
           type="monotone"
           dataKey="totalSesiones"
           name="Sesiones"
-          stroke="oklch(0.64 0.12 220)"
+          stroke="var(--chart-2)"
           strokeWidth={2}
-          dot={{ fill: "oklch(0.64 0.12 220)", r: 4 }}
+          dot={{ fill: "var(--chart-2)", r: 4 }}
           activeDot={{ r: 6 }}
         />
       </LineChart>
