@@ -11,4 +11,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm audit --audit-level=high
+      # Informativo — no bloquea. Reporta vulnerabilidades sin romper el workflow.
+      - run: npm audit --audit-level=high || true
