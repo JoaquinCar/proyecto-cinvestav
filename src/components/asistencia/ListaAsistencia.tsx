@@ -112,14 +112,36 @@ export function ListaAsistencia({
       }
       return res.json() as Promise<{ updated: number }>;
     },
-    onSuccess: () => {
-      // After successful save, clear optimistic state and refetch
-      setPendientes(new Map());
-      pendientesRef.current = new Map();
-      void queryClient.invalidateQueries({ queryKey: ["asistencia", sesionId] });
+    onSuccess: (_data, variables) => {
+      // Escribir los valores guardados directo en el cache (sin refetch → sin parpadeo)
+      const saved = new Map(variables.items.map((i) => [i.inscripcionId, i.presente]));
+      queryClient.setQueryData<AsistenciaResponse>(["asistencia", sesionId], (old) => {
+        if (!old) return old;
+        const asistencias = old.asistencias.map((a) =>
+          saved.has(a.inscripcion.id)
+            ? { ...a, presente: saved.get(a.inscripcion.id)! }
+            : a,
+        );
+        const presentes = asistencias.filter((a) => a.presente).length;
+        return {
+          asistencias,
+          resumen: { total: asistencias.length, presentes, ausentes: asistencias.length - presentes },
+        };
+      });
+      // Limpiar solo los pendientes ya guardados que siguen coincidiendo
+      // (conserva toggles hechos mientras la petición viajaba)
+      const clear = (prev: Map<string, boolean>) => {
+        const next = new Map(prev);
+        for (const it of variables.items) {
+          if (next.get(it.inscripcionId) === it.presente) next.delete(it.inscripcionId);
+        }
+        return next;
+      };
+      setPendientes((prev) => clear(prev));
+      pendientesRef.current = clear(pendientesRef.current);
     },
     onError: () => {
-      // Rollback: clear pending optimistic updates so UI reverts to server state
+      // Rollback: descartar optimismo para volver al estado del servidor
       setPendientes(new Map());
       pendientesRef.current = new Map();
     },
@@ -145,7 +167,7 @@ export function ListaAsistencia({
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       flushPendientes();
-    }, 800);
+    }, 400);
   }, [flushPendientes]);
 
   // Flush on unmount so no changes are lost
@@ -328,7 +350,6 @@ export function ListaAsistencia({
           {filtradas.map((item) => {
             const p = item.inscripcion.participante;
             const nombreCompleto = `${p.nombre} ${p.apellidos}`;
-            const esPendiente = pendientes.has(item.inscripcion.id);
 
             return (
               <li
@@ -339,7 +360,7 @@ export function ListaAsistencia({
                 <BotonAsistencia
                   presente={item.presente}
                   onToggle={() => handleToggle(item.inscripcion.id, item.presente)}
-                  disabled={readOnly || mutation.isPending || esPendiente}
+                  disabled={readOnly}
                   nombre={nombreCompleto}
                 />
 
