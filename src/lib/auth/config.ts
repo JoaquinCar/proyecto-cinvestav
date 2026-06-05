@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { compare } from "bcryptjs";
 import { z } from "zod";
@@ -87,12 +86,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
-
-    // ── Resend: magic link ────────────────────────────────────────────────────
-    Resend({
-      apiKey: process.env.RESEND_API_KEY,
-      from: "noreply@pasaporte-cientifico.vercel.app",
-    }),
   ],
 
   session: { strategy: "jwt" },
@@ -107,18 +100,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
-        // user.role viene del authorize() de Credentials
-        // o desde el adapter para magic link — lo consultamos en DB si hace falta
-        if (user.role) {
-          token.role = user.role;
-        } else {
-          // Magic link: el adapter crea/busca al usuario; consultamos el role
-          const dbUser = await prisma.user.findUnique({
-            where: { id: user.id as string },
-            select: { role: true },
-          });
-          token.role = dbUser?.role ?? "READONLY";
-        }
+        token.role = user.role ?? "READONLY";
       }
       return token;
     },
