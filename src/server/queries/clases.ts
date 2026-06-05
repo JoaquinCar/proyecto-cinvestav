@@ -33,6 +33,29 @@ export async function listarClasesDeEdicion(edicionId: string) {
   });
 }
 
+// ── Clases con sus sesiones (hub de asistencia) ───────────────────────────────
+
+export async function listarClasesConSesiones(edicionId: string) {
+  return prisma.clase.findMany({
+    where: { edicionId },
+    orderBy: { nombre: "asc" },
+    select: {
+      id: true,
+      nombre: true,
+      investigador: true,
+      sesiones: {
+        orderBy: { fecha: "asc" },
+        select: {
+          id: true,
+          fecha: true,
+          temas: true,
+          _count: { select: { asistencias: true } },
+        },
+      },
+    },
+  });
+}
+
 // ── Obtener una clase por ID ──────────────────────────────────────────────────
 
 export async function obtenerClasePorId(id: string) {

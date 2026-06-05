@@ -44,12 +44,17 @@ async function main() {
     { nombre: "Física Experimental", investigador: "Dr. Roberto Sosa", descripcion: "Experimentos de mecánica y electricidad" },
   ];
 
+  // quitar acentos → IDs ASCII (URLs seguras, sin problemas de codificación)
+  const ACENTOS = new RegExp("[\\u0300-\\u036f]", "g");
+  const slug = (s: string) =>
+    `clase-${s.toLowerCase().normalize("NFD").replace(ACENTOS, "").replace(/\s+/g, "-")}`;
+
   const clases = await Promise.all(
     clasesData.map((c) =>
       prisma.clase.upsert({
-        where: { id: `clase-${c.nombre.toLowerCase().replace(/\s+/g, "-")}` },
+        where: { id: slug(c.nombre) },
         update: {},
-        create: { id: `clase-${c.nombre.toLowerCase().replace(/\s+/g, "-")}`, edicionId: edicion.id, ...c },
+        create: { id: slug(c.nombre), edicionId: edicion.id, ...c },
       })
     )
   );
