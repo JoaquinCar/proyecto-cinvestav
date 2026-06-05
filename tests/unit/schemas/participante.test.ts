@@ -147,9 +147,16 @@ describe("busquedaParticipanteSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rechaza edicionId que no es CUID", () => {
+  it("acepta cualquier edicionId no vacío (IDs opacos)", () => {
     const result = busquedaParticipanteSchema.safeParse({
-      edicionId: "no-es-cuid-valido!!!",
+      edicionId: "clase-astronomia",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rechaza edicionId vacío", () => {
+    const result = busquedaParticipanteSchema.safeParse({
+      edicionId: "",
     });
     expect(result.success).toBe(false);
   });
@@ -184,10 +191,10 @@ describe("inscripcionSchema", () => {
     expect(result.error?.flatten().fieldErrors.edicionId).toBeDefined();
   });
 
-  it("rechaza participanteId que no es CUID", () => {
+  it("rechaza participanteId vacío", () => {
     const result = inscripcionSchema.safeParse({
       ...inscripcionValida,
-      participanteId: "no-cuid",
+      participanteId: "",
     });
     expect(result.success).toBe(false);
   });

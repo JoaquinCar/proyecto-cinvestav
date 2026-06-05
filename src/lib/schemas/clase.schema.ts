@@ -3,7 +3,7 @@ import { z } from "zod";
 // ── Schema para crear una clase ───────────────────────────────────────────────
 
 export const crearClaseSchema = z.object({
-  edicionId: z.string({ error: "El ID de edición es requerido" }).cuid("ID de edición inválido"),
+  edicionId: z.string({ error: "El ID de edición es requerido" }).min(1, "ID de edición inválido"),
 
   nombre: z
     .string({ error: "El nombre es requerido" })
@@ -52,7 +52,7 @@ export const editarClaseSchema = z.object({
 // ── Schema para crear una sesión ──────────────────────────────────────────────
 
 export const crearSesionSchema = z.object({
-  claseId: z.string({ error: "El ID de clase es requerido" }).cuid("ID de clase inválido"),
+  claseId: z.string({ error: "El ID de clase es requerido" }).min(1, "ID de clase inválido"),
 
   fecha: z
     .string({ error: "La fecha es requerida" })

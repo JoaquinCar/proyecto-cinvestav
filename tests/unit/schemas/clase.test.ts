@@ -73,10 +73,10 @@ describe("crearClaseSchema", () => {
     }
   });
 
-  it("rechaza edicionId que no es un cuid válido", () => {
+  it("rechaza edicionId vacío", () => {
     const result = crearClaseSchema.safeParse({
       ...claseValida,
-      edicionId: "no-es-un-cuid",
+      edicionId: "",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -238,10 +238,10 @@ describe("crearSesionSchema", () => {
     }
   });
 
-  it("rechaza claseId que no es un cuid válido", () => {
+  it("rechaza claseId vacío", () => {
     const result = crearSesionSchema.safeParse({
       ...sesionValida,
-      claseId: "id-invalido",
+      claseId: "",
     });
     expect(result.success).toBe(false);
   });

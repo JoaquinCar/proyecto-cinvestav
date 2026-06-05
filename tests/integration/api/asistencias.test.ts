@@ -230,13 +230,13 @@ describe("POST /api/asistencias", () => {
     expect(json.detalles).toBeDefined();
   });
 
-  it("responde 422 cuando un item tiene inscripcionId inválido", async () => {
+  it("responde 422 cuando un item tiene inscripcionId vacío", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
 
     const { POST } = await import("@/app/api/asistencias/route");
     const req = makeRequest("POST", "/api/asistencias", {
-      items: [{ inscripcionId: "no-es-cuid", sesionId: CUID2, presente: true }],
+      items: [{ inscripcionId: "", sesionId: CUID2, presente: true }],
     });
     const res = await POST(req as never);
 

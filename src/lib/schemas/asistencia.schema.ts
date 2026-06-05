@@ -3,8 +3,8 @@ import { z } from "zod";
 // ── Marcar asistencia individual ──────────────────────────────────────────────
 
 export const marcarAsistenciaSchema = z.object({
-  inscripcionId: z.string().cuid("inscripcionId debe ser un cuid válido"),
-  sesionId:      z.string().cuid("sesionId debe ser un cuid válido"),
+  inscripcionId: z.string().min(1, "inscripcionId es requerido"),
+  sesionId:      z.string().min(1, "sesionId es requerido"),
   presente:      z.boolean(),
 });
 
