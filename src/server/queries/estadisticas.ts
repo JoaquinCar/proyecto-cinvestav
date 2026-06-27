@@ -464,13 +464,8 @@ export async function obtenerAnalisisProfundo(
     .sort((x, y) => x[0] - y[0])
     .map(([edad, v]) => ({ etiqueta: `${edad}`, a: v.a, b: v.b }));
 
-  // Contactos conocidos (grupos identificados por el organizador)
-  const CONTACTO_CONOCIDO: Record<string, string> = {
-    "9992463880": "Grupo Zarigüeyas",
-    "buenrostrojaz94@gmail.com": "Grupo Zarigüeyas",
-  };
-
-  // Registros por contacto (teléfono; fallback correo)
+  // Registros por contacto (teléfono; fallback correo). El valor crudo del
+  // contacto NO se expone al cliente: la página lo enmascara antes de render.
   const contactoMap = new Map<string, { count: number; ejemplo: string }>();
   for (const p of parts) {
     const c = (p.telefono || p.correo || "Sin contacto").trim();
@@ -482,9 +477,14 @@ export async function obtenerAnalisisProfundo(
       contacto,
       cantidad: v.count,
       ejemplo: v.ejemplo,
-      label: CONTACTO_CONOCIDO[contacto] ?? null,
+      label: null as string | null,
     }))
     .sort((a, b) => b.cantidad - a.cantidad);
+  // El contacto con muchos registros es un grupo (no una familia): el Grupo Zarigüeyas.
+  // Se identifica por volumen para no incrustar el teléfono real en el código (repo público).
+  if (registrosPorContacto[0] && registrosPorContacto[0].cantidad >= 5) {
+    registrosPorContacto[0].label = "Grupo Zarigüeyas";
+  }
   const numContactos = registrosPorContacto.length;
 
   // Asistencia agregada
@@ -584,17 +584,24 @@ export async function obtenerDatosExcel(edicionId: string) {
   const generoLabel = (g: "FEMENINO" | "MASCULINO" | null) =>
     g === "FEMENINO" ? "Niña" : g === "MASCULINO" ? "Niño" : "—";
 
+  // Anti CSV/formula-injection: si un valor empieza con = + - @ (o tab/CR),
+  // Excel podría interpretarlo como fórmula al abrir el archivo. Lo neutralizamos.
+  const safe = (v: string | null | undefined) => {
+    const s = (v ?? "—").toString();
+    return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  };
+
   return inscripciones.map((i, idx) => ({
     "#": idx + 1,
-    Nombre: i.participante.nombre,
-    Apellidos: i.participante.apellidos,
+    Nombre: safe(i.participante.nombre),
+    Apellidos: safe(i.participante.apellidos),
     Edad: i.participante.edad,
     Género: generoLabel(i.participante.genero),
-    Grado: i.participante.grado,
+    Grado: safe(i.participante.grado),
     Nivel: NIVEL_LABEL[i.participante.nivel ?? ""] ?? i.participante.nivel ?? "—",
-    Escuela: i.participante.escuela,
-    Ciudad: i.participante.ciudad ?? "—",
-    Correo: i.participante.correo ?? "—",
-    Teléfono: i.participante.telefono ?? "—",
+    Escuela: safe(i.participante.escuela),
+    Ciudad: safe(i.participante.ciudad),
+    Correo: safe(i.participante.correo),
+    Teléfono: safe(i.participante.telefono),
   }));
 }

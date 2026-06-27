@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import LoginForm from "./LoginForm";
 
 export const metadata: Metadata = {
@@ -63,6 +64,11 @@ export default async function LoginPage({
 
         <p className="text-center text-xs mt-6 text-muted-foreground">
           Acceso restringido al personal autorizado
+        </p>
+        <p className="text-center text-xs mt-2">
+          <Link href="/privacidad" className="text-muted-foreground underline hover:text-foreground transition-colors">
+            Aviso de privacidad
+          </Link>
         </p>
       </div>
     </main>

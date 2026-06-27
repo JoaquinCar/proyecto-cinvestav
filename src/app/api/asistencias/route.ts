@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    if (session.user.role === "READONLY") {
+    // Allowlist explícita (fail-closed ante roles futuros): solo ADMIN o BECARIO.
+    if (session.user.role !== "ADMIN" && session.user.role !== "BECARIO") {
       return NextResponse.json({ error: "Permiso insuficiente" }, { status: 403 });
     }
 

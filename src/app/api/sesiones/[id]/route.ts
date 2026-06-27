@@ -18,8 +18,8 @@ export async function PUT(request: Request, context: RouteContext) {
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    // READONLY no puede modificar sesiones
-    if (session.user.role === "READONLY") {
+    // Allowlist explícita: solo ADMIN o BECARIO pueden modificar sesiones.
+    if (session.user.role !== "ADMIN" && session.user.role !== "BECARIO") {
       return NextResponse.json({ error: "Prohibido" }, { status: 403 });
     }
 

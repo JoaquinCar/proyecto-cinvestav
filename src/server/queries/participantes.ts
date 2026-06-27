@@ -27,12 +27,21 @@ export async function buscarParticipantes(q?: string, edicionId?: string) {
     where,
     orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
     take: 50,
-    include: {
+    // select explícito: NO exponer correo/teléfono (contacto de padres) ni otros
+    // campos sensibles al cliente. Solo lo que la UI de búsqueda/listado usa.
+    select: {
+      id: true,
+      nombre: true,
+      apellidos: true,
+      edad: true,
+      escuela: true,
+      grado: true,
+      createdAt: true,
       inscripciones: {
-        include: {
-          edicion: {
-            select: { id: true, anio: true, nombre: true, activa: true },
-          },
+        select: {
+          id: true,
+          constanciaGenerada: true,
+          edicion: { select: { id: true, anio: true, nombre: true, activa: true } },
         },
         orderBy: { createdAt: "desc" },
       },
@@ -126,12 +135,19 @@ export async function buscarParticipantesSimilares(
     where: { OR: condiciones },
     orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
     take: 10,
-    include: {
+    select: {
+      id: true,
+      nombre: true,
+      apellidos: true,
+      edad: true,
+      escuela: true,
+      grado: true,
+      createdAt: true,
       inscripciones: {
-        include: {
-          edicion: {
-            select: { id: true, anio: true, nombre: true, activa: true },
-          },
+        select: {
+          id: true,
+          constanciaGenerada: true,
+          edicion: { select: { id: true, anio: true, nombre: true, activa: true } },
         },
         orderBy: { createdAt: "desc" },
       },

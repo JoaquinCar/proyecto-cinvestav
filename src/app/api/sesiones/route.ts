@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    if (session.user.role === "READONLY") {
+    if (session.user.role !== "ADMIN" && session.user.role !== "BECARIO") {
       return NextResponse.json({ error: "Prohibido" }, { status: 403 });
     }
 

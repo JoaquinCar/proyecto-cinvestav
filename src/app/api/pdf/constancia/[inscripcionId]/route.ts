@@ -36,7 +36,7 @@ export async function POST(_req: Request, context: RouteContext) {
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    if (session.user.role === "READONLY") {
+    if (session.user.role !== "ADMIN" && session.user.role !== "BECARIO") {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
     const { inscripcionId } = await context.params;
