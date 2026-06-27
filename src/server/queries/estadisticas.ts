@@ -346,6 +346,205 @@ export async function obtenerMetricasAsistencia(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ANÁLISIS PROFUNDO de la edición activa — cruces y hallazgos para el organizador.
+// Combina el registro (51 niños) con la asistencia agregada (totales por sesión).
+// ─────────────────────────────────────────────────────────────────────────────
+
+type SerieDual = { etiqueta: string; tema?: string; a: number; b: number };
+
+export type AnalisisProfundo = {
+  // Registro
+  totalNinos: number;
+  totalNinas: number;
+  totalNinosM: number;
+  pctNinas: number;
+  edadPromedio: number;
+  edadMin: number;
+  edadMax: number;
+  numEscuelas: number;
+  escuelaTop: { nombre: string; cantidad: number; pct: number } | null;
+  numContactos: number;
+  // Asistencia
+  sesionesConDatos: number;
+  sesionesTotal: number;
+  promedioAsist: number;
+  picoAsist: { tema: string; total: number } | null;
+  minAsist: { tema: string; total: number } | null;
+  caidaPct: number; // caída de la última sesión con datos respecto a la primera
+  totalAcompanantes: number;
+  ratioAcompanantes: number; // acompañantes por cada 10 niños (eventos)
+  // Distribuciones cruzadas
+  generoPorNivel: SerieDual[]; // a=niñas, b=niños por nivel
+  edadGenero: SerieDual[]; // a=niñas, b=niños por edad
+  concentracionEscuelas: { escuela: string; cantidad: number; pct: number; acumPct: number }[];
+  registrosPorContacto: { contacto: string; cantidad: number; ejemplo: string }[];
+  acompanantesPorSesion: SerieDual[]; // a=mamás, b=papás por sesión
+  retencion: { fecha: string; etiqueta: string; presentes: number }[];
+};
+
+export async function obtenerAnalisisProfundo(
+  edicionId: string,
+): Promise<AnalisisProfundo> {
+  const [inscripciones, sesiones] = await Promise.all([
+    prisma.inscripcion.findMany({
+      where: { edicionId },
+      select: {
+        participante: {
+          select: {
+            edad: true,
+            genero: true,
+            nivel: true,
+            escuela: true,
+            telefono: true,
+            correo: true,
+            nombre: true,
+            apellidos: true,
+          },
+        },
+      },
+    }),
+    prisma.sesion.findMany({
+      where: { clase: { edicionId } },
+      orderBy: { fecha: "asc" },
+      select: { fecha: true, temas: true, clase: { select: { nombre: true } }, resumen: true },
+    }),
+  ]);
+
+  const parts = inscripciones.map((i) => i.participante);
+  const totalNinos = parts.length;
+  const totalNinas = parts.filter((p) => p.genero === "FEMENINO").length;
+  const totalNinosM = parts.filter((p) => p.genero === "MASCULINO").length;
+  const edades = parts.map((p) => p.edad).filter((e) => e > 0);
+  const edadPromedio = edades.length
+    ? Math.round((edades.reduce((a, b) => a + b, 0) / edades.length) * 10) / 10
+    : 0;
+
+  // Escuelas
+  const escMap = new Map<string, number>();
+  for (const p of parts) escMap.set(p.escuela, (escMap.get(p.escuela) ?? 0) + 1);
+  const escOrden = Array.from(escMap.entries()).sort((a, b) => b[1] - a[1]);
+  let acum = 0;
+  const concentracionEscuelas = escOrden.map(([escuela, cantidad]) => {
+    const pct = Math.round((cantidad / totalNinos) * 100);
+    acum += cantidad;
+    return { escuela, cantidad, pct, acumPct: Math.round((acum / totalNinos) * 100) };
+  });
+  const escuelaTop = concentracionEscuelas[0]
+    ? {
+        nombre: concentracionEscuelas[0].escuela,
+        cantidad: concentracionEscuelas[0].cantidad,
+        pct: concentracionEscuelas[0].pct,
+      }
+    : null;
+
+  // Género por nivel
+  const nivelMap = new Map<string, { a: number; b: number }>();
+  for (const p of parts) {
+    const lbl = NIVEL_LABEL[p.nivel ?? ""] ?? "Sin especificar";
+    if (!nivelMap.has(lbl)) nivelMap.set(lbl, { a: 0, b: 0 });
+    const slot = nivelMap.get(lbl)!;
+    if (p.genero === "FEMENINO") slot.a++;
+    else slot.b++;
+  }
+  const generoPorNivel: SerieDual[] = Array.from(nivelMap.entries())
+    .sort((x, y) => (NIVEL_ORDEN[x[0]] ?? 99) - (NIVEL_ORDEN[y[0]] ?? 99))
+    .map(([etiqueta, v]) => ({ etiqueta, a: v.a, b: v.b }));
+
+  // Edad × género
+  const edadMap = new Map<number, { a: number; b: number }>();
+  for (const p of parts) {
+    if (!p.edad) continue;
+    if (!edadMap.has(p.edad)) edadMap.set(p.edad, { a: 0, b: 0 });
+    const slot = edadMap.get(p.edad)!;
+    if (p.genero === "FEMENINO") slot.a++;
+    else slot.b++;
+  }
+  const edadGenero: SerieDual[] = Array.from(edadMap.entries())
+    .sort((x, y) => x[0] - y[0])
+    .map(([edad, v]) => ({ etiqueta: `${edad}`, a: v.a, b: v.b }));
+
+  // Registros por contacto (teléfono; fallback correo)
+  const contactoMap = new Map<string, { count: number; ejemplo: string }>();
+  for (const p of parts) {
+    const c = (p.telefono || p.correo || "Sin contacto").trim();
+    if (!contactoMap.has(c)) contactoMap.set(c, { count: 0, ejemplo: `${p.nombre} ${p.apellidos}` });
+    contactoMap.get(c)!.count++;
+  }
+  const registrosPorContacto = Array.from(contactoMap.entries())
+    .map(([contacto, v]) => ({ contacto, cantidad: v.count, ejemplo: v.ejemplo }))
+    .sort((a, b) => b.cantidad - a.cantidad);
+  const numContactos = registrosPorContacto.length;
+
+  // Asistencia agregada
+  const conResumen = sesiones.filter((s) => s.resumen);
+  const totalEventos = conResumen.reduce((a, s) => a + s.resumen!.total, 0);
+  const promedioAsist = conResumen.length ? Math.round(totalEventos / conResumen.length) : 0;
+  const totalAcompanantes = conResumen.reduce((a, s) => a + s.resumen!.mamas + s.resumen!.papas, 0);
+  const ratioAcompanantes = totalEventos
+    ? Math.round((totalAcompanantes / totalEventos) * 100) / 10
+    : 0;
+
+  const sesionesData = conResumen.map((s) => ({
+    tema: s.temas ?? s.clase.nombre,
+    total: s.resumen!.total,
+    mamas: s.resumen!.mamas,
+    papas: s.resumen!.papas,
+    fecha: new Date(s.fecha),
+  }));
+  const picoAsist = sesionesData.length
+    ? sesionesData.reduce((m, s) => (s.total > m.total ? s : m))
+    : null;
+  const minAsist = sesionesData.length
+    ? sesionesData.reduce((m, s) => (s.total < m.total ? s : m))
+    : null;
+  const caidaPct =
+    sesionesData.length >= 2 && sesionesData[0].total > 0
+      ? Math.round((1 - sesionesData[sesionesData.length - 1].total / sesionesData[0].total) * 100)
+      : 0;
+
+  const fmtFecha = (d: Date) =>
+    d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+  const acompanantesPorSesion: SerieDual[] = sesionesData.map((s) => ({
+    etiqueta: fmtFecha(s.fecha),
+    tema: s.tema,
+    a: s.mamas,
+    b: s.papas,
+  }));
+  const retencion = sesionesData.map((s) => ({
+    fecha: s.fecha.toISOString().slice(0, 10),
+    etiqueta: fmtFecha(s.fecha),
+    presentes: s.total,
+  }));
+
+  return {
+    totalNinos,
+    totalNinas,
+    totalNinosM,
+    pctNinas: totalNinos ? Math.round((totalNinas / totalNinos) * 100) : 0,
+    edadPromedio,
+    edadMin: edades.length ? Math.min(...edades) : 0,
+    edadMax: edades.length ? Math.max(...edades) : 0,
+    numEscuelas: escMap.size,
+    escuelaTop,
+    numContactos,
+    sesionesConDatos: conResumen.length,
+    sesionesTotal: sesiones.length,
+    promedioAsist,
+    picoAsist: picoAsist ? { tema: picoAsist.tema, total: picoAsist.total } : null,
+    minAsist: minAsist ? { tema: minAsist.tema, total: minAsist.total } : null,
+    caidaPct,
+    totalAcompanantes,
+    ratioAcompanantes,
+    generoPorNivel,
+    edadGenero,
+    concentracionEscuelas,
+    registrosPorContacto,
+    acompanantesPorSesion,
+    retencion,
+  };
+}
+
 export async function obtenerDatosExcel(edicionId: string) {
   const inscripciones = await prisma.inscripcion.findMany({
     where: { edicionId },
