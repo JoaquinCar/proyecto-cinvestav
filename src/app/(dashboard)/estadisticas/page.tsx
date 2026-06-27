@@ -253,8 +253,12 @@ export default async function EstadisticasPage() {
           <div className="space-y-2">
             {a.registrosPorContacto.slice(0, 8).map((c, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-32 shrink-0 text-xs text-muted-foreground truncate">
-                  {maskContacto(c.contacto)}
+                <div
+                  className={`w-36 shrink-0 text-xs truncate ${
+                    c.label ? "font-medium text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {c.label ?? maskContacto(c.contacto)}
                 </div>
                 <div className="flex-1 h-5 rounded-md bg-muted overflow-hidden">
                   <div
@@ -272,7 +276,7 @@ export default async function EstadisticasPage() {
           </div>
           <p className="mt-4 text-xs text-muted-foreground leading-relaxed">
             {maxContacto > 5
-              ? `Un solo contacto registró ${maxContacto} niños (probablemente un grupo o casa hogar); el resto son familias de 1 a ${
+              ? `El ${a.registrosPorContacto[0]?.label ?? "contacto principal"} registró ${maxContacto} niños; el resto son familias de 1 a ${
                   a.registrosPorContacto.filter((c) => c.cantidad < maxContacto)[0]?.cantidad ?? 1
                 } niños.`
               : "La mayoría de los registros son familias pequeñas."}

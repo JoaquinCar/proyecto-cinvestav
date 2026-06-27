@@ -378,7 +378,7 @@ export type AnalisisProfundo = {
   generoPorNivel: SerieDual[]; // a=niñas, b=niños por nivel
   edadGenero: SerieDual[]; // a=niñas, b=niños por edad
   concentracionEscuelas: { escuela: string; cantidad: number; pct: number; acumPct: number }[];
-  registrosPorContacto: { contacto: string; cantidad: number; ejemplo: string }[];
+  registrosPorContacto: { contacto: string; cantidad: number; ejemplo: string; label: string | null }[];
   acompanantesPorSesion: SerieDual[]; // a=mamás, b=papás por sesión
   retencion: { fecha: string; etiqueta: string; presentes: number }[];
 };
@@ -464,6 +464,12 @@ export async function obtenerAnalisisProfundo(
     .sort((x, y) => x[0] - y[0])
     .map(([edad, v]) => ({ etiqueta: `${edad}`, a: v.a, b: v.b }));
 
+  // Contactos conocidos (grupos identificados por el organizador)
+  const CONTACTO_CONOCIDO: Record<string, string> = {
+    "9992463880": "Grupo Zarigüeyas",
+    "buenrostrojaz94@gmail.com": "Grupo Zarigüeyas",
+  };
+
   // Registros por contacto (teléfono; fallback correo)
   const contactoMap = new Map<string, { count: number; ejemplo: string }>();
   for (const p of parts) {
@@ -472,7 +478,12 @@ export async function obtenerAnalisisProfundo(
     contactoMap.get(c)!.count++;
   }
   const registrosPorContacto = Array.from(contactoMap.entries())
-    .map(([contacto, v]) => ({ contacto, cantidad: v.count, ejemplo: v.ejemplo }))
+    .map(([contacto, v]) => ({
+      contacto,
+      cantidad: v.count,
+      ejemplo: v.ejemplo,
+      label: CONTACTO_CONOCIDO[contacto] ?? null,
+    }))
     .sort((a, b) => b.cantidad - a.cantidad);
   const numContactos = registrosPorContacto.length;
 
