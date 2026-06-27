@@ -59,6 +59,10 @@ model Participante {
   escuela   String
   grado     String
   genero    Genero?
+  nivel     String?
+  correo    String?
+  telefono  String?
+  ciudad    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -108,9 +112,30 @@ model Sesion {
   registradaPorId String?
   createdAt       DateTime @default(now())
 
-  clase         Clase        @relation(fields: [claseId], references: [id])
-  registradaPor User?        @relation(fields: [registradaPorId], references: [id])
+  clase         Clase          @relation(fields: [claseId], references: [id])
+  registradaPor User?          @relation(fields: [registradaPorId], references: [id])
   asistencias   Asistencia[]
+  resumen       ResumenSesion?
+}
+
+// Totales agregados de asistencia por sesión (sin nombres — provienen del Excel del organizador).
+// Coexiste con Asistencia individual; aquí se guardan los conteos para el análisis.
+model ResumenSesion {
+  id            String   @id @default(cuid())
+  sesionId      String   @unique
+  ninas         Int      @default(0)
+  ninos         Int      @default(0)
+  total         Int      @default(0)
+  mamas         Int      @default(0)
+  papas         Int      @default(0)
+  preescolar    Int      @default(0)
+  primaria      Int      @default(0)
+  secundaria    Int      @default(0)
+  mediaSuperior Int      @default(0)
+  porEdad       Json?
+  createdAt     DateTime @default(now())
+
+  sesion Sesion @relation(fields: [sesionId], references: [id], onDelete: Cascade)
 }
 
 model Asistencia {

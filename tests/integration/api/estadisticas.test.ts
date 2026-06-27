@@ -20,6 +20,8 @@ const metricasMock = {
   totalConstancias: 20,
   porEscuela: [{ escuela: "Primaria Centro", cantidad: 10 }],
   porGrado: [{ grado: "3°", cantidad: 15 }],
+  porNivel: [{ escuela: "Primaria", cantidad: 20 }],
+  porCiudad: [{ escuela: "Mérida", cantidad: 28 }],
   clasesResumen: [{ nombre: "Astronomía", sesiones: 4, asistenciaPromedio: 80 }],
   tendencia: [{ fecha: "2026-01-24", etiqueta: "24 ene", presentes: 31 }],
   porEdad: [{ edad: 10, cantidad: 12 }],

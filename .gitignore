@@ -50,3 +50,7 @@ next-env.d.ts
 
 # prisma migrations generated client
 /prisma/generated/
+
+# scripts: datos personales de participantes (PII) y artefactos temporales — NUNCA subir
+/scripts/data/
+/scripts/_*

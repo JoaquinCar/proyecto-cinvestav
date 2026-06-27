@@ -1,67 +1,116 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Users, ClipboardCheck, BookOpen, Download } from "lucide-react";
+import {
+  Users,
+  CalendarCheck,
+  TrendingUp,
+  Download,
+  Sparkles,
+  UserRound,
+  HeartHandshake,
+} from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/server/db";
-import { obtenerMetricasEdicion } from "@/server/queries/estadisticas";
+import {
+  obtenerMetricasEdicion,
+  obtenerMetricasAsistencia,
+} from "@/server/queries/estadisticas";
 import { GraficaEscuelas } from "@/components/dashboard/GraficaEscuelas";
 import { GraficaGrados } from "@/components/dashboard/GraficaGrados";
 import { GraficaTendencia } from "@/components/dashboard/GraficaTendencia";
 import { GraficaEdad } from "@/components/dashboard/GraficaEdad";
 import { GraficaGenero } from "@/components/dashboard/GraficaGenero";
-import { GraficaRanking } from "@/components/dashboard/GraficaRanking";
+import { GraficaNinasNinos } from "@/components/dashboard/GraficaNinasNinos";
 
 export const metadata: Metadata = { title: "Dashboard · Pasaporte Científico" };
 
-const statCards = [
-  {
-    label: "Participantes inscritos",
-    icon: Users,
-    colorClass: "text-secondary",
-    bgClass: "bg-secondary/10",
-  },
-  {
-    label: "Asistencia promedio",
-    icon: ClipboardCheck,
-    colorClass: "text-success",
-    bgClass: "bg-success/10",
-  },
-  {
-    label: "Sesiones impartidas",
-    icon: BookOpen,
-    colorClass: "text-chart-5",
-    bgClass: "bg-chart-5/10",
-  },
-] as const;
+function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  colorClass,
+  bgClass,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  colorClass: string;
+  bgClass: string;
+}) {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-6">
+      <div className="flex items-start justify-between mb-4">
+        <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
+          {label}
+        </p>
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${bgClass}`}>
+          <Icon size={18} strokeWidth={2} className={colorClass} />
+        </div>
+      </div>
+      <div className="stat-number text-5xl">{value}</div>
+      {hint && <p className="mt-2 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function Panel({
+  title,
+  subtitle,
+  children,
+  span2,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  span2?: boolean;
+}) {
+  return (
+    <div className={`bg-card border border-border rounded-2xl p-6 ${span2 ? "lg:col-span-2" : ""}`}>
+      <h3 className="text-sm font-semibold mb-1 text-foreground">{title}</h3>
+      <p className="text-xs mb-4 text-muted-foreground">{subtitle}</p>
+      {children}
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
   const edicion = await prisma.edicion.findFirst({ where: { activa: true } });
-  const metricas = edicion ? await obtenerMetricasEdicion(edicion.id) : null;
 
-  const statValues = [
-    metricas?.totalParticipantes ?? "—",
-    metricas ? `${metricas.promedioAsistencia}%` : "—",
-    metricas?.totalSesiones ?? "—",
-  ];
+  if (!edicion) {
+    return (
+      <div className="space-y-2">
+        <h1 className="font-display text-3xl font-semibold text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Sin edición activa — crea una en /ediciones
+        </p>
+      </div>
+    );
+  }
+
+  const [metricas, asist] = await Promise.all([
+    obtenerMetricasEdicion(edicion.id),
+    obtenerMetricasAsistencia(edicion.id),
+  ]);
 
   return (
     <div className="space-y-8">
+      {/* Encabezado */}
       <div className="animate-fade-up flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-3xl font-semibold text-foreground">
-            Resumen de la{" "}
-            <em className="text-primary not-italic font-semibold">edición activa</em>
+            Análisis ·{" "}
+            <em className="text-primary not-italic font-semibold">{edicion.nombre}</em>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {edicion
-              ? `${edicion.nombre} ${edicion.anio} · CINVESTAV Unidad Mérida`
-              : "Sin edición activa — crea una en /ediciones"}
+            CINVESTAV Unidad Mérida · {edicion.anio}
           </p>
         </div>
-        {edicion && session.user.role === "ADMIN" && (
+        {session.user.role === "ADMIN" && (
           <a
             href={`/api/exportar/excel/${edicion.id}`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground transition-opacity hover:opacity-80"
@@ -72,92 +121,199 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {statCards.map(({ label, icon: Icon, colorClass, bgClass }, i) => (
-          <div
-            key={label}
-            className={`animate-fade-up animate-fade-up-delay-${i + 1} bg-card border border-border rounded-2xl p-6`}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
-                {label}
-              </p>
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${bgClass}`}>
-                <Icon size={18} strokeWidth={2} className={colorClass} />
-              </div>
-            </div>
-            <div className="stat-number text-5xl">{statValues[i]}</div>
+      {/* Banner de cruce registro vs asistencia */}
+      <div className="animate-fade-up animate-fade-up-delay-1 rounded-2xl border border-border bg-muted/40 p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles size={16} className="text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">
+            Registro vs. asistencia — lectura rápida
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">Niños registrados</p>
+            <p className="text-foreground font-semibold text-lg">
+              {metricas.totalParticipantes}
+              <span className="text-muted-foreground font-normal text-sm">
+                {" "}
+                ({metricas.porGenero.find((g) => g.genero === "FEMENINO")?.cantidad ?? 0} niñas ·{" "}
+                {metricas.porGenero.find((g) => g.genero === "MASCULINO")?.cantidad ?? 0} niños)
+              </span>
+            </p>
           </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up animate-fade-up-delay-4">
-        <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-semibold mb-1 text-foreground">
-            Participación por escuela
-          </h3>
-          <p className="text-xs mb-4 text-muted-foreground">
-            Top 10 escuelas con más inscritos
-          </p>
-          <GraficaEscuelas data={metricas?.porEscuela ?? []} />
+          <div>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Asistencia (eventos)
+            </p>
+            <p className="text-foreground font-semibold text-lg">
+              {asist.totalEventos}
+              <span className="text-muted-foreground font-normal text-sm">
+                {" "}
+                ({asist.totalNinas} niñas · {asist.totalNinos} niños)
+              </span>
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Sesiones con datos
+            </p>
+            <p className="text-foreground font-semibold text-lg">
+              {asist.sesionesConDatos}
+              <span className="text-muted-foreground font-normal text-sm">
+                {" "}
+                de {asist.totalSesiones}
+              </span>
+            </p>
+          </div>
         </div>
-
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-semibold mb-1 text-foreground">
-            Distribución por grado
-          </h3>
-          <p className="text-xs mb-4 text-muted-foreground">
-            Inscritos por año escolar
-          </p>
-          <GraficaGrados data={metricas?.porGrado ?? []} />
-        </div>
-      </div>
-
-      {/* Tendencia de asistencia por fecha */}
-      <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up">
-        <h3 className="text-sm font-semibold mb-1 text-foreground">
-          Tendencia de asistencia
-        </h3>
-        <p className="text-xs mb-4 text-muted-foreground">
-          Asistentes presentes por fecha de sesión
+        <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+          El <strong>registro</strong> cuenta niños únicos inscritos; la{" "}
+          <strong>asistencia</strong> son eventos sumados por sesión (un mismo niño cuenta
+          en cada sesión a la que asiste). Por eso los totales no coinciden — son métricas
+          distintas, no un error de captura.
         </p>
-        <GraficaTendencia data={metricas?.tendencia ?? []} />
       </div>
 
-      {/* Edad + Género */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up">
-        <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-semibold mb-1 text-foreground">
-            Distribución por edad
-          </h3>
-          <p className="text-xs mb-4 text-muted-foreground">
-            Participantes inscritos por edad
-          </p>
-          <GraficaEdad data={metricas?.porEdad ?? []} />
+      {/* ════════ SECCIÓN A · ASISTENCIA POR SESIÓN ════════ */}
+      <div className="animate-fade-up">
+        <h2 className="font-display text-xl font-semibold text-foreground mb-4">
+          Asistencia por sesión
+        </h2>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Asistencia promedio"
+            value={asist.promedioPorSesion}
+            hint="por sesión"
+            icon={TrendingUp}
+            colorClass="text-success"
+            bgClass="bg-success/10"
+          />
+          <StatCard
+            label="Pico de asistencia"
+            value={asist.picoSesion}
+            hint="mejor sesión"
+            icon={Users}
+            colorClass="text-secondary"
+            bgClass="bg-secondary/10"
+          />
+          <StatCard
+            label="Sesiones impartidas"
+            value={`${asist.sesionesConDatos}/${asist.totalSesiones}`}
+            hint="con datos / total"
+            icon={CalendarCheck}
+            colorClass="text-chart-5"
+            bgClass="bg-chart-5/10"
+          />
+          <StatCard
+            label="Acompañantes"
+            value={asist.totalMamas + asist.totalPapas}
+            hint={`${asist.totalMamas} mamás · ${asist.totalPapas} papás`}
+            icon={HeartHandshake}
+            colorClass="text-chart-3"
+            bgClass="bg-chart-3/10"
+          />
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-semibold mb-1 text-foreground">
-            Niñas y niños
-          </h3>
-          <p className="text-xs mb-4 text-muted-foreground">
-            Distribución por género
-          </p>
-          <GraficaGenero data={metricas?.porGenero ?? []} />
+        <div className="mt-4 grid grid-cols-1 gap-4">
+          <Panel
+            title="Tendencia de asistencia"
+            subtitle="Total de asistentes por sesión a lo largo del programa"
+          >
+            <GraficaTendencia data={asist.tendencia} />
+          </Panel>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4">
+          <Panel
+            title="Niñas y niños por sesión"
+            subtitle="Comparativa de asistencia por género en cada sesión"
+          >
+            <GraficaNinasNinos data={asist.porSesion} />
+          </Panel>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Panel
+            title="Asistencia por edad"
+            subtitle="Eventos de asistencia agrupados por edad"
+            span2
+          >
+            <GraficaEdad data={asist.porEdad} />
+          </Panel>
+          <Panel title="Asistencia por nivel" subtitle="Por nivel escolar (eventos)">
+            <GraficaEscuelas data={asist.porNivel} />
+          </Panel>
         </div>
       </div>
 
-      {/* Ranking de clases */}
-      <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up">
-        <h3 className="text-sm font-semibold mb-1 text-foreground">
-          Clases con más convocatoria
-        </h3>
-        <p className="text-xs mb-4 text-muted-foreground">
-          Total de asistencias registradas por clase
-        </p>
-        <GraficaRanking data={metricas?.rankingClases ?? []} />
+      <div className="h-px bg-border" />
+
+      {/* ════════ SECCIÓN B · PERFIL DE LOS INSCRITOS ════════ */}
+      <div className="animate-fade-up">
+        <h2 className="font-display text-xl font-semibold text-foreground mb-4">
+          Perfil de los inscritos
+        </h2>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <StatCard
+            label="Total inscritos"
+            value={metricas.totalParticipantes}
+            hint="niños registrados"
+            icon={UserRound}
+            colorClass="text-secondary"
+            bgClass="bg-secondary/10"
+          />
+          <StatCard
+            label="Niñas"
+            value={metricas.porGenero.find((g) => g.genero === "FEMENINO")?.cantidad ?? 0}
+            icon={Users}
+            colorClass="text-chart-3"
+            bgClass="bg-chart-3/10"
+          />
+          <StatCard
+            label="Niños"
+            value={metricas.porGenero.find((g) => g.genero === "MASCULINO")?.cantidad ?? 0}
+            icon={Users}
+            colorClass="text-chart-1"
+            bgClass="bg-chart-1/10"
+          />
+          <StatCard
+            label="Escuelas"
+            value={metricas.porEscuela.length}
+            hint="distintas"
+            icon={CalendarCheck}
+            colorClass="text-chart-5"
+            bgClass="bg-chart-5/10"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Panel title="Por escuela" subtitle="Top 10 escuelas con más inscritos" span2>
+            <GraficaEscuelas data={metricas.porEscuela} />
+          </Panel>
+          <Panel title="Por nivel escolar" subtitle="Inscritos por nivel">
+            <GraficaEscuelas data={metricas.porNivel} />
+          </Panel>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Panel title="Por edad" subtitle="Inscritos por edad" span2>
+            <GraficaEdad data={metricas.porEdad} />
+          </Panel>
+          <Panel title="Niñas y niños" subtitle="Distribución por género">
+            <GraficaGenero data={metricas.porGenero} />
+          </Panel>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Panel title="Por grado" subtitle="Inscritos por año escolar" span2>
+            <GraficaGrados data={metricas.porGrado} />
+          </Panel>
+          <Panel title="Por ciudad" subtitle="Procedencia de los inscritos">
+            <GraficaEscuelas data={metricas.porCiudad} />
+          </Panel>
+        </div>
       </div>
     </div>
   );
