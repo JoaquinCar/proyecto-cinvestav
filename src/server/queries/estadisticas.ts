@@ -381,7 +381,7 @@ export async function obtenerDatosExcel(edicionId: string) {
     Edad: i.participante.edad,
     Género: generoLabel(i.participante.genero),
     Grado: i.participante.grado,
-    Nivel: i.participante.nivel ?? "—",
+    Nivel: NIVEL_LABEL[i.participante.nivel ?? ""] ?? i.participante.nivel ?? "—",
     Escuela: i.participante.escuela,
     Ciudad: i.participante.ciudad ?? "—",
     Correo: i.participante.correo ?? "—",
