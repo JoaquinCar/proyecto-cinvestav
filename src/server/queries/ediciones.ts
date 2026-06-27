@@ -30,7 +30,7 @@ export async function listarEdiciones() {
 // ── Obtener una edición por ID con conteos ────────────────────────────────────
 
 export async function obtenerEdicionPorId(id: string) {
-  return prisma.edicion.findUnique({
+  const edicion = await prisma.edicion.findUnique({
     where: { id },
     select: {
       id: true,
@@ -51,6 +51,15 @@ export async function obtenerEdicionPorId(id: string) {
       },
     },
   });
+
+  if (!edicion) return null;
+
+  const [sesionesTotal, sesionesConDatos] = await Promise.all([
+    prisma.sesion.count({ where: { clase: { edicionId: id } } }),
+    prisma.sesion.count({ where: { clase: { edicionId: id }, resumen: { isNot: null } } }),
+  ]);
+
+  return { ...edicion, sesionesTotal, sesionesConDatos };
 }
 
 // ── Crear nueva edición ───────────────────────────────────────────────────────

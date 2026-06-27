@@ -121,13 +121,17 @@ describe("GET /api/exportar/excel/[edicionId]", () => {
     );
     vi.mocked(obtenerDatosExcel).mockResolvedValueOnce([
       {
+        "#": 1,
         Nombre: "Ana",
         Apellidos: "García",
-        Escuela: "Primaria",
-        Grado: "3°",
         Edad: 9,
-        Asistencias: 5,
-        Constancia: "Sí",
+        Género: "Niña",
+        Grado: "3° Primaria",
+        Nivel: "Primaria",
+        Escuela: "Primaria Centro",
+        Ciudad: "Mérida",
+        Correo: "—",
+        Teléfono: "—",
       },
     ]);
     const { GET } = await import(

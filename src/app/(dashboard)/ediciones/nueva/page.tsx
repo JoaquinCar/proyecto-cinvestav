@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, FlaskConical, Calendar, Hash, Percent, Globe } from "lucide-react";
+import { ArrowLeft, FlaskConical, Calendar, Hash } from "lucide-react";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 
 // ── Zod schema (client-side — matches backend crearEdicionSchema) ─────────────
 
@@ -35,19 +34,6 @@ const formSchema = z
     fechaFin: z
       .string({ error: "La fecha de fin es requerida" })
       .min(1, "La fecha de fin es requerida"),
-
-    minAsistencias: z
-      .number({ error: "Ingresa un número" })
-      .int("Debe ser un entero")
-      .min(1, "Mínimo 1 asistencia"),
-
-    porcentajeMinimo: z
-      .number({ error: "Ingresa un número" })
-      .min(0, "No puede ser negativo")
-      .max(100, "No puede superar 100")
-      .nullable(),
-
-    asistenciaGlobal: z.boolean(),
   })
   .refine((d) => new Date(d.fechaFin) > new Date(d.fechaInicio), {
     message: "La fecha de fin debe ser posterior a la de inicio",
@@ -66,7 +52,6 @@ export default function NuevaEdicionPage() {
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -75,9 +60,6 @@ export default function NuevaEdicionPage() {
       nombre: "",
       fechaInicio: "",
       fechaFin: "",
-      minAsistencias: 5,
-      porcentajeMinimo: null,
-      asistenciaGlobal: true,
     },
   });
 
@@ -261,124 +243,6 @@ export default function NuevaEdicionPage() {
                   {errors.fechaFin.message}
                 </p>
               )}
-            </div>
-          </div>
-
-          {/* Separator */}
-          <div className="h-px bg-border" role="separator" />
-
-          {/* Row 3: Asistencias + Porcentaje */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Mínimo de asistencias */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="minAsistencias"
-                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
-              >
-                <Hash size={13} strokeWidth={2} aria-hidden />
-                Mínimo de asistencias
-              </Label>
-              <Input
-                id="minAsistencias"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                placeholder="5"
-                {...register("minAsistencias", { valueAsNumber: true })}
-                className={`h-11 rounded-lg bg-muted border-border tabular transition-colors focus:ring-primary ${errors.minAsistencias ? "border-destructive focus:ring-destructive" : ""}`}
-                aria-describedby={
-                  errors.minAsistencias ? "minAsistencias-error" : "minAsistencias-hint"
-                }
-              />
-              {errors.minAsistencias ? (
-                <p
-                  id="minAsistencias-error"
-                  className="text-xs text-destructive"
-                  role="alert"
-                >
-                  {errors.minAsistencias.message}
-                </p>
-              ) : (
-                <p id="minAsistencias-hint" className="text-xs text-muted-foreground">
-                  Sesiones requeridas para obtener constancia
-                </p>
-              )}
-            </div>
-
-            {/* Porcentaje mínimo (opcional) */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="porcentajeMinimo"
-                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
-              >
-                <Percent size={13} strokeWidth={2} aria-hidden />
-                Porcentaje mínimo
-                <span className="text-xs font-normal text-muted-foreground/60">
-                  (opcional)
-                </span>
-              </Label>
-              <Input
-                id="porcentajeMinimo"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                max={100}
-                step={0.1}
-                placeholder="80"
-                {...register("porcentajeMinimo", {
-                  setValueAs: (v) => (v === "" || v == null ? null : Number(v)),
-                })}
-                className={`h-11 rounded-lg bg-muted border-border tabular transition-colors focus:ring-primary ${errors.porcentajeMinimo ? "border-destructive focus:ring-destructive" : ""}`}
-                aria-describedby={
-                  errors.porcentajeMinimo ? "porcentaje-error" : "porcentaje-hint"
-                }
-              />
-              {errors.porcentajeMinimo ? (
-                <p
-                  id="porcentaje-error"
-                  className="text-xs text-destructive"
-                  role="alert"
-                >
-                  {errors.porcentajeMinimo.message}
-                </p>
-              ) : (
-                <p id="porcentaje-hint" className="text-xs text-muted-foreground">
-                  Deja vacío para usar solo conteo absoluto
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Row 4: Asistencia global toggle */}
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-muted border border-border">
-            <Controller
-              name="asistenciaGlobal"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  id="asistenciaGlobal"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  className="mt-0.5 shrink-0"
-                  aria-describedby="asistenciaGlobal-desc"
-                />
-              )}
-            />
-            <div>
-              <Label
-                htmlFor="asistenciaGlobal"
-                className="text-sm font-medium flex items-center gap-1.5 cursor-pointer text-foreground"
-              >
-                <Globe size={13} strokeWidth={2} aria-hidden />
-                Asistencia global
-              </Label>
-              <p
-                id="asistenciaGlobal-desc"
-                className="text-xs mt-1 leading-relaxed text-muted-foreground"
-              >
-                Las asistencias se cuentan en todas las sesiones de la edición,
-                independientemente de la clase. Desactiva para contar por clase.
-              </p>
             </div>
           </div>
 

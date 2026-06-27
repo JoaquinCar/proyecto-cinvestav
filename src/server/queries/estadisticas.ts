@@ -358,23 +358,33 @@ export async function obtenerDatosExcel(edicionId: string) {
         select: {
           nombre: true,
           apellidos: true,
-          escuela: true,
-          grado: true,
           edad: true,
+          genero: true,
+          grado: true,
+          nivel: true,
+          escuela: true,
+          ciudad: true,
+          correo: true,
+          telefono: true,
         },
       },
-      constanciaGenerada: true,
-      asistencias: { where: { presente: true }, select: { id: true } },
     },
   });
 
-  return inscripciones.map((i) => ({
+  const generoLabel = (g: "FEMENINO" | "MASCULINO" | null) =>
+    g === "FEMENINO" ? "Niña" : g === "MASCULINO" ? "Niño" : "—";
+
+  return inscripciones.map((i, idx) => ({
+    "#": idx + 1,
     Nombre: i.participante.nombre,
     Apellidos: i.participante.apellidos,
-    Escuela: i.participante.escuela,
-    Grado: i.participante.grado,
     Edad: i.participante.edad,
-    Asistencias: i.asistencias.length,
-    Constancia: i.constanciaGenerada ? "Sí" : "No",
+    Género: generoLabel(i.participante.genero),
+    Grado: i.participante.grado,
+    Nivel: i.participante.nivel ?? "—",
+    Escuela: i.participante.escuela,
+    Ciudad: i.participante.ciudad ?? "—",
+    Correo: i.participante.correo ?? "—",
+    Teléfono: i.participante.telefono ?? "—",
   }));
 }

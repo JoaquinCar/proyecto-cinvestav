@@ -44,17 +44,19 @@ export default async function EdicionDetallePage({
 
   const inscripciones = edicion._count?.inscripciones ?? 0;
   const clases = edicion._count?.clases ?? 0;
+  const sesionesTotal = edicion.sesionesTotal ?? 0;
+  const sesionesConDatos = edicion.sesionesConDatos ?? 0;
 
   const stats = [
     { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
     { label: "Clases",        value: clases,         icon: BookOpen,       colorClass: "text-success",   bgClass: "bg-success/10"  },
-    { label: "Sesiones",      value: "—",            icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
+    { label: "Sesiones",      value: `${sesionesConDatos} de ${sesionesTotal}`, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
   ];
 
   const quickLinks = [
     { href: `/ediciones/${edicion.id}/participantes`, label: "Ver participantes", icon: Users,     detail: `${inscripciones} inscritos` },
     { href: `/ediciones/${edicion.id}/clases`,        label: "Ver clases",        icon: BookOpen,  detail: `${clases} clases` },
-    { href: `/ediciones/${edicion.id}/reportes`,      label: "Ver reportes",      icon: BarChart3, detail: "Asistencia y constancias" },
+    { href: `/ediciones/${edicion.id}/reportes`,      label: "Ver reportes",      icon: BarChart3, detail: "Asistencia y estadísticas" },
   ];
 
   return (
@@ -149,30 +151,6 @@ export default async function EdicionDetallePage({
             <div className="stat-number text-5xl tabular">{value}</div>
           </div>
         ))}
-      </div>
-
-      <div className="bg-card border border-border rounded-2xl p-6 animate-fade-up animate-fade-up-delay-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide mb-4 text-muted-foreground" style={{ letterSpacing: "0.07em" }}>
-          Configuracion de constancias
-        </h2>
-        <dl className="grid grid-cols-1 sm:grid-cols-3 gap-y-4 gap-x-8">
-          <div>
-            <dt className="text-xs mb-1 text-muted-foreground">Minimo de asistencias</dt>
-            <dd className="font-display text-3xl font-semibold tabular text-primary">{edicion.minAsistencias}</dd>
-          </div>
-          <div>
-            <dt className="text-xs mb-1 text-muted-foreground">Porcentaje minimo</dt>
-            <dd className="font-display text-3xl font-semibold tabular text-foreground">
-              {edicion.porcentajeMinimo != null ? `${edicion.porcentajeMinimo}%` : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs mb-1 text-muted-foreground">Tipo de asistencia</dt>
-            <dd className="text-sm font-medium mt-1 text-foreground">
-              {edicion.asistenciaGlobal ? "Global (todas las sesiones)" : "Por clase"}
-            </dd>
-          </div>
-        </dl>
       </div>
 
       <div className="animate-fade-up animate-fade-up-delay-4">

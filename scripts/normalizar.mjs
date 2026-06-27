@@ -29,7 +29,7 @@ function nivelDe(texto, edad) {
 }
 
 function normGrado(grado, escuela, edad) {
-  if (/no va a escuela|no asiste/i.test(grado)) return "Sin escuela";
+  if (/no va a escuela|no asiste|sin escuela/i.test(grado)) return "Sin escuela";
   const niv = nivelDe(`${grado} ${escuela}`, edad);
   if (niv === "Preescolar" || niv === "Bachillerato") return niv; // colapsar
   const ord = ordinal(grado);
@@ -46,6 +46,10 @@ const ESCUELA_ALIAS = {
   "sor juana inez de la cruz": "Sor Juana Inés de la Cruz",
   "primaria sor juana inez de la cruz": "Sor Juana Inés de la Cruz",
   "preescolar chak pepen": "Preescolar Chak Pepen",
+  "esc. sec. #26": "Secundaria Técnica #26",
+  "esc sec #26": "Secundaria Técnica #26",
+  "secundaria técnica #26": "Secundaria Técnica #26",
+  "secundaria tecnica #26": "Secundaria Técnica #26",
 };
 
 function normEscuela(e) {

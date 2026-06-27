@@ -24,9 +24,6 @@ export default async function EditarEdicionPage({
         nombre: edicion.nombre,
         fechaInicio: edicion.fechaInicio.toString(),
         fechaFin: edicion.fechaFin.toString(),
-        minAsistencias: edicion.minAsistencias,
-        porcentajeMinimo: edicion.porcentajeMinimo,
-        asistenciaGlobal: edicion.asistenciaGlobal,
       }}
     />
   );

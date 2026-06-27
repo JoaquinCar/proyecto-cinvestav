@@ -47,6 +47,8 @@ const edicionMock = {
   activa: true,
   createdAt: new Date("2025-01-01T00:00:00.000Z"),
   _count: { inscripciones: 0, clases: 3 },
+  sesionesTotal: 12,
+  sesionesConDatos: 7,
 };
 
 function makeRequest(body?: unknown, method = "GET"): Request {
