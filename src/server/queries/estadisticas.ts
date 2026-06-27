@@ -1,5 +1,19 @@
 import { prisma } from "@/server/db";
 
+// Orden lógico de los grados homologados para las gráficas.
+function ordenGrado(g: string): number {
+  if (g === "Preescolar") return 0;
+  const m = g.match(/^(\d)°\s+(Primaria|Secundaria)/);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    return m[2] === "Primaria" ? 10 + n : 20 + n;
+  }
+  if (g === "Secundaria") return 30;
+  if (g === "Bachillerato") return 40;
+  if (g === "Sin escuela") return 90;
+  return 50;
+}
+
 export type MetricasEdicion = {
   totalParticipantes: number;
   totalSesiones: number;
@@ -88,7 +102,7 @@ export async function obtenerMetricasEdicion(
 
   const porGrado = Array.from(gradoCounts.entries())
     .map(([grado, cantidad]) => ({ grado, cantidad }))
-    .sort((a, b) => a.grado.localeCompare(b.grado));
+    .sort((a, b) => ordenGrado(a.grado) - ordenGrado(b.grado));
 
   const porNivel = Array.from(nivelCounts.entries())
     .map(([escuela, cantidad]) => ({ escuela, cantidad }))

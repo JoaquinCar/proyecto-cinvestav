@@ -242,7 +242,7 @@ export default async function DashboardPage() {
             <GraficaEdad data={asist.porEdad} />
           </Panel>
           <Panel title="Asistencia por nivel" subtitle="Por nivel escolar (eventos)">
-            <GraficaEscuelas data={asist.porNivel} />
+            <GraficaEscuelas data={asist.porNivel} labelWidth={120} />
           </Panel>
         </div>
       </div>
@@ -288,30 +288,32 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel title="Por escuela" subtitle="Top 10 escuelas con más inscritos" span2>
-            <GraficaEscuelas data={metricas.porEscuela} />
+        {/* Por escuela — ancho completo para que quepan todos los nombres */}
+        <Panel
+          title="Por escuela"
+          subtitle={`${metricas.porEscuela.length} escuelas distintas entre los inscritos`}
+        >
+          <GraficaEscuelas data={metricas.porEscuela} labelWidth={250} />
+        </Panel>
+
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Panel title="Por grado" subtitle="Inscritos por grado (homologado)">
+            <GraficaGrados data={metricas.porGrado} />
           </Panel>
-          <Panel title="Por nivel escolar" subtitle="Inscritos por nivel">
-            <GraficaEscuelas data={metricas.porNivel} />
+          <Panel title="Por edad" subtitle="Inscritos por edad">
+            <GraficaEdad data={metricas.porEdad} />
           </Panel>
         </div>
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel title="Por edad" subtitle="Inscritos por edad" span2>
-            <GraficaEdad data={metricas.porEdad} />
+          <Panel title="Por nivel escolar" subtitle="Inscritos por nivel">
+            <GraficaEscuelas data={metricas.porNivel} labelWidth={120} />
           </Panel>
           <Panel title="Niñas y niños" subtitle="Distribución por género">
             <GraficaGenero data={metricas.porGenero} />
           </Panel>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel title="Por grado" subtitle="Inscritos por año escolar" span2>
-            <GraficaGrados data={metricas.porGrado} />
-          </Panel>
           <Panel title="Por ciudad" subtitle="Procedencia de los inscritos">
-            <GraficaEscuelas data={metricas.porCiudad} />
+            <GraficaEscuelas data={metricas.porCiudad} labelWidth={120} />
           </Panel>
         </div>
       </div>

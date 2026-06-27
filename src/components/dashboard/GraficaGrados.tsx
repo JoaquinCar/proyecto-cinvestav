@@ -1,12 +1,15 @@
 "use client";
 
 import {
-  PieChart,
-  Pie,
-  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  Cell,
+  LabelList,
 } from "recharts";
 
 const CHART_VARS = [
@@ -30,23 +33,27 @@ export function GraficaGrados({ data }: Props) {
     );
   }
 
+  const height = Math.max(220, data.length * 38);
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="45%"
-          innerRadius={50}
-          outerRadius={80}
-          dataKey="cantidad"
-          nameKey="grado"
-          paddingAngle={2}
-        >
-          {data.map((_, i) => (
-            <Cell key={i} fill={CHART_VARS[i % CHART_VARS.length]} />
-          ))}
-        </Pie>
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} layout="vertical" margin={{ left: 0, right: 28, top: 4, bottom: 4 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+        <XAxis
+          type="number"
+          tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          allowDecimals={false}
+        />
+        <YAxis
+          type="category"
+          dataKey="grado"
+          width={120}
+          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+          tickLine={false}
+          axisLine={false}
+        />
         <Tooltip
           contentStyle={{
             background: "var(--card)",
@@ -54,15 +61,20 @@ export function GraficaGrados({ data }: Props) {
             borderRadius: 12,
             color: "var(--foreground)",
           }}
+          cursor={{ fill: "var(--muted)" }}
+          formatter={(v) => [`${v} niños`, ""]}
         />
-        <Legend
-          formatter={(value) => (
-            <span style={{ color: "var(--muted-foreground)", fontSize: 11 }}>
-              {value}
-            </span>
-          )}
-        />
-      </PieChart>
+        <Bar dataKey="cantidad" radius={[0, 4, 4, 0]}>
+          {data.map((_, i) => (
+            <Cell key={i} fill={CHART_VARS[i % CHART_VARS.length]} />
+          ))}
+          <LabelList
+            dataKey="cantidad"
+            position="right"
+            style={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+          />
+        </Bar>
+      </BarChart>
     </ResponsiveContainer>
   );
 }
