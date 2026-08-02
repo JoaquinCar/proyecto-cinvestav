@@ -41,20 +41,35 @@ const credentialsSchema = z.object({
 // ── Rate limit básico de login (defensa-en-profundidad) ───────────────────────
 // En serverless el Map es por-instancia (no global), pero frena fuerza bruta /
 // password spraying sostenido desde una misma instancia. Para 5 usuarios internos
-// es proporcional; sin CAPTCHA. Reinicia el contador en login exitoso.
-const intentosLogin = new Map<string, { count: number; resetAt: number }>();
+// es proporcional; sin CAPTCHA.
+//
+// Solo cuenta INTENTOS FALLIDOS: unas credenciales correctas siempre entran, sin
+// importar cuántas veces se haya fallado antes. El freno real contra fuerza bruta
+// es el costo de bcrypt (~250 ms por intento con cost 12).
+const intentosFallidos = new Map<string, { count: number; resetAt: number }>();
 const MAX_INTENTOS = 10;
 const VENTANA_MS = 10 * 60 * 1000;
+const PENALIZACION_MS = 2000;
 
-function loginBloqueado(email: string): boolean {
-  const ahora = Date.now();
-  const reg = intentosLogin.get(email);
-  if (!reg || ahora > reg.resetAt) {
-    intentosLogin.set(email, { count: 1, resetAt: ahora + VENTANA_MS });
+/** ¿Este correo ya agotó sus intentos fallidos? Solo consulta, no incrementa. */
+function estaBloqueado(email: string): boolean {
+  const reg = intentosFallidos.get(email);
+  if (!reg || Date.now() > reg.resetAt) {
+    intentosFallidos.delete(email);
     return false;
   }
+  return reg.count >= MAX_INTENTOS;
+}
+
+/** Registrar un intento fallido para este correo. */
+function registrarFallo(email: string): void {
+  const ahora = Date.now();
+  const reg = intentosFallidos.get(email);
+  if (!reg || ahora > reg.resetAt) {
+    intentosFallidos.set(email, { count: 1, resetAt: ahora + VENTANA_MS });
+    return;
+  }
   reg.count += 1;
-  return reg.count > MAX_INTENTOS;
 }
 
 // ── Configuración NextAuth v5 ─────────────────────────────────────────────────
@@ -77,8 +92,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data;
 
-        // Frenar intentos repetidos antes de tocar la DB / bcrypt
-        if (loginBloqueado(email)) return null;
+        // Si este correo acumula fallos, penalizar la respuesta en vez de bloquear:
+        // el atacante avanza lentísimo, pero una contraseña correcta sigue entrando.
+        if (estaBloqueado(email)) {
+          await new Promise((resolve) => setTimeout(resolve, PENALIZACION_MS));
+        }
 
         // Buscar usuario en DB
         const usuario = await prisma.user.findUnique({
@@ -93,14 +111,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        if (!usuario || !usuario.passwordHash) return null;
+        if (!usuario || !usuario.passwordHash) {
+          registrarFallo(email);
+          return null;
+        }
 
         // Comparar password con bcrypt (nunca texto plano)
         const passwordValido = await compare(password, usuario.passwordHash);
-        if (!passwordValido) return null;
+        if (!passwordValido) {
+          registrarFallo(email);
+          return null;
+        }
 
-        // Login correcto: limpiar el contador de intentos
-        intentosLogin.delete(email);
+        // Login correcto: limpiar el contador de fallos
+        intentosFallidos.delete(email);
 
         return {
           id: usuario.id,
