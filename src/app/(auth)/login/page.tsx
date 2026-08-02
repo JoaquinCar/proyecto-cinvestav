@@ -56,7 +56,7 @@ export default async function LoginPage({
         <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
           {error && (
             <div className="rounded-lg px-4 py-3 text-sm mb-6 bg-destructive/10 border border-destructive/40 text-destructive">
-              Credenciales incorrectas. Verifica tu correo y contraseña.
+              Correo o contraseña incorrectos.
             </div>
           )}
           <LoginForm />

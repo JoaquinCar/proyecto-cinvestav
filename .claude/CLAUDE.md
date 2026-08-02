@@ -18,7 +18,7 @@ Plataforma web centralizada para gestión integral del programa Pasaporte Cient�
 - **Framework:** Next.js API Routes (no servidor separado necesario)
 - **ORM:** Prisma
 - **Base de datos:** PostgreSQL (Supabase Free Tier — HTTPS incluido, gratis)
-- **Auth:** NextAuth.js v5 (credenciales + magic link)
+- **Auth:** NextAuth.js v5 (solo credenciales: correo + contraseña con bcrypt)
 - **Storage PDFs:** Supabase Storage (gratis hasta 1GB)
 
 ### Infraestructura
@@ -79,7 +79,7 @@ pasaporte-cientifico/
 
 | # | Módulo | Estado |
 |---|--------|--------|
-| 0 | Auth (NextAuth v5 credentials + magic link) | ✅ Completo — PR #1 |
+| 0 | Auth (NextAuth v5, solo credenciales) | ✅ Completo — PR #1 |
 | 1 | Registro de participantes | ✅ Completo — feature/modulos-1-2 |
 | 2 | Gestión de ediciones | ✅ Completo — feature/modulos-1-2 |
 | 3 | Clases y temas | ✅ Completo — feature/modulos-1-2 |

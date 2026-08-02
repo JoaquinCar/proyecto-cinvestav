@@ -44,7 +44,7 @@ export default function LoginForm() {
       if (result?.ok) {
         router.push("/");
       } else {
-        setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
+        setError("Correo o contraseña incorrectos.");
       }
     } catch {
       setError("Ocurrió un error inesperado. Intenta de nuevo.");
