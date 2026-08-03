@@ -17,7 +17,6 @@ interface Props {
   labelB: string;
   colorA?: string;
   colorB?: string;
-  height?: number;
 }
 
 export function GraficaBarrasDual({
@@ -26,20 +25,19 @@ export function GraficaBarrasDual({
   labelB,
   colorA = "var(--chart-3)",
   colorB = "var(--chart-1)",
-  height = 260,
 }: Props) {
   if (data.length === 0) {
     return (
-      <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
+      <div className="h-full min-h-32 flex items-center justify-center text-sm text-muted-foreground">
         Sin datos aún
       </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ left: -10, right: 8, top: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <CartesianGrid stroke="var(--border)" vertical={false} />
         <XAxis
           dataKey="etiqueta"
           tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
@@ -67,8 +65,8 @@ export function GraficaBarrasDual({
             <span style={{ color: "var(--muted-foreground)", fontSize: 12 }}>{value}</span>
           )}
         />
-        <Bar dataKey="a" name={labelA} fill={colorA} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="b" name={labelB} fill={colorB} radius={[4, 4, 0, 0]} />
+        <Bar maxBarSize={24} dataKey="a" name={labelA} fill={colorA} radius={[4, 4, 0, 0]} />
+        <Bar maxBarSize={24} dataKey="b" name={labelB} fill={colorB} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

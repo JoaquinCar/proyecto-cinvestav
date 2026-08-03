@@ -88,8 +88,12 @@
   --input:               oklch(0.92 0.005 260);
   --ring:                oklch(0.55 0.22 264);
 
+  /* Serie categórica validada contra la superficie clara (#fafafa): banda de
+     luminosidad, piso de croma, separación CVD y contraste ≥ 3:1. El amarillo de
+     marca (--secondary, L 0.80) NO pasa como serie sobre fondo claro —contraste
+     1.8:1—, por eso --chart-2 es un paso más oscuro del mismo tono. */
   --chart-1:             oklch(0.55 0.22 264);  /* azul */
-  --chart-2:             oklch(0.80 0.16 80);   /* amarillo */
+  --chart-2:             oklch(0.65 0.14 80);   /* ámbar */
   --chart-3:             oklch(0.68 0.21 0);    /* rosa */
   --chart-4:             oklch(0.62 0.16 150);  /* verde */
   --chart-5:             oklch(0.60 0.18 300);  /* violeta */
@@ -137,11 +141,13 @@
   --input:              oklch(0.30 0.005 260);
   --ring:                oklch(0.62 0.20 264);
 
+  /* Misma validación contra la superficie oscura (#171717): la banda en modo
+     oscuro es más estrecha (L 0.48–0.67), así que los cinco pasos bajan. */
   --chart-1:             oklch(0.62 0.20 264);
-  --chart-2:             oklch(0.82 0.16 82);
-  --chart-3:             oklch(0.72 0.20 2);
-  --chart-4:             oklch(0.70 0.16 150);
-  --chart-5:             oklch(0.68 0.18 300);
+  --chart-2:             oklch(0.66 0.14 82);
+  --chart-3:             oklch(0.63 0.20 2);
+  --chart-4:             oklch(0.56 0.15 150);
+  --chart-5:             oklch(0.59 0.18 300);
 
   --sidebar:                    oklch(0.20 0 0);
   --sidebar-foreground:         oklch(0.97 0 0);

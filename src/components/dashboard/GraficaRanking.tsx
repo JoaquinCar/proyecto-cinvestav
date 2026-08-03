@@ -8,20 +8,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 
 interface Props {
   data: { nombre: string; asistentes: number }[];
 }
-
-const CHART_VARS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
 
 // recorta nombres largos para el eje
 function corto(nombre: string): string {
@@ -32,19 +23,18 @@ function corto(nombre: string): string {
 export function GraficaRanking({ data }: Props) {
   if (data.length === 0) {
     return (
-      <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
+      <div className="h-full min-h-32 flex items-center justify-center text-sm text-muted-foreground">
         Sin datos aún
       </div>
     );
   }
 
   const chartData = data.map((d) => ({ ...d, label: corto(d.nombre) }));
-  const altura = Math.max(220, chartData.length * 44);
 
   return (
-    <ResponsiveContainer width="100%" height={altura}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 24 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+        <CartesianGrid stroke="var(--border)" horizontal={false} />
         <XAxis
           type="number"
           tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
@@ -70,11 +60,7 @@ export function GraficaRanking({ data }: Props) {
           cursor={{ fill: "var(--muted)" }}
           formatter={(v) => [`${v} asistencias`, ""]}
         />
-        <Bar dataKey="asistentes" radius={[0, 4, 4, 0]}>
-          {chartData.map((_, i) => (
-            <Cell key={i} fill={CHART_VARS[i % CHART_VARS.length]} />
-          ))}
-        </Bar>
+        <Bar maxBarSize={24} dataKey="asistentes" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
