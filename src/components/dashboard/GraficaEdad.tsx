@@ -17,7 +17,7 @@ interface Props {
 export function GraficaEdad({ data }: Props) {
   if (data.length === 0) {
     return (
-      <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
+      <div className="h-full min-h-32 flex items-center justify-center text-sm text-muted-foreground">
         Sin datos aún
       </div>
     );
@@ -26,9 +26,10 @@ export function GraficaEdad({ data }: Props) {
   const chartData = data.map((d) => ({ ...d, label: `${d.edad}` }));
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={chartData} margin={{ left: -10, right: 8, top: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+    <ResponsiveContainer width="100%" height="100%">
+      {/* bottom deja sitio al rótulo "Edad (años)": si no, la tarjeta lo recorta */}
+      <BarChart data={chartData} margin={{ left: -10, right: 8, top: 8, bottom: 18 }}>
+        <CartesianGrid stroke="var(--border)" vertical={false} />
         <XAxis
           dataKey="label"
           tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
@@ -59,7 +60,7 @@ export function GraficaEdad({ data }: Props) {
           formatter={(v) => [`${v} niños`, ""]}
           labelFormatter={(l) => `${l} años`}
         />
-        <Bar dataKey="cantidad" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+        <Bar maxBarSize={24} dataKey="cantidad" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

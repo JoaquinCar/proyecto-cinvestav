@@ -21,6 +21,7 @@ import { GraficaTendencia } from "@/components/dashboard/GraficaTendencia";
 import { GraficaEdad } from "@/components/dashboard/GraficaEdad";
 import { GraficaGenero } from "@/components/dashboard/GraficaGenero";
 import { GraficaNinasNinos } from "@/components/dashboard/GraficaNinasNinos";
+import { PanelGrafica } from "@/components/dashboard/PanelGrafica";
 
 export const metadata: Metadata = { title: "Dashboard · Pasaporte Científico" };
 
@@ -55,24 +56,9 @@ function StatCard({
   );
 }
 
-function Panel({
-  title,
-  subtitle,
-  children,
-  span2,
-}: {
-  title: string;
-  subtitle: string;
-  children: React.ReactNode;
-  span2?: boolean;
-}) {
-  return (
-    <div className={`bg-card border border-border rounded-2xl p-6 ${span2 ? "lg:col-span-2" : ""}`}>
-      <h3 className="text-sm font-semibold mb-1 text-foreground">{title}</h3>
-      <p className="text-xs mb-4 text-muted-foreground">{subtitle}</p>
-      {children}
-    </div>
-  );
+/** Alto de las gráficas de lista (una barra por fila): crece con los datos. */
+function altoLista(filas: number, px = 34): number {
+  return Math.max(220, filas * px + 28);
 }
 
 export default async function DashboardPage() {
@@ -216,34 +202,57 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4">
-          <Panel
+          <PanelGrafica
             title="Tendencia de asistencia"
             subtitle="Total de asistentes por sesión a lo largo del programa"
+            alto={280}
+            datos={{
+              columnas: ["Sesión", "Asistentes"],
+              filas: asist.tendencia.map((t) => [t.etiqueta, t.presentes]),
+            }}
           >
             <GraficaTendencia data={asist.tendencia} />
-          </Panel>
+          </PanelGrafica>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4">
-          <Panel
+          <PanelGrafica
             title="Niñas y niños por sesión"
             subtitle="Comparativa de asistencia por género en cada sesión"
+            alto={300}
+            datos={{
+              columnas: ["Sesión", "Tema", "Niñas", "Niños", "Total"],
+              filas: asist.porSesion.map((s) => [s.etiqueta, s.tema, s.ninas, s.ninos, s.total]),
+            }}
           >
             <GraficaNinasNinos data={asist.porSesion} />
-          </Panel>
+          </PanelGrafica>
         </div>
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel
+          <PanelGrafica
             title="Asistencia por edad"
             subtitle="Eventos de asistencia agrupados por edad"
-            span2
+            alto={280}
+            className="lg:col-span-2"
+            datos={{
+              columnas: ["Edad", "Asistencias"],
+              filas: asist.porEdad.map((e) => [`${e.edad} años`, e.cantidad]),
+            }}
           >
             <GraficaEdad data={asist.porEdad} />
-          </Panel>
-          <Panel title="Asistencia por nivel" subtitle="Por nivel escolar (eventos)">
+          </PanelGrafica>
+          <PanelGrafica
+            title="Asistencia por nivel"
+            subtitle="Por nivel escolar (eventos)"
+            alto={altoLista(asist.porNivel.length)}
+            datos={{
+              columnas: ["Nivel", "Asistencias"],
+              filas: asist.porNivel.map((n) => [n.escuela, n.cantidad]),
+            }}
+          >
             <GraficaEscuelas data={asist.porNivel} labelWidth={120} />
-          </Panel>
+          </PanelGrafica>
         </div>
       </div>
 
@@ -289,32 +298,81 @@ export default async function DashboardPage() {
         </div>
 
         {/* Por escuela — ancho completo para que quepan todos los nombres */}
-        <Panel
+        <PanelGrafica
           title="Por escuela"
           subtitle={`${metricas.porEscuela.length} escuelas distintas entre los inscritos`}
+          alto={altoLista(metricas.porEscuela.length)}
+          altoExpandido={Math.max(520, altoLista(metricas.porEscuela.length))}
+          datos={{
+            columnas: ["Escuela", "Inscritos"],
+            filas: metricas.porEscuela.map((e) => [e.escuela, e.cantidad]),
+          }}
         >
           <GraficaEscuelas data={metricas.porEscuela} labelWidth={250} />
-        </Panel>
+        </PanelGrafica>
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Panel title="Por grado" subtitle="Inscritos por grado (homologado)">
+          <PanelGrafica
+            title="Por grado"
+            subtitle="Inscritos por grado (homologado)"
+            alto={altoLista(metricas.porGrado.length, 38)}
+            datos={{
+              columnas: ["Grado", "Inscritos"],
+              filas: metricas.porGrado.map((g) => [g.grado, g.cantidad]),
+            }}
+          >
             <GraficaGrados data={metricas.porGrado} />
-          </Panel>
-          <Panel title="Por edad" subtitle="Inscritos por edad">
+          </PanelGrafica>
+          <PanelGrafica
+            title="Por edad"
+            subtitle="Inscritos por edad"
+            alto={280}
+            datos={{
+              columnas: ["Edad", "Inscritos"],
+              filas: metricas.porEdad.map((e) => [`${e.edad} años`, e.cantidad]),
+            }}
+          >
             <GraficaEdad data={metricas.porEdad} />
-          </Panel>
+          </PanelGrafica>
         </div>
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Panel title="Por nivel escolar" subtitle="Inscritos por nivel">
+          <PanelGrafica
+            title="Por nivel escolar"
+            subtitle="Inscritos por nivel"
+            alto={altoLista(metricas.porNivel.length)}
+            datos={{
+              columnas: ["Nivel", "Inscritos"],
+              filas: metricas.porNivel.map((n) => [n.escuela, n.cantidad]),
+            }}
+          >
             <GraficaEscuelas data={metricas.porNivel} labelWidth={120} />
-          </Panel>
-          <Panel title="Niñas y niños" subtitle="Distribución por género">
+          </PanelGrafica>
+          <PanelGrafica
+            title="Niñas y niños"
+            subtitle="Distribución por género"
+            alto={280}
+            datos={{
+              columnas: ["Género", "Inscritos"],
+              filas: metricas.porGenero.map((g) => [
+                g.genero === "FEMENINO" ? "Niñas" : g.genero === "MASCULINO" ? "Niños" : g.genero,
+                g.cantidad,
+              ]),
+            }}
+          >
             <GraficaGenero data={metricas.porGenero} />
-          </Panel>
-          <Panel title="Por ciudad" subtitle="Procedencia de los inscritos">
+          </PanelGrafica>
+          <PanelGrafica
+            title="Por ciudad"
+            subtitle="Procedencia de los inscritos"
+            alto={altoLista(metricas.porCiudad.length)}
+            datos={{
+              columnas: ["Ciudad", "Inscritos"],
+              filas: metricas.porCiudad.map((c) => [c.escuela, c.cantidad]),
+            }}
+          >
             <GraficaEscuelas data={metricas.porCiudad} labelWidth={120} />
-          </Panel>
+          </PanelGrafica>
         </div>
       </div>
     </div>
