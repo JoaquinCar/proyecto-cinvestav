@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import {
-  ArrowLeft,
   BookOpen,
   User,
   Calendar,
@@ -14,9 +13,12 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerClasePorId, listarSesionesDeClase } from "@/server/queries/clases";
+import { listarImagenesDeClase } from "@/server/queries/imagenes-clase";
 import { obtenerEdicionPorId } from "@/server/queries/ediciones";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FormSesion } from "@/components/clases/FormSesion";
+import { FormTemasSesion } from "@/components/clases/FormTemasSesion";
+import { ContenidoClase } from "@/components/clases/ContenidoClase";
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -67,9 +69,10 @@ export default async function ClaseDetallePage({
 
   const { id } = await params;
 
-  const [clase, sesiones] = await Promise.all([
+  const [clase, sesiones, imagenes] = await Promise.all([
     obtenerClasePorId(id),
     listarSesionesDeClase(id),
+    listarImagenesDeClase(id),
   ]);
 
   if (!clase) notFound();
@@ -95,7 +98,7 @@ export default async function ClaseDetallePage({
           </Link>
           <span aria-hidden>/</span>
           <Link
-            href={edicion ? `/ediciones/${edicion.id}/clases` : "/ediciones"}
+            href={edicion ? `/clases?edicion=${edicion.id}` : "/clases"}
             className="hover:underline transition-colors text-primary"
           >
             Clases
@@ -141,8 +144,8 @@ export default async function ClaseDetallePage({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {/* Actions — envuelven en pantalla chica para que no se corte "Editar" */}
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <a
               href={`/api/pdf/reporte-clase/${clase.id}`}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 bg-muted border border-border text-primary"
@@ -171,12 +174,6 @@ export default async function ClaseDetallePage({
           </div>
         </div>
 
-        {/* Description */}
-        {clase.descripcion && (
-          <p className="mt-4 text-sm leading-relaxed max-w-2xl text-muted-foreground">
-            {clase.descripcion}
-          </p>
-        )}
       </div>
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
@@ -224,6 +221,24 @@ export default async function ClaseDetallePage({
             <div className="stat-number text-4xl">{value}</div>
           </div>
         ))}
+      </div>
+
+      {/* Contenido: descripción e imágenes de la clase */}
+      <div className="animate-fade-up animate-fade-up-delay-2">
+        <ContenidoClase
+          claseId={clase.id}
+          claseNombre={clase.nombre}
+          descripcion={clase.descripcion}
+          imagenes={imagenes.map((imagen) => ({
+            id: imagen.id,
+            url: imagen.url,
+            titulo: imagen.titulo,
+            mimeType: imagen.mimeType,
+            tamano: imagen.tamano,
+          }))}
+          puedeEditarDescripcion={isAdmin}
+          puedeEditarImagenes={isBecarioOrAdmin}
+        />
       </div>
 
       {/* Sesiones list */}
@@ -296,14 +311,12 @@ export default async function ClaseDetallePage({
 
                     {/* Update temas button (BECARIO+) */}
                     {isBecarioOrAdmin && (
-                      <Link
-                        href={`/sesiones/${sesion.id}/temas`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground"
-                        aria-label={`Actualizar temas de la sesión del ${formatFechaCorta(sesion.fecha)}`}
-                      >
-                        <Pencil size={11} strokeWidth={2} aria-hidden />
-                        Temas
-                      </Link>
+                      <FormTemasSesion
+                        sesionId={sesion.id}
+                        fechaSesion={formatFechaCorta(sesion.fecha)}
+                        temas={sesion.temas}
+                        notas={sesion.notas}
+                      />
                     )}
                   </div>
                 </div>
