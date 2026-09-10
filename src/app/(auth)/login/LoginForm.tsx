@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
+import { interpretarLogin } from "@/lib/auth/resultado-login";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,15 +37,18 @@ export default function LoginForm() {
     setLoading(true);
     setError(null);
     try {
-      const result = await signIn("credentials", {
+      const resultado = await signIn("credentials", {
         email: data.email,
         password: data.password,
         redirect: false,
       });
-      if (result?.ok) {
+      // `resultado.ok` viene en true aunque la contraseña sea incorrecta:
+      // interpretarLogin() lee `error`, que es el único campo confiable.
+      const lectura = interpretarLogin(resultado);
+      if (lectura.entro) {
         router.push("/");
       } else {
-        setError("Correo o contraseña incorrectos.");
+        setError(lectura.mensaje);
       }
     } catch {
       setError("Ocurrió un error inesperado. Intenta de nuevo.");
