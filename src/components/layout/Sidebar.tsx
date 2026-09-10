@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   BarChart3,
   Layers,
+  FileSpreadsheet,
   LogOut,
 } from "lucide-react";
 
@@ -23,8 +24,14 @@ const navItems = [
   { href: "/estadisticas", label: "Estadísticas",  icon: BarChart3,       match: (p: string) => p.startsWith("/estadisticas") },
 ];
 
-export default function Sidebar() {
+// La importación reescribe el padrón de una edición completa: solo ADMIN.
+const navItemsAdmin = [
+  { href: "/importar", label: "Importar Excel", icon: FileSpreadsheet, match: (p: string) => p.startsWith("/importar") },
+];
+
+export default function Sidebar({ esAdmin = false }: { esAdmin?: boolean }) {
   const pathname = usePathname();
+  const items = esAdmin ? [...navItems, ...navItemsAdmin] : navItems;
 
   return (
     <aside className="hidden lg:flex flex-col w-60 shrink-0 bg-[var(--color-sidebar)] border-r border-sidebar-border">
@@ -55,7 +62,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-5 space-y-1">
-        {navItems.map(({ href, label, icon: Icon, match }) => {
+        {items.map(({ href, label, icon: Icon, match }) => {
           const active = match(pathname);
           return (
             <Link
