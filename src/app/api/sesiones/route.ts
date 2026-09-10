@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { crearSesionSchema } from "@/lib/schemas/clase.schema";
 import { crearSesion, obtenerClasePorId } from "@/server/queries/clases";
+import {
+  assertEdicionDeClaseAbierta,
+  EdicionCerradaError,
+} from "@/server/queries/edicion-cerrada";
 
 // ── POST /api/sesiones — crear sesión (ADMIN o BECARIO) ──────────────────────
 
@@ -31,9 +35,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
     }
 
+    // Una edición cerrada no admite sesiones nuevas.
+    await assertEdicionDeClaseAbierta(parsed.data.claseId);
+
     const sesion = await crearSesion(parsed.data, session.user.id);
     return NextResponse.json(sesion, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof EdicionCerradaError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

@@ -45,6 +45,8 @@ const edicionMock = {
   porcentajeMinimo: null,
   asistenciaGlobal: true,
   activa: true,
+  cerrada: false,
+  cerradaAt: null,
   createdAt: new Date("2025-01-01T00:00:00.000Z"),
   _count: { inscripciones: 0, clases: 3 },
   sesionesTotal: 12,

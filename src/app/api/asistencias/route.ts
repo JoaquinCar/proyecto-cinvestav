@@ -5,6 +5,7 @@ import {
   batchUpsertAsistencias,
   AsistenciaFueraDeEdicionError,
 } from "@/server/queries/asistencias";
+import { EdicionCerradaError } from "@/server/queries/edicion-cerrada";
 
 // ── POST /api/asistencias ─────────────────────────────────────────────────────
 // Registra o actualiza asistencias en batch para una sesión.
@@ -46,6 +47,12 @@ export async function POST(request: NextRequest) {
     // La inscripción y la sesión son de ediciones distintas (o no existen):
     // registrar esa asistencia mezclaría los datos de dos ediciones.
     if (error instanceof AsistenciaFueraDeEdicionError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
+    // La edición ya se cerró: conserva lectura y reportes, pero no admite
+    // nuevas capturas.
+    if (error instanceof EdicionCerradaError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, FlaskConical, Calendar, Hash } from "lucide-react";
+import { ArrowLeft, FlaskConical, Calendar, Hash, Award } from "lucide-react";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,13 @@ const formSchema = z
     fechaFin: z
       .string({ error: "La fecha de fin es requerida" })
       .min(1, "La fecha de fin es requerida"),
+
+    // Decide quién recibe constancia. Mismos límites que el backend.
+    minAsistencias: z
+      .number({ error: "El mínimo de asistencias es requerido" })
+      .int("Debe ser un número entero")
+      .min(1, "Debe requerir al menos 1 asistencia")
+      .max(60, "No puede superar 60 asistencias"),
   })
   .refine((d) => new Date(d.fechaFin) > new Date(d.fechaInicio), {
     message: "La fecha de fin debe ser posterior a la de inicio",
@@ -60,6 +67,7 @@ export default function NuevaEdicionPage() {
       nombre: "",
       fechaInicio: "",
       fechaFin: "",
+      minAsistencias: 5,
     },
   });
 
@@ -244,6 +252,36 @@ export default function NuevaEdicionPage() {
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Row 3: Mínimo de asistencias para constancia */}
+          <div className="space-y-2 sm:max-w-xs">
+            <Label
+              htmlFor="minAsistencias"
+              className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
+            >
+              <Award size={13} strokeWidth={2} aria-hidden />
+              Asistencias para constancia
+            </Label>
+            <Input
+              id="minAsistencias"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={60}
+              {...register("minAsistencias", { valueAsNumber: true })}
+              className={`h-11 rounded-lg bg-muted border-border tabular transition-colors focus:ring-primary ${errors.minAsistencias ? "border-destructive focus:ring-destructive" : ""}`}
+              aria-describedby="minAsistencias-ayuda"
+            />
+            <p id="minAsistencias-ayuda" className="text-xs text-muted-foreground">
+              Número mínimo de sesiones a las que un niño debe asistir para recibir
+              constancia. En 2026 fueron 6.
+            </p>
+            {errors.minAsistencias && (
+              <p className="text-xs text-destructive" role="alert">
+                {errors.minAsistencias.message}
+              </p>
+            )}
           </div>
 
           {/* Server error */}

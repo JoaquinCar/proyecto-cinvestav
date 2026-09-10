@@ -16,6 +16,8 @@ export async function listarEdiciones() {
       porcentajeMinimo: true,
       asistenciaGlobal: true,
       activa: true,
+      cerrada: true,
+      cerradaAt: true,
       createdAt: true,
       _count: {
         select: {
@@ -42,6 +44,8 @@ export async function obtenerEdicionPorId(id: string) {
       porcentajeMinimo: true,
       asistenciaGlobal: true,
       activa: true,
+      cerrada: true,
+      cerradaAt: true,
       createdAt: true,
       _count: {
         select: {
@@ -136,6 +140,26 @@ export async function activarEdicion(id: string) {
       where: { id },
       data: { activa: true },
     });
+  });
+}
+
+// ── Cerrar / reabrir una edición ─────────────────────────────────────────────
+// Cerrar congela las escrituras (asistencias, sesiones, temas) conservando la
+// lectura, las estadísticas y las constancias. Solo ADMIN lo hace, y es
+// reversible: `cerradaAt` deja constancia de cuándo se congeló.
+// Ver el porqué del diseño en src/server/queries/edicion-cerrada.ts.
+
+export async function cerrarEdicion(id: string) {
+  return prisma.edicion.update({
+    where: { id },
+    data: { cerrada: true, cerradaAt: new Date() },
+  });
+}
+
+export async function reabrirEdicion(id: string) {
+  return prisma.edicion.update({
+    where: { id },
+    data: { cerrada: false, cerradaAt: null },
   });
 }
 

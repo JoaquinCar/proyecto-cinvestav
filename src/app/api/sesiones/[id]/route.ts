@@ -7,6 +7,10 @@ import {
   eliminarSesion,
   SesionConAsistenciasError,
 } from "@/server/queries/clases";
+import {
+  assertEdicionDeSesionAbierta,
+  EdicionCerradaError,
+} from "@/server/queries/edicion-cerrada";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -47,9 +51,16 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "No hay campos para actualizar" }, { status: 422 });
     }
 
+    // Una edición cerrada ya no admite cambios de temas ni notas.
+    await assertEdicionDeSesionAbierta(id);
+
     const sesionActualizada = await actualizarSesion(id, parsed.data);
     return NextResponse.json(sesionActualizada);
-  } catch {
+  } catch (error) {
+    if (error instanceof EdicionCerradaError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -76,9 +87,15 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 });
     }
 
+    await assertEdicionDeSesionAbierta(id);
+
     await eliminarSesion(id);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
+    if (error instanceof EdicionCerradaError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     if (error instanceof SesionConAsistenciasError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }

@@ -10,7 +10,9 @@ import {
   HeartHandshake,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/server/db";
+import { listarEdiciones } from "@/server/queries/ediciones";
+import { resolverEdicionSeleccionada } from "@/lib/edicion-seleccionada";
+import { SelectorEdicion } from "@/components/clases/SelectorEdicion";
 import {
   obtenerMetricasEdicion,
   obtenerMetricasAsistencia,
@@ -61,18 +63,28 @@ function altoLista(filas: number, px = 34): number {
   return Math.max(220, filas * px + 28);
 }
 
-export default async function DashboardPage() {
+// La edición se elige con `?edicion=`; sin parámetro se muestra la activa.
+// Antes el dashboard solo sabía leer la activa, así que comparar con un año
+// anterior obligaba a reactivarlo — con el riesgo de capturar sobre él.
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edicion?: string }>;
+}) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const edicion = await prisma.edicion.findFirst({ where: { activa: true } });
+  const { edicion: edicionParam } = await searchParams;
+  const ediciones = await listarEdiciones();
+  const edicion = resolverEdicionSeleccionada(ediciones, edicionParam);
 
   if (!edicion) {
     return (
       <div className="space-y-2">
         <h1 className="font-display text-3xl font-semibold text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Sin edición activa — crea una en /ediciones
+          Sin ediciones — crea una en /ediciones
         </p>
       </div>
     );
@@ -94,17 +106,31 @@ export default async function DashboardPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             CINVESTAV Unidad Mérida · {edicion.anio}
+            {!edicion.activa && " · edición anterior"}
+            {edicion.cerrada && " · cerrada"}
           </p>
         </div>
-        {session.user.role === "ADMIN" && (
-          <a
-            href={`/api/exportar/excel/${edicion.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground transition-opacity hover:opacity-80"
-          >
-            <Download size={15} />
-            Exportar Excel
-          </a>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <SelectorEdicion
+            ediciones={ediciones.map((e) => ({
+              id: e.id,
+              nombre: e.nombre,
+              anio: e.anio,
+              activa: e.activa,
+            }))}
+            edicionActualId={edicion.id}
+            basePath="/"
+          />
+          {session.user.role === "ADMIN" && (
+            <a
+              href={`/api/exportar/excel/${edicion.id}`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground transition-opacity hover:opacity-80 min-h-[44px]"
+            >
+              <Download size={15} />
+              Exportar Excel
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Banner de cruce registro vs asistencia */}

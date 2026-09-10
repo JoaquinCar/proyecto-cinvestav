@@ -34,6 +34,20 @@ vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
 }));
 
+// Aquí se prueba el aislamiento entre ediciones, no el congelado: se da por
+// hecho que las ediciones están abiertas. Ver tests/unit/queries/edicion-cerrada.
+vi.mock("@/server/queries/edicion-cerrada", () => ({
+  assertEdicionAbierta: vi.fn(),
+  assertEdicionDeSesionAbierta: vi.fn(),
+  assertEdicionDeClaseAbierta: vi.fn(),
+  EdicionCerradaError: class EdicionCerradaError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "EdicionCerradaError";
+    }
+  },
+}));
+
 const sessionBecario = {
   user: {
     id: "user-2",

@@ -12,6 +12,9 @@ import {
   Zap,
   BarChart3,
   ChevronRight,
+  Lock,
+  Unlock,
+  Award,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerEdicionPorId } from "@/server/queries/ediciones";
@@ -51,6 +54,7 @@ export default async function EdicionDetallePage({
     { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
     { label: "Clases",        value: clases,         icon: BookOpen,       colorClass: "text-success",   bgClass: "bg-success/10"  },
     { label: "Sesiones",      value: `${sesionesConDatos} de ${sesionesTotal}`, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
+    { label: "Constancia desde", value: `${edicion.minAsistencias} asist.`, icon: Award, colorClass: "text-chart-3", bgClass: "bg-chart-3/10" },
   ];
 
   const quickLinks = [
@@ -94,6 +98,12 @@ export default async function EdicionDetallePage({
                     Inactiva
                   </span>
                 )}
+                {edicion.cerrada && (
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-destructive/10 border border-destructive/40 text-destructive">
+                    <Lock size={11} strokeWidth={2} aria-hidden />
+                    Cerrada
+                  </span>
+                )}
               </div>
               <h1 className="font-display text-2xl sm:text-3xl font-semibold leading-snug text-foreground">
                 {edicion.nombre}
@@ -118,6 +128,36 @@ export default async function EdicionDetallePage({
                   </button>
                 </form>
               )}
+              {/* Cerrar congela las escrituras (asistencias, sesiones, temas)
+                  y deja intactos lectura, reportes y constancias. Reabrir es
+                  posible, pero solo desde aquí: un becario no puede. */}
+              <form action={`/api/ediciones/${edicion.id}/cerrar`} method="POST">
+                <input
+                  type="hidden"
+                  name="accion"
+                  value={edicion.cerrada ? "reabrir" : "cerrar"}
+                />
+                <button
+                  type="submit"
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium border transition-colors min-h-[44px] ${
+                    edicion.cerrada
+                      ? "bg-muted border-border text-muted-foreground hover:text-foreground"
+                      : "bg-destructive/10 border-destructive/40 text-destructive hover:bg-destructive/20"
+                  }`}
+                >
+                  {edicion.cerrada ? (
+                    <>
+                      <Unlock size={14} strokeWidth={2} aria-hidden />
+                      Reabrir
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={14} strokeWidth={2} aria-hidden />
+                      Cerrar edición
+                    </>
+                  )}
+                </button>
+              </form>
               <Link
                 href={`/ediciones/${edicion.id}/editar`}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-muted border border-border text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
@@ -139,7 +179,7 @@ export default async function EdicionDetallePage({
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-up animate-fade-up-delay-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up animate-fade-up-delay-2">
         {stats.map(({ label, value, icon: Icon, colorClass, bgClass }) => (
           <div key={label} className="bg-card border border-border rounded-2xl p-5">
             <div className="flex items-start justify-between mb-3">

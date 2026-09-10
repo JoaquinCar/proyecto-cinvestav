@@ -52,6 +52,20 @@ vi.mock("@/server/queries/ediciones", () => ({
   existeEdicion: vi.fn(),
 }));
 
+// Guarda de edición cerrada: aquí la edición siempre está abierta. El congelado
+// tiene sus propias pruebas en tests/unit/queries/edicion-cerrada.test.ts.
+vi.mock("@/server/queries/edicion-cerrada", () => ({
+  assertEdicionAbierta: vi.fn(),
+  assertEdicionDeSesionAbierta: vi.fn(),
+  assertEdicionDeClaseAbierta: vi.fn(),
+  EdicionCerradaError: class EdicionCerradaError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "EdicionCerradaError";
+    }
+  },
+}));
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const sessionAdmin = {
