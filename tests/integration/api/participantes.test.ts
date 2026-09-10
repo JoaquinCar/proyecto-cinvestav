@@ -23,11 +23,18 @@ vi.mock("@/lib/prisma", () => ({
       findMany:   vi.fn(),
       findUnique: vi.fn(),
       create:     vi.fn(),
+      update:     vi.fn(),
+      delete:     vi.fn(),
     },
     inscripcion: {
       findUnique: vi.fn(),
       create:     vi.fn(),
       delete:     vi.fn(),
+      count:      vi.fn(),
+    },
+    asistencia: {
+      count:      vi.fn(),
+      deleteMany: vi.fn(),
     },
     edicion: {
       findUnique: vi.fn(),
@@ -35,6 +42,7 @@ vi.mock("@/lib/prisma", () => ({
     user: {
       findUnique: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -446,7 +454,7 @@ describe("DELETE /api/inscripciones/[id]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("responde 204 cuando ADMIN elimina inscripción existente", async () => {
+  it("responde 204 cuando ADMIN elimina inscripción sin asistencias", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce({
       user: { id: "u1", role: "ADMIN", email: "a@cinvestav.mx", name: null, image: null },
@@ -455,8 +463,10 @@ describe("DELETE /api/inscripciones/[id]", () => {
 
     const { prisma } = await import("@/lib/prisma");
     vi.mocked(prisma.inscripcion.findUnique).mockResolvedValueOnce({
-      id: "i1",
+      id: "i1", constanciaGenerada: false,
     } as never);
+    // Sin asistencias registradas: no hay historial que arrastrar
+    vi.mocked(prisma.asistencia.count).mockResolvedValue(0 as never);
     vi.mocked(prisma.inscripcion.delete).mockResolvedValueOnce({
       id: "i1",
     } as never);
@@ -465,5 +475,295 @@ describe("DELETE /api/inscripciones/[id]", () => {
     const req = makeRequest("DELETE", "/api/inscripciones/i1");
     const res = await DELETE(req as never, { params: Promise.resolve({ id: "i1" }) });
     expect(res.status).toBe(204);
+  });
+
+  // ── Regresión: desinscribir con asistencias NO debe dar 500 ────────────────
+  // El schema de Prisma no declara onDelete: Cascade en Asistencia → Inscripcion,
+  // así que el borrado directo lo rechaza la llave foránea. La API tiene que
+  // explicarlo, no reventar.
+
+  it("responde 409 (no 500) cuando la inscripción tiene asistencias", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce({
+      user: { id: "u1", role: "ADMIN", email: "a@cinvestav.mx", name: null, image: null },
+      expires: "",
+    } as never);
+
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.inscripcion.findUnique).mockResolvedValueOnce({
+      id: "i1", constanciaGenerada: false,
+    } as never);
+    // 7 registros de asistencia, 5 de ellos con presente = true
+    vi.mocked(prisma.asistencia.count)
+      .mockResolvedValueOnce(7 as never)
+      .mockResolvedValueOnce(5 as never);
+
+    const { DELETE } = await import("@/app/api/inscripciones/[id]/route");
+    const req = makeRequest("DELETE", "/api/inscripciones/i1");
+    const res = await DELETE(req as never, { params: Promise.resolve({ id: "i1" }) });
+
+    expect(res.status).toBe(409);
+    expect(prisma.inscripcion.delete).not.toHaveBeenCalled();
+
+    const json = await res.json();
+    expect(json.error).toMatch(/7/);
+    expect(json.error).toMatch(/5/);
+    expect(json.conteos).toEqual({ asistencias: 7, presentes: 5 });
+  });
+
+  it("responde 409 si ya hay constancia generada, incluso con ?forzar=true", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce({
+      user: { id: "u1", role: "ADMIN", email: "a@cinvestav.mx", name: null, image: null },
+      expires: "",
+    } as never);
+
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.inscripcion.findUnique).mockResolvedValueOnce({
+      id: "i1", constanciaGenerada: true,
+    } as never);
+    vi.mocked(prisma.asistencia.count).mockResolvedValue(3 as never);
+
+    const { DELETE } = await import("@/app/api/inscripciones/[id]/route");
+    const req = makeRequest("DELETE", "/api/inscripciones/i1?forzar=true");
+    const res = await DELETE(req as never, { params: Promise.resolve({ id: "i1" }) });
+
+    expect(res.status).toBe(409);
+    expect(prisma.inscripcion.delete).not.toHaveBeenCalled();
+
+    const json = await res.json();
+    expect(json.error).toMatch(/constancia/i);
+  });
+
+  it("responde 204 con ?forzar=true borrando asistencias e inscripción en una transacción", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce({
+      user: { id: "u1", role: "ADMIN", email: "a@cinvestav.mx", name: null, image: null },
+      expires: "",
+    } as never);
+
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.inscripcion.findUnique).mockResolvedValueOnce({
+      id: "i1", constanciaGenerada: false,
+    } as never);
+    vi.mocked(prisma.asistencia.count).mockResolvedValue(4 as never);
+    vi.mocked(prisma.$transaction).mockResolvedValueOnce([
+      { count: 4 },
+      { id: "i1" },
+    ] as never);
+
+    const { DELETE } = await import("@/app/api/inscripciones/[id]/route");
+    const req = makeRequest("DELETE", "/api/inscripciones/i1?forzar=true");
+    const res = await DELETE(req as never, { params: Promise.resolve({ id: "i1" }) });
+
+    expect(res.status).toBe(204);
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(prisma.asistencia.deleteMany).toHaveBeenCalledWith({
+      where: { inscripcionId: "i1" },
+    });
+  });
+});
+
+// ── Helper de sesión para los bloques de editar/eliminar ──────────────────────
+
+async function mockSesion(role: "ADMIN" | "BECARIO" | "READONLY" | null) {
+  const { auth } = await import("@/lib/auth");
+  vi.mocked(auth).mockResolvedValueOnce(
+    role === null
+      ? (null as never)
+      : ({
+          user: {
+            id: "u1",
+            role,
+            email: `${role.toLowerCase()}@cinvestav.mx`,
+            name: null,
+            image: null,
+          },
+          expires: "",
+        } as never),
+  );
+}
+
+// ── PUT /api/participantes/[id] — editar (solo ADMIN) ─────────────────────────
+
+describe("PUT /api/participantes/[id] — editar participante", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("responde 401 sin sesión", async () => {
+    await mockSesion(null);
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p1", { nombre: "Ana" });
+    const res = await PUT(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(401);
+  });
+
+  it("responde 403 cuando el rol es BECARIO", async () => {
+    await mockSesion("BECARIO");
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p1", { nombre: "Ana" });
+    const res = await PUT(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(403);
+  });
+
+  it("responde 403 cuando el rol es READONLY", async () => {
+    await mockSesion("READONLY");
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p1", { nombre: "Ana" });
+    const res = await PUT(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(403);
+  });
+
+  it("responde 404 cuando el participante no existe", async () => {
+    await mockSesion("ADMIN");
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.participante.findUnique).mockResolvedValueOnce(null);
+
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p_noexiste", { nombre: "Ana" });
+    const res = await PUT(req as never, {
+      params: Promise.resolve({ id: "p_noexiste" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("responde 422 con edad fuera de rango", async () => {
+    await mockSesion("ADMIN");
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p1", { edad: 2 });
+    const res = await PUT(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(422);
+
+    const json = await res.json();
+    expect(json.detalles).toBeDefined();
+  });
+
+  it("responde 422 cuando el nombre es solo espacios en blanco", async () => {
+    await mockSesion("ADMIN");
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p1", { nombre: "   " });
+    const res = await PUT(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(422);
+  });
+
+  it("responde 422 cuando el cuerpo no trae ningún campo", async () => {
+    await mockSesion("ADMIN");
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p1", {});
+    const res = await PUT(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(422);
+  });
+
+  it("responde 200 y guarda los cambios cuando el rol es ADMIN", async () => {
+    await mockSesion("ADMIN");
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.participante.findUnique).mockResolvedValueOnce({
+      id: "p1",
+    } as never);
+    vi.mocked(prisma.participante.update).mockResolvedValueOnce({
+      id: "p1", nombre: "Ana", apellidos: "Martínez",
+      edad: 12, escuela: "Primaria Norte", grado: "6°",
+    } as never);
+
+    const { PUT } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("PUT", "/api/participantes/p1", {
+      nombre: "  Ana  ",
+      apellidos: "Martínez",
+    });
+    const res = await PUT(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(200);
+
+    const json = await res.json();
+    expect(json.participante.nombre).toBe("Ana");
+
+    // El nombre llega recortado a la base, no con los espacios del formulario
+    expect(prisma.participante.update).toHaveBeenCalledWith({
+      where: { id: "p1" },
+      data: { nombre: "Ana", apellidos: "Martínez" },
+    });
+  });
+});
+
+// ── DELETE /api/participantes/[id] — borrar (solo ADMIN) ──────────────────────
+
+describe("DELETE /api/participantes/[id] — eliminar participante", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("responde 401 sin sesión", async () => {
+    await mockSesion(null);
+    const { DELETE } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("DELETE", "/api/participantes/p1");
+    const res = await DELETE(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(401);
+  });
+
+  it("responde 403 cuando el rol es BECARIO", async () => {
+    await mockSesion("BECARIO");
+    const { DELETE } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("DELETE", "/api/participantes/p1");
+    const res = await DELETE(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(403);
+  });
+
+  it("responde 404 cuando el participante no existe", async () => {
+    await mockSesion("ADMIN");
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.participante.findUnique).mockResolvedValueOnce(null);
+
+    const { DELETE } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("DELETE", "/api/participantes/p_noexiste");
+    const res = await DELETE(req as never, {
+      params: Promise.resolve({ id: "p_noexiste" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("responde 204 cuando el participante no tiene dependencias", async () => {
+    await mockSesion("ADMIN");
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.participante.findUnique).mockResolvedValueOnce({
+      id: "p1",
+    } as never);
+    vi.mocked(prisma.inscripcion.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.asistencia.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.participante.delete).mockResolvedValueOnce({
+      id: "p1",
+    } as never);
+
+    const { DELETE } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("DELETE", "/api/participantes/p1");
+    const res = await DELETE(req as never, { params: Promise.resolve({ id: "p1" }) });
+    expect(res.status).toBe(204);
+    expect(prisma.participante.delete).toHaveBeenCalledWith({ where: { id: "p1" } });
+  });
+
+  it("responde 409 con conteos exactos cuando tiene inscripciones y asistencias", async () => {
+    await mockSesion("ADMIN");
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.participante.findUnique).mockResolvedValueOnce({
+      id: "p1",
+    } as never);
+    // inscripciones totales = 2, de ellas con constancia = 1
+    vi.mocked(prisma.inscripcion.count)
+      .mockResolvedValueOnce(2 as never)
+      .mockResolvedValueOnce(1 as never);
+    vi.mocked(prisma.asistencia.count).mockResolvedValueOnce(9 as never);
+
+    const { DELETE } = await import("@/app/api/participantes/[id]/route");
+    const req = makeRequest("DELETE", "/api/participantes/p1");
+    const res = await DELETE(req as never, { params: Promise.resolve({ id: "p1" }) });
+
+    expect(res.status).toBe(409);
+    expect(prisma.participante.delete).not.toHaveBeenCalled();
+
+    const json = await res.json();
+    // El mensaje dice exactamente qué lo impide y con qué conteos
+    expect(json.error).toMatch(/2/);
+    expect(json.error).toMatch(/9/);
+    expect(json.error).toMatch(/constancia/i);
+    expect(json.conteos).toEqual({
+      inscripciones: 2,
+      asistencias: 9,
+      constancias: 1,
+    });
   });
 });

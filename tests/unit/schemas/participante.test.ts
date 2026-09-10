@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   participanteSchema,
+  editarParticipanteSchema,
   busquedaParticipanteSchema,
   inscripcionSchema,
 } from "@/lib/schemas/participante.schema";
@@ -116,6 +117,86 @@ describe("participanteSchema", () => {
       nombre: "A".repeat(101),
     });
     expect(result.success).toBe(false);
+  });
+
+  // El orden de los checks importa: con .min(1) antes de .trim(), una cadena de
+  // solo espacios pasaba la validación y se guardaba vacía en la base.
+
+  it("rechaza nombre formado solo por espacios", () => {
+    const result = participanteSchema.safeParse({
+      ...participanteValido,
+      nombre: "   ",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.nombre).toBeDefined();
+  });
+
+  it("rechaza apellidos formados solo por espacios", () => {
+    const result = participanteSchema.safeParse({
+      ...participanteValido,
+      apellidos: "  \t ",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza escuela formada solo por espacios", () => {
+    const result = participanteSchema.safeParse({
+      ...participanteValido,
+      escuela: "    ",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza grado formado solo por espacios", () => {
+    const result = participanteSchema.safeParse({
+      ...participanteValido,
+      grado: " ",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ── editarParticipanteSchema ──────────────────────────────────────────────────
+
+describe("editarParticipanteSchema", () => {
+  it("acepta un solo campo (edición parcial)", () => {
+    const result = editarParticipanteSchema.safeParse({ nombre: "Ana" });
+    expect(result.success).toBe(true);
+  });
+
+  it("recorta los espacios del campo enviado", () => {
+    const result = editarParticipanteSchema.safeParse({ apellidos: "  Pérez  " });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.apellidos).toBe("Pérez");
+    }
+  });
+
+  it("rechaza un cuerpo sin ningún campo", () => {
+    const result = editarParticipanteSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza un campo presente pero solo con espacios", () => {
+    const result = editarParticipanteSchema.safeParse({ nombre: "   " });
+    expect(result.success).toBe(false);
+  });
+
+  it("mantiene las reglas de edad del schema base", () => {
+    expect(editarParticipanteSchema.safeParse({ edad: 4 }).success).toBe(false);
+    expect(editarParticipanteSchema.safeParse({ edad: 19 }).success).toBe(false);
+    expect(editarParticipanteSchema.safeParse({ edad: 11 }).success).toBe(true);
+  });
+
+  it("ignora campos desconocidos en lugar de guardarlos", () => {
+    const result = editarParticipanteSchema.safeParse({
+      nombre: "Ana",
+      role:   "ADMIN",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect("role" in result.data).toBe(false);
+    }
   });
 });
 
