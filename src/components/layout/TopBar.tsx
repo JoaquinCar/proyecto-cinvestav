@@ -11,6 +11,7 @@ const routeLabels: Record<string, string> = {
   "/clases":        "Clases",
   "/asistencia":    "Control de Asistencia",
   "/estadisticas":  "Estadísticas Históricas",
+  "/importar":      "Importar desde Excel",
 };
 
 export default function TopBar() {

@@ -1,16 +1,21 @@
+import { auth } from "@/lib/auth";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import { MobileBottomNav } from "@/components/layout/MobileNavItemClient";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // El rol decide qué entradas de navegación se ven (la importación es de ADMIN).
+  const session = await auth();
+  const esAdmin = session?.user.role === "ADMIN";
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Desktop sidebar — hidden on mobile */}
-      <Sidebar />
+      <Sidebar esAdmin={esAdmin} />
 
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
