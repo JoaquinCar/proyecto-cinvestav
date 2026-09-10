@@ -26,7 +26,7 @@ vi.mock("@/server/queries/clases", () => ({
 vi.mock("@/server/queries/imagenes-clase", () => ({
   listarImagenesDeClaseConUrl: vi.fn(),
   crearImagenClase: vi.fn(),
-  firmarImagenes: vi.fn(),
+  resolverImagenParaVista: vi.fn(),
   obtenerImagenClase: vi.fn(),
   eliminarImagenClase: vi.fn(),
   ImagenNoAlmacenableError: class ImagenNoAlmacenableError extends Error {
@@ -74,11 +74,13 @@ const imagenMock = {
   createdAt: new Date("2026-01-02T00:00:00.000Z"),
 };
 
-/** La misma imagen ya resuelta para el navegador, con URL firmada. */
-const imagenFirmada = {
+/** La misma imagen ya resuelta para el navegador: apunta al proxy autenticado. */
+const RUTA_ARCHIVO = "/api/clases/clase-1/imagenes/imagen-1/archivo";
+
+const imagenParaVista = {
   id: "imagen-1",
   claseId: "clase-1",
-  url: "https://ejemplo.supabase.co/storage/v1/object/sign/clases/1.webp?token=abc",
+  url: RUTA_ARCHIVO,
   titulo: null,
   mimeType: "image/webp",
   tamano: 12345,
@@ -142,7 +144,7 @@ describe("GET /api/clases/[id]/imagenes", () => {
       "@/server/queries/imagenes-clase"
     );
     vi.mocked(listarImagenesDeClaseConUrl).mockResolvedValueOnce([
-      imagenFirmada,
+      imagenParaVista,
     ] as never);
 
     const { GET } = await import("@/app/api/clases/[id]/imagenes/route");
@@ -152,13 +154,13 @@ describe("GET /api/clases/[id]/imagenes", () => {
     const body = await res.json();
     expect(body).toHaveLength(1);
     expect(body[0].id).toBe("imagen-1");
-    // Sale la URL firmada; ni la ruta interna ni la referencia supabase://.
-    expect(body[0].url).toContain("/object/sign/");
+    // Sale la ruta del proxy; ni el storagePath ni la referencia supabase://.
+    expect(body[0].url).toBe(RUTA_ARCHIVO);
     expect(JSON.stringify(body)).not.toContain("supabase://");
     expect(body[0]).not.toHaveProperty("storagePath");
   });
 
-  it("responde 200 aunque alguna imagen no se haya podido firmar", async () => {
+  it("responde 200 aunque alguna imagen no se pueda resolver", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
 
@@ -169,7 +171,7 @@ describe("GET /api/clases/[id]/imagenes", () => {
       "@/server/queries/imagenes-clase"
     );
     vi.mocked(listarImagenesDeClaseConUrl).mockResolvedValueOnce([
-      { ...imagenFirmada, url: null },
+      { ...imagenParaVista, url: null },
     ] as never);
 
     const { GET } = await import("@/app/api/clases/[id]/imagenes/route");
@@ -267,11 +269,11 @@ describe("POST /api/clases/[id]/imagenes", () => {
     const { obtenerClasePorId } = await import("@/server/queries/clases");
     vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock as never);
 
-    const { crearImagenClase, firmarImagenes } = await import(
+    const { crearImagenClase, resolverImagenParaVista } = await import(
       "@/server/queries/imagenes-clase"
     );
     vi.mocked(crearImagenClase).mockResolvedValueOnce(imagenMock as never);
-    vi.mocked(firmarImagenes).mockResolvedValueOnce([imagenFirmada] as never);
+    vi.mocked(resolverImagenParaVista).mockReturnValueOnce(imagenParaVista as never);
 
     const { POST } = await import("@/app/api/clases/[id]/imagenes/route");
     const res = await POST(
@@ -288,26 +290,27 @@ describe("POST /api/clases/[id]/imagenes", () => {
       expect.objectContaining({ mimeType: "image/png" }),
     );
 
-    // La respuesta lleva la URL firmada, nunca la referencia interna.
+    // La respuesta lleva la ruta del proxy, nunca la referencia interna.
     const body = await res.json();
-    expect(body.url).toContain("/object/sign/");
+    expect(body.url).toBe(RUTA_ARCHIVO);
     expect(body).not.toHaveProperty("storagePath");
   });
 
-  it("responde 201 con url null si el firmado falla tras subir", async () => {
+  it("responde 201 con url null si la fila no se puede resolver tras subir", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
 
     const { obtenerClasePorId } = await import("@/server/queries/clases");
     vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock as never);
 
-    const { crearImagenClase, firmarImagenes } = await import(
+    const { crearImagenClase, resolverImagenParaVista } = await import(
       "@/server/queries/imagenes-clase"
     );
     vi.mocked(crearImagenClase).mockResolvedValueOnce(imagenMock as never);
-    vi.mocked(firmarImagenes).mockResolvedValueOnce([
-      { ...imagenFirmada, url: null },
-    ] as never);
+    vi.mocked(resolverImagenParaVista).mockReturnValueOnce({
+      ...imagenParaVista,
+      url: null,
+    } as never);
 
     const { POST } = await import("@/app/api/clases/[id]/imagenes/route");
     const res = await POST(
@@ -318,7 +321,7 @@ describe("POST /api/clases/[id]/imagenes", () => {
       contextClase,
     );
 
-    // La imagen ya está guardada: no se pierde el trabajo por no poder firmar.
+    // La imagen ya está guardada: no se pierde el trabajo por no poder pintarla.
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.url).toBeNull();

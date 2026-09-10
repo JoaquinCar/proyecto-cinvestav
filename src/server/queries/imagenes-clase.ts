@@ -13,28 +13,17 @@ import {
  * El bucket debe ser PRIVADO: en estas fotos aparecen menores de edad y un
  * bucket público las deja accesibles a cualquiera que tenga la URL, sin sesión.
  * La subida usa la clave service_role, que se salta las políticas RLS, y la
- * lectura se hace siempre con URLs firmadas de caducidad corta
- * (`resolverUrlImagen`), nunca con `getPublicUrl()`.
+ * lectura pasa siempre por el proxy autenticado
+ * (`GET /api/clases/[id]/imagenes/[imagenId]/archivo`), nunca por
+ * `getPublicUrl()` ni por URLs firmadas.
  */
 export const BUCKET_IMAGENES = process.env.SUPABASE_BUCKET_CLASES ?? "clases";
 
 /**
- * Caducidad de las URLs firmadas, en segundos.
- *
- * 30 minutos es un equilibrio deliberado: las miniaturas se cargan con
- * `loading="lazy"`, así que una imagen puede pedirse bastante después de que la
- * página se renderizó (el becario baja por la galería con el teléfono ya
- * bloqueado y desbloqueado varias veces). Menos tiempo produciría imágenes rotas
- * en campo; más tiempo alarga la ventana en la que una URL filtrada —una captura
- * compartida, el historial del navegador— sigue sirviendo la foto de un niño.
- */
-export const EXPIRACION_URL_FIRMADA = 60 * 30;
-
-/**
  * Prefijo que se guarda en `ImagenClase.url` cuando el archivo vive en Storage.
- * No es una URL descargable a propósito: la URL real se firma en cada render, y
- * si algún código la pintara por error el resultado es una imagen rota, nunca
- * una foto expuesta.
+ * No es una URL descargable a propósito: el archivo solo se sirve a través del
+ * proxy autenticado, y si algún código pintara esta columna por error el
+ * resultado es una imagen rota, nunca una foto expuesta.
  */
 const PREFIJO_STORAGE = "supabase://";
 
@@ -71,15 +60,49 @@ export function storageDisponible(): boolean {
   );
 }
 
+/**
+ * Ruta del proxy autenticado que sirve el archivo de una imagen.
+ *
+ * Es estable —depende solo de los ids— y por eso el navegador puede cachearla;
+ * a diferencia de una URL firmada, no lleva ningún permiso dentro: el acceso se
+ * comprueba en cada petición contra la sesión de quien la pide.
+ */
+export function rutaArchivoImagen(claseId: string, imagenId: string): string {
+  return `/api/clases/${claseId}/imagenes/${imagenId}/archivo`;
+}
+
+/**
+ * Content-Type que el proxy puede devolver sin riesgo.
+ *
+ * El `mimeType` guardado en la base se valida con Zod al subir, pero reflejarlo
+ * a ciegas convertiría cualquier fila manipulada (por ejemplo `text/html` o
+ * `image/svg+xml`) en contenido ejecutable servido desde nuestro propio origen.
+ * Solo se devuelven los tipos de imagen que el sistema acepta.
+ */
+export function tipoImagenSeguro(mimeType: string): string {
+  return mimeType in EXTENSIONES ? mimeType : "application/octet-stream";
+}
+
+/** Extensión del archivo según su tipo, para el nombre sugerido al descargar. */
+export function extensionImagen(mimeType: string): string {
+  return EXTENSIONES[mimeType] ?? "bin";
+}
+
 // ── Lectura ───────────────────────────────────────────────────────────────────
 
 export type ImagenClaseDetalle = Awaited<
   ReturnType<typeof listarImagenesDeClase>
 >[number];
 
-/** Imagen lista para pintar: `url` ya es un data URI o una URL firmada vigente. */
+/**
+ * Imagen lista para pintar: `url` ya es un data URI o la ruta del proxy.
+ *
+ * El `Omit` es deliberado: quita del tipo tanto `storagePath` como la columna
+ * `url` con la referencia interna `supabase://…`, así que filtrar cualquiera de
+ * las dos hacia el navegador no compila.
+ */
 export type ImagenClaseConUrl = Omit<ImagenClaseDetalle, "url" | "storagePath"> & {
-  /** `null` cuando el archivo está en Storage y no se pudo firmar la URL. */
+  /** `null` cuando la fila está en un estado que no se puede servir. */
   url: string | null;
 };
 
@@ -104,74 +127,45 @@ export async function listarImagenesDeClase(claseId: string) {
 /**
  * Lista las imágenes de una clase con una URL utilizable en el navegador.
  *
- * Quien llame a esta función es responsable de haber comprobado la sesión y el
- * rol: firmar una URL es dar acceso a la foto, así que nunca debe invocarse
- * desde una vista pública.
- *
- * Si el firmado falla (credenciales, red, archivo borrado del bucket) la imagen
- * viaja con `url: null` en lugar de tirar la página entera: la galería pinta un
- * hueco y el resto de la clase sigue funcionando.
+ * Ya no hace falta que quien llame tenga sesión para *construir* la URL —la del
+ * proxy no concede acceso por sí sola—, pero sí para *usarla*: el proxy vuelve a
+ * comprobar la sesión en cada petición del archivo.
  */
 export async function listarImagenesDeClaseConUrl(
   claseId: string,
 ): Promise<ImagenClaseConUrl[]> {
   const imagenes = await listarImagenesDeClase(claseId);
-  return firmarImagenes(imagenes);
+  return resolverImagenesParaVista(imagenes);
 }
 
 /**
- * Convierte filas de `ImagenClase` en imágenes pintables.
+ * Convierte una fila de `ImagenClase` en una imagen pintable.
  *
- * Las que viven en la base (respaldo data URI) se devuelven tal cual; las que
- * viven en Storage se firman en un solo viaje con `createSignedUrls`.
+ * - Si vive en Storage, apunta al proxy autenticado.
+ * - Si es el respaldo en base de datos, devuelve el data URI tal cual.
+ * - Si la fila no encaja en ninguno de los dos casos (columna `url` con la
+ *   referencia interna y sin `storagePath`, por ejemplo tras un borrado a
+ *   medias), devuelve `null` en lugar de la referencia: la galería pinta un
+ *   hueco y el resto de la clase se renderiza normal.
  */
-export async function firmarImagenes(
-  imagenes: ImagenClaseDetalle[],
-): Promise<ImagenClaseConUrl[]> {
-  const enStorage = imagenes.filter((imagen) => Boolean(imagen.storagePath));
+export function resolverImagenParaVista(
+  imagen: ImagenClaseDetalle,
+): ImagenClaseConUrl {
+  const { url, storagePath, ...resto } = imagen;
 
-  const firmadas = new Map<string, string>();
-
-  if (enStorage.length > 0 && storageDisponible()) {
-    try {
-      const admin = getSupabaseAdmin();
-      const { data, error } = await admin.storage
-        .from(BUCKET_IMAGENES)
-        .createSignedUrls(
-          enStorage.map((imagen) => imagen.storagePath as string),
-          EXPIRACION_URL_FIRMADA,
-        );
-
-      if (!error && data) {
-        for (const firma of data) {
-          if (firma.path && firma.signedUrl && !firma.error) {
-            firmadas.set(firma.path, firma.signedUrl);
-          }
-        }
-      }
-    } catch {
-      // Se ignora a propósito: abajo cada imagen sin firma sale con url null.
-    }
+  if (storagePath) {
+    return { ...resto, url: rutaArchivoImagen(imagen.claseId, imagen.id) };
   }
 
-  return imagenes.map((imagen) => {
-    const { url, storagePath, ...resto } = imagen;
-
-    if (!storagePath) {
-      // Respaldo en base de datos: la propia columna ya es un data URI.
-      return { ...resto, url };
-    }
-
-    return { ...resto, url: firmadas.get(storagePath) ?? null };
-  });
+  // Respaldo en base de datos: la propia columna ya es un data URI. Cualquier
+  // otra cosa no se pinta; nunca se deja escapar `supabase://…`.
+  return { ...resto, url: url.startsWith("data:") ? url : null };
 }
 
-/** Firma una sola imagen. Devuelve `null` si no se pudo. */
-export async function resolverUrlImagen(
-  imagen: ImagenClaseDetalle,
-): Promise<string | null> {
-  const [resuelta] = await firmarImagenes([imagen]);
-  return resuelta?.url ?? null;
+export function resolverImagenesParaVista(
+  imagenes: ImagenClaseDetalle[],
+): ImagenClaseConUrl[] {
+  return imagenes.map(resolverImagenParaVista);
 }
 
 export async function obtenerImagenClase(id: string) {
@@ -191,14 +185,41 @@ export async function obtenerImagenClase(id: string) {
   });
 }
 
+/**
+ * Descarga el binario de una imagen desde el bucket privado con `service_role`.
+ *
+ * Solo debe llamarse desde el proxy, que ya comprobó sesión, rol y que la imagen
+ * pertenece a la clase de la URL. Devuelve `null` ante cualquier fallo
+ * (credenciales ausentes, red caída, objeto borrado del bucket) para que el
+ * proxy responda un error y la galería pinte un hueco, sin tumbar nada más.
+ */
+export async function descargarImagenDeStorage(
+  storagePath: string,
+): Promise<Blob | null> {
+  if (!storageDisponible()) return null;
+
+  try {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.storage
+      .from(BUCKET_IMAGENES)
+      .download(storagePath);
+
+    if (error || !data) return null;
+    return data;
+  } catch {
+    // Se ignora a propósito: arriba se traduce a una respuesta de error.
+    return null;
+  }
+}
+
 // ── Escritura ─────────────────────────────────────────────────────────────────
 
 /**
  * Guarda una imagen de una clase.
  *
  * Si Supabase Storage está configurado sube el archivo al bucket privado y solo
- * guarda su ruta: la URL de lectura se firma en cada render. Si no lo está,
- * guarda un data URI en la base de datos siempre que la imagen no exceda
+ * guarda su ruta: el archivo se sirve después por el proxy autenticado. Si no lo
+ * está, guarda un data URI en la base de datos siempre que la imagen no exceda
  * `TAMANO_MAXIMO_DATA_URI`.
  */
 export async function crearImagenClase(
@@ -228,7 +249,7 @@ export async function crearImagenClase(
   let storagePath: string | null = null;
 
   if (storageDisponible()) {
-    const extension = EXTENSIONES[input.mimeType] ?? "bin";
+    const extension = extensionImagen(input.mimeType);
     const path = `clases/${claseId}/${Date.now()}-${orden}.${extension}`;
 
     const admin = getSupabaseAdmin();
@@ -242,8 +263,8 @@ export async function crearImagenClase(
       );
     }
 
-    // Nunca se guarda una URL pública: el bucket es privado y la URL de lectura
-    // se firma al renderizar. Esto solo deja constancia de dónde está el archivo.
+    // Nunca se guarda una URL pública ni una URL firmada: el bucket es privado y
+    // el archivo se lee por el proxy. Esto solo deja constancia de dónde está.
     url = `${PREFIJO_STORAGE}${BUCKET_IMAGENES}/${path}`;
     storagePath = path;
   } else {

@@ -31,7 +31,10 @@ import {
 
 export interface ImagenClaseVista {
   id: string;
-  /** URL firmada o data URI. `null` cuando no se pudo firmar la URL. */
+  /**
+   * Ruta del proxy autenticado o data URI. `null` cuando la fila está en un
+   * estado que no se puede servir.
+   */
   url: string | null;
   titulo: string | null;
   mimeType: string;
@@ -69,8 +72,22 @@ export function ContenidoClase({
   const [subiendo, setSubiendo] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
   const [ampliada, setAmpliada] = useState<ImagenClaseVista | null>(null);
+  // Imágenes cuya descarga por el proxy falló (sesión caída, Storage no
+  // disponible, objeto borrado del bucket). Con URLs firmadas el fallo se sabía
+  // al renderizar; ahora ocurre al pedir el archivo, así que se recoge aquí para
+  // pintar el mismo hueco en lugar del icono de imagen rota del navegador.
+  const [rotas, setRotas] = useState<ReadonlySet<string>>(() => new Set());
 
   const inputArchivo = useRef<HTMLInputElement>(null);
+
+  const marcarRota = useCallback((id: string) => {
+    setRotas((previas) => {
+      if (previas.has(id)) return previas;
+      const siguiente = new Set(previas);
+      siguiente.add(id);
+      return siguiente;
+    });
+  }, []);
 
   const tieneDescripcion = Boolean(descripcion && descripcion.trim().length > 0);
 
@@ -333,27 +350,30 @@ export function ContenidoClase({
           >
             {imagenes.map((imagen) => (
               <li key={imagen.id} className="relative group">
-                {imagen.url ? (
+                {imagen.url && !rotas.has(imagen.id) ? (
                   <button
                     type="button"
                     onClick={() => setAmpliada(imagen)}
                     className="block w-full aspect-square overflow-hidden rounded-xl border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 ring-primary"
                     aria-label={`Ampliar imagen${imagen.titulo ? `: ${imagen.titulo}` : ""}`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- son
-                        URLs firmadas de Supabase Storage o data URIs; usar
-                        next/image cachearía en /_next/image una copia sin
-                        proteger de una foto privada */}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- la
+                        imagen llega por el proxy autenticado (o es un data URI);
+                        usar next/image dejaría en /_next/image una copia
+                        accesible sin sesión de una foto privada, que es justo lo
+                        que este proxy evita */}
                     <img
                       src={imagen.url}
                       alt={imagen.titulo ?? `Imagen de ${claseNombre}`}
                       className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
                       loading="lazy"
+                      onError={() => marcarRota(imagen.id)}
                     />
                   </button>
                 ) : (
-                  // La URL no se pudo firmar: se deja un hueco con explicación en
-                  // lugar de una imagen rota, y el resto de la página sigue viva.
+                  // La imagen no se pudo resolver o el proxy no la sirvió: se
+                  // deja un hueco con explicación en lugar de una imagen rota, y
+                  // el resto de la página sigue viva.
                   <div
                     className="flex w-full aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-muted px-2 text-center"
                     role="img"
@@ -538,13 +558,20 @@ export function ContenidoClase({
             </DialogTitle>
           </DialogHeader>
 
-          {ampliada && ampliada.url && (
+          {ampliada && (!ampliada.url || rotas.has(ampliada.id)) && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No se pudo cargar esta imagen.
+            </p>
+          )}
+
+          {ampliada && ampliada.url && !rotas.has(ampliada.id) && (
             <div className="space-y-3">
               {/* eslint-disable-next-line @next/next/no-img-element -- ver arriba */}
               <img
                 src={ampliada.url}
                 alt={ampliada.titulo ?? `Imagen de ${claseNombre}`}
                 className="w-full max-h-[70vh] object-contain rounded-xl bg-muted"
+                onError={() => marcarRota(ampliada.id)}
               />
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-xs text-muted-foreground">
