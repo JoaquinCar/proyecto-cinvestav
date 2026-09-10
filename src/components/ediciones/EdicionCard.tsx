@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Calendar, Users, ChevronRight } from "lucide-react";
+import { formatearRangoFechas } from "@/lib/fechas";
 
 export interface EdicionCardData {
   id: string;
@@ -16,17 +17,6 @@ export interface EdicionCardData {
 
 interface EdicionCardProps {
   edicion: EdicionCardData;
-}
-
-function formatRange(inicio: Date | string, fin: Date | string): string {
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const locale = "es-MX";
-  const start = new Date(inicio);
-  const end = new Date(fin);
-
-  const startStr = start.toLocaleDateString(locale, { ...opts, year: undefined });
-  const endStr = end.toLocaleDateString(locale, { ...opts, year: "numeric" });
-  return `${startStr} – ${endStr}`;
 }
 
 export function EdicionCard({ edicion }: EdicionCardProps) {
@@ -88,7 +78,7 @@ export function EdicionCard({ edicion }: EdicionCardProps) {
         {/* Date range */}
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar size={13} strokeWidth={1.8} aria-hidden />
-          <span>{formatRange(edicion.fechaInicio, edicion.fechaFin)}</span>
+          <span>{formatearRangoFechas(edicion.fechaInicio, edicion.fechaFin)}</span>
         </div>
 
         {/* Inscripciones */}

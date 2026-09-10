@@ -6,16 +6,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/server/db";
 import { listarClasesConSesiones } from "@/server/queries/clases";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { formatearFecha } from "@/lib/fechas";
 
 export const metadata: Metadata = { title: "Asistencia" };
-
-function formatFecha(date: Date | string): string {
-  return new Date(date).toLocaleDateString("es-MX", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 export default async function AsistenciaHubPage() {
   const session = await auth();
@@ -104,7 +97,7 @@ export default async function AsistenciaHubPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground capitalize">
-                            {formatFecha(s.fecha)}
+                            {formatearFecha(s.fecha, "diaSemana")}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
                             {s.temas || "Sin tema registrado"}

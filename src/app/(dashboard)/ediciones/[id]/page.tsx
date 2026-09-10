@@ -18,17 +18,10 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerEdicionPorId } from "@/server/queries/ediciones";
+import { formatearFecha } from "@/lib/fechas";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: "Edicion · Pasaporte Cientifico" };
-}
-
-function formatDate(d: Date | string): string {
-  return new Date(d).toLocaleDateString("es-MX", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 export default async function EdicionDetallePage({
@@ -110,7 +103,7 @@ export default async function EdicionDetallePage({
               </h1>
               <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
                 <Calendar size={14} strokeWidth={1.8} aria-hidden />
-                <span>{formatDate(edicion.fechaInicio)} — {formatDate(edicion.fechaFin)}</span>
+                <span>{formatearFecha(edicion.fechaInicio)} — {formatearFecha(edicion.fechaFin)}</span>
               </div>
             </div>
           </div>

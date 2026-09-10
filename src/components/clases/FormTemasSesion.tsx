@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 const LARGO_MAXIMO_TEMAS = 500;
@@ -21,28 +22,33 @@ interface FormTemasSesionProps {
   sesionId: string;
   /** Fecha ya formateada, se muestra en el encabezado del modal. */
   fechaSesion: string;
+  /** Fecha de la sesión como "AAAA-MM-DD", para poder corregirla. */
+  fechaISO: string;
   temas: string | null;
   notas: string | null;
 }
 
 /**
- * Edita temas y notas de una sesión desde la página de la clase.
+ * Edita fecha, temas y notas de una sesión desde la página de la clase.
  * Antes esto enlazaba a `/sesiones/[id]/temas`, una ruta que nunca existió.
  */
 export function FormTemasSesion({
   sesionId,
   fechaSesion,
+  fechaISO,
   temas,
   notas,
 }: FormTemasSesionProps) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [valorFecha, setValorFecha] = useState(fechaISO);
   const [valorTemas, setValorTemas] = useState(temas ?? "");
   const [valorNotas, setValorNotas] = useState(notas ?? "");
 
   function abrir(nuevoEstado: boolean) {
     if (nuevoEstado) {
+      setValorFecha(fechaISO);
       setValorTemas(temas ?? "");
       setValorNotas(notas ?? "");
     }
@@ -56,6 +62,9 @@ export function FormTemasSesion({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // La fecha solo viaja si cambió: el servidor valida que siga dentro
+          // del rango de la edición.
+          ...(valorFecha && valorFecha !== fechaISO && { fecha: valorFecha }),
           temas: valorTemas.trim() || null,
           notas: valorNotas.trim() || null,
         }),
@@ -63,15 +72,15 @@ export function FormTemasSesion({
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error ?? "Error al guardar los temas");
+        throw new Error(json?.error ?? "Error al guardar la sesión");
       }
 
-      toast.success("Temas actualizados");
+      toast.success("Sesión actualizada");
       setAbierto(false);
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Error al guardar los temas",
+        error instanceof Error ? error.message : "Error al guardar la sesión",
       );
     } finally {
       setGuardando(false);
@@ -85,10 +94,10 @@ export function FormTemasSesion({
           <button
             type="button"
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground"
-            aria-label={`Actualizar temas de la sesión del ${fechaSesion}`}
+            aria-label={`Editar la sesión del ${fechaSesion}`}
           >
             <Pencil size={11} strokeWidth={2} aria-hidden />
-            Temas
+            Editar
           </button>
         }
       />
@@ -106,7 +115,7 @@ export function FormTemasSesion({
             </div>
             <div>
               <DialogTitle className="font-display text-lg font-semibold text-foreground">
-                Temas de la sesión
+                Editar sesión
               </DialogTitle>
               <p className="text-xs mt-0.5 text-muted-foreground">{fechaSesion}</p>
             </div>
@@ -115,6 +124,23 @@ export function FormTemasSesion({
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="sesion-fecha-editar" className="text-sm font-medium text-foreground">
+              Fecha de la sesión
+            </Label>
+            <Input
+              id="sesion-fecha-editar"
+              type="date"
+              value={valorFecha}
+              onChange={(e) => setValorFecha(e.target.value)}
+              className="h-11 transition-colors bg-surface-alt border-border focus:border-primary focus:ring-primary"
+              aria-describedby="sesion-fecha-editar-hint"
+            />
+            <p id="sesion-fecha-editar-hint" className="text-xs text-muted-foreground">
+              Corrige aquí un dedazo en la fecha; debe caer dentro de la edición.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="sesion-temas-editar" className="text-sm font-medium text-foreground">
               Temas tratados

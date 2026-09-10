@@ -9,6 +9,7 @@ import { ArrowLeft, Pencil, Calendar, Hash, Award } from "lucide-react";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { aISOFecha } from "@/lib/fechas";
 
 const formSchema = z
   .object({
@@ -29,10 +30,6 @@ const formSchema = z
   });
 
 type FormData = z.infer<typeof formSchema>;
-
-function toDateInput(date: string | Date): string {
-  return new Date(date).toISOString().slice(0, 10);
-}
 
 interface Props {
   edicion: {
@@ -55,8 +52,8 @@ export function EditarEdicionForm({ edicion }: Props) {
     defaultValues: {
       anio: edicion.anio,
       nombre: edicion.nombre,
-      fechaInicio: toDateInput(edicion.fechaInicio),
-      fechaFin: toDateInput(edicion.fechaFin),
+      fechaInicio: aISOFecha(edicion.fechaInicio),
+      fechaFin: aISOFecha(edicion.fechaFin),
       minAsistencias: edicion.minAsistencias,
     },
   });

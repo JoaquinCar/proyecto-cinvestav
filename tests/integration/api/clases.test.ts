@@ -32,6 +32,8 @@ vi.mock("@/server/queries/clases", () => ({
   obtenerSesionPorId:    vi.fn(),
   crearSesion:           vi.fn(),
   actualizarSesion:      vi.fn(),
+  obtenerRangoEdicionDeClase:  vi.fn(),
+  obtenerRangoEdicionDeSesion: vi.fn(),
   eliminarSesion:        vi.fn(),
   ClaseConAsistenciasError: class ClaseConAsistenciasError extends Error {
     constructor(message: string) {
@@ -99,6 +101,14 @@ const sesionMock = {
   registradaPorId: "user-1",
   createdAt:       new Date("2025-03-10T00:00:00.000Z"),
   _count:          { asistencias: 15 },
+};
+
+const rangoEdicionMock = {
+  edicionId:   "edicion-1",
+  nombre:      "Pasaporte Científico 2025",
+  anio:        2025,
+  fechaInicio: new Date("2025-02-01T00:00:00.000Z"),
+  fechaFin:    new Date("2025-06-30T00:00:00.000Z"),
 };
 
 function makeRequest(
@@ -597,8 +607,11 @@ describe("POST /api/sesiones", () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
 
-    const { obtenerClasePorId, crearSesion } = await import("@/server/queries/clases");
+    const { obtenerClasePorId, crearSesion, obtenerRangoEdicionDeClase } = await import(
+      "@/server/queries/clases"
+    );
     vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock);
+    vi.mocked(obtenerRangoEdicionDeClase).mockResolvedValueOnce(rangoEdicionMock);
     vi.mocked(crearSesion).mockResolvedValueOnce(sesionMock);
 
     const { POST } = await import("@/app/api/sesiones/route");
@@ -612,6 +625,55 @@ describe("POST /api/sesiones", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.temas).toBe("Sistema solar");
+  });
+
+  it("acepta el formato AAAA-MM-DD del formulario y guarda el día correcto", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId, crearSesion, obtenerRangoEdicionDeClase } = await import(
+      "@/server/queries/clases"
+    );
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock);
+    vi.mocked(obtenerRangoEdicionDeClase).mockResolvedValueOnce(rangoEdicionMock);
+    vi.mocked(crearSesion).mockResolvedValueOnce(sesionMock);
+
+    const { POST } = await import("@/app/api/sesiones/route");
+    const req = makeRequest("POST", "/api/sesiones", {
+      claseId: "clxyz1234567890abcdef0001",
+      fecha: "2025-03-08",
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(201);
+    expect(vi.mocked(crearSesion).mock.calls[0][0].fecha.toISOString()).toBe(
+      "2025-03-08T00:00:00.000Z",
+    );
+  });
+
+  it("retorna 422 cuando la fecha cae fuera del rango de la edición", async () => {
+    const { auth } = await import("@/lib/auth");
+    const { obtenerClasePorId, crearSesion, obtenerRangoEdicionDeClase } = await import(
+      "@/server/queries/clases"
+    );
+    const { POST } = await import("@/app/api/sesiones/route");
+
+    for (const fecha of ["1999-03-08", "2200-03-08"]) {
+      vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+      vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock);
+      vi.mocked(obtenerRangoEdicionDeClase).mockResolvedValueOnce(rangoEdicionMock);
+
+      const req = makeRequest("POST", "/api/sesiones", {
+        claseId: "clxyz1234567890abcdef0001",
+        fecha,
+      });
+      const res = await POST(req);
+
+      expect(res.status).toBe(422);
+      const body = await res.json();
+      expect(body.error).toMatch(/edición/i);
+      expect(crearSesion).not.toHaveBeenCalled();
+    }
   });
 });
 
@@ -694,6 +756,48 @@ describe("PUT /api/sesiones/[id]", () => {
     const res = await PUT(req, { params: Promise.resolve({ id: "sesion-1" }) });
 
     expect(res.status).toBe(422);
+  });
+
+  it("permite corregir la fecha de la sesión", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerSesionPorId, actualizarSesion, obtenerRangoEdicionDeSesion } =
+      await import("@/server/queries/clases");
+    vi.mocked(obtenerSesionPorId).mockResolvedValueOnce(sesionMock);
+    vi.mocked(obtenerRangoEdicionDeSesion).mockResolvedValueOnce(rangoEdicionMock);
+    vi.mocked(actualizarSesion).mockResolvedValueOnce({
+      ...sesionMock,
+      fecha: new Date("2025-03-08T00:00:00.000Z"),
+    });
+
+    const { PUT } = await import("@/app/api/sesiones/[id]/route");
+    const req = makeRequest("PUT", "/api/sesiones/sesion-1", { fecha: "2025-03-08" });
+    const res = await PUT(req, { params: Promise.resolve({ id: "sesion-1" }) });
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(actualizarSesion).mock.calls[0][1].fecha?.toISOString()).toBe(
+      "2025-03-08T00:00:00.000Z",
+    );
+  });
+
+  it("retorna 422 al corregir con una fecha fuera del rango de la edición", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerSesionPorId, actualizarSesion, obtenerRangoEdicionDeSesion } =
+      await import("@/server/queries/clases");
+    vi.mocked(obtenerSesionPorId).mockResolvedValueOnce(sesionMock);
+    vi.mocked(obtenerRangoEdicionDeSesion).mockResolvedValueOnce(rangoEdicionMock);
+
+    const { PUT } = await import("@/app/api/sesiones/[id]/route");
+    const req = makeRequest("PUT", "/api/sesiones/sesion-1", { fecha: "1999-03-08" });
+    const res = await PUT(req, { params: Promise.resolve({ id: "sesion-1" }) });
+
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error).toMatch(/edición/i);
+    expect(actualizarSesion).not.toHaveBeenCalled();
   });
 });
 

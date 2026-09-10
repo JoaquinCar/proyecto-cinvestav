@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { FormSesion } from "@/components/clases/FormSesion";
 import { FormTemasSesion } from "@/components/clases/FormTemasSesion";
 import { ContenidoClase } from "@/components/clases/ContenidoClase";
+import { formatearFecha, aISOFecha } from "@/lib/fechas";
 
 // Ya no hay `export const dynamic = "force-dynamic"`. Existía porque las
 // imágenes viajaban con URLs firmadas de caducidad corta y un HTML cacheado
@@ -40,25 +41,6 @@ export async function generateMetadata({
   return {
     title: clase ? `${clase.nombre} · Pasaporte Científico` : "Clase · Pasaporte Científico",
   };
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatFecha(date: Date | string): string {
-  return new Date(date).toLocaleDateString("es-MX", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatFechaCorta(date: Date | string): string {
-  return new Date(date).toLocaleDateString("es-MX", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -303,8 +285,8 @@ export default async function ClaseDetallePage({
                     </span>
                     <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                       <Calendar size={14} strokeWidth={1.8} aria-hidden />
-                      <time dateTime={new Date(sesion.fecha).toISOString()}>
-                        {formatFecha(sesion.fecha)}
+                      <time dateTime={aISOFecha(sesion.fecha)}>
+                        {formatearFecha(sesion.fecha, "completa")}
                       </time>
                     </div>
                   </div>
@@ -321,7 +303,8 @@ export default async function ClaseDetallePage({
                     {isBecarioOrAdmin && (
                       <FormTemasSesion
                         sesionId={sesion.id}
-                        fechaSesion={formatFechaCorta(sesion.fecha)}
+                        fechaSesion={formatearFecha(sesion.fecha, "media")}
+                        fechaISO={aISOFecha(sesion.fecha)}
                         temas={sesion.temas}
                         notas={sesion.notas}
                       />

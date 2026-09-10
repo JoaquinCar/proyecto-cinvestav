@@ -205,7 +205,8 @@ export async function crearSesion(data: CrearSesionInput, registradaPorId?: stri
   return prisma.sesion.create({
     data: {
       claseId:         data.claseId,
-      fecha:           new Date(data.fecha),
+      // El schema ya normalizó la fecha a medianoche UTC del día de calendario.
+      fecha:           data.fecha,
       temas:           data.temas  ?? null,
       notas:           data.notas  ?? null,
       registradaPorId: registradaPorId ?? null,
@@ -213,16 +214,68 @@ export async function crearSesion(data: CrearSesionInput, registradaPorId?: stri
   });
 }
 
-// ── Actualizar temas y notas de una sesión ────────────────────────────────────
+// ── Actualizar fecha, temas y notas de una sesión ─────────────────────────────
 
 export async function actualizarSesion(id: string, data: ActualizarSesionInput) {
   return prisma.sesion.update({
     where: { id },
     data: {
+      ...(data.fecha !== undefined && { fecha: data.fecha }),
       ...(data.temas !== undefined && { temas: data.temas }),
       ...(data.notas !== undefined && { notas: data.notas }),
     },
   });
+}
+
+// ── Rango de fechas de la edición a la que pertenece una clase / sesión ───────
+
+/** Datos mínimos de la edición para validar que una sesión caiga dentro de ella. */
+export type RangoEdicion = {
+  edicionId:   string;
+  nombre:      string;
+  anio:        number;
+  fechaInicio: Date;
+  fechaFin:    Date;
+};
+
+export async function obtenerRangoEdicionDeClase(
+  claseId: string,
+): Promise<RangoEdicion | null> {
+  const clase = await prisma.clase.findUnique({
+    where:  { id: claseId },
+    select: {
+      edicion: {
+        select: { id: true, nombre: true, anio: true, fechaInicio: true, fechaFin: true },
+      },
+    },
+  });
+
+  if (!clase) return null;
+
+  const { id, ...resto } = clase.edicion;
+  return { edicionId: id, ...resto };
+}
+
+export async function obtenerRangoEdicionDeSesion(
+  sesionId: string,
+): Promise<RangoEdicion | null> {
+  const sesion = await prisma.sesion.findUnique({
+    where:  { id: sesionId },
+    select: {
+      clase: {
+        select: {
+          edicion: {
+            select: { id: true, nombre: true, anio: true, fechaInicio: true, fechaFin: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!sesion) return null;
+
+  const { id, ...resto } = sesion.clase.edicion;
+  return { edicionId: id, ...resto };
 }
 
 // ── Eliminar una sesión (solo si no tiene asistencias) ────────────────────────

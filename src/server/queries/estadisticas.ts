@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db";
+import { formatearFecha, aISOFecha } from "@/lib/fechas";
 
 // Orden lógico de los grados homologados para las gráficas.
 function ordenGrado(g: string): number {
@@ -127,7 +128,7 @@ export async function obtenerMetricasEdicion(
   const fechaMap = new Map<string, number>();
   for (const c of clases) {
     for (const s of c.sesiones) {
-      const key = new Date(s.fecha).toISOString().slice(0, 10);
+      const key = aISOFecha(s.fecha);
       fechaMap.set(key, (fechaMap.get(key) ?? 0) + s.asistencias.length);
     }
   }
@@ -135,10 +136,7 @@ export async function obtenerMetricasEdicion(
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([fecha, presentes]) => ({
       fecha,
-      etiqueta: new Date(fecha + "T00:00:00").toLocaleDateString("es-MX", {
-        day: "numeric",
-        month: "short",
-      }),
+      etiqueta: formatearFecha(fecha, "corta"),
       presentes,
     }));
 
@@ -257,10 +255,7 @@ export async function obtenerMetricasAsistencia(
   const porSesion = conResumen.map((s) => {
     const r = s.resumen!;
     return {
-      etiqueta: new Date(s.fecha).toLocaleDateString("es-MX", {
-        day: "numeric",
-        month: "short",
-      }),
+      etiqueta: formatearFecha(s.fecha, "corta"),
       tema: s.temas ?? s.clase.nombre,
       ninas: r.ninas,
       ninos: r.ninos,
@@ -281,11 +276,8 @@ export async function obtenerMetricasAsistencia(
     : 0;
 
   const tendencia = conResumen.map((s) => ({
-    fecha: new Date(s.fecha).toISOString().slice(0, 10),
-    etiqueta: new Date(s.fecha).toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "short",
-    }),
+    fecha: aISOFecha(s.fecha),
+    etiqueta: formatearFecha(s.fecha, "corta"),
     presentes: s.resumen!.total,
   }));
 
@@ -534,17 +526,15 @@ export async function obtenerAnalisisProfundo(
       ? Math.round((1 - sesionesData[sesionesData.length - 1].total / sesionesData[0].total) * 100)
       : 0;
 
-  const fmtFecha = (d: Date) =>
-    d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
   const acompanantesPorSesion: SerieDual[] = sesionesData.map((s) => ({
-    etiqueta: fmtFecha(s.fecha),
+    etiqueta: formatearFecha(s.fecha, "corta"),
     tema: s.tema,
     a: s.mamas,
     b: s.papas,
   }));
   const retencion = sesionesData.map((s) => ({
-    fecha: s.fecha.toISOString().slice(0, 10),
-    etiqueta: fmtFecha(s.fecha),
+    fecha: aISOFecha(s.fecha),
+    etiqueta: formatearFecha(s.fecha, "corta"),
     presentes: s.total,
   }));
 

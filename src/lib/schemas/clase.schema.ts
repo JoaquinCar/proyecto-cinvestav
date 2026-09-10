@@ -1,4 +1,35 @@
 import { z } from "zod";
+import { aFechaCalendario } from "@/lib/fechas";
+
+// ── Fecha de calendario ───────────────────────────────────────────────────────
+
+/**
+ * Fecha sin hora (el día en que ocurre una sesión).
+ *
+ * Acepta tanto "AAAA-MM-DD" —lo que manda un `<input type="date">`— como un ISO
+ * 8601 completo, y normaliza ambos a la medianoche UTC de ese día. Es el único
+ * punto donde una fecha de calendario se convierte a `Date`: así el día que
+ * escribió la persona es el que se guarda, sin pasar por la zona local.
+ */
+export const fechaCalendarioSchema = z
+  .string({ error: "La fecha es requerida" })
+  .trim()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}([T ].*)?$/,
+    "La fecha debe tener el formato AAAA-MM-DD",
+  )
+  .refine(
+    (valor) => {
+      try {
+        aFechaCalendario(valor);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: "Esa fecha no existe en el calendario" },
+  )
+  .transform(aFechaCalendario);
 
 // ── Schema para crear una clase ───────────────────────────────────────────────
 
@@ -54,9 +85,7 @@ export const editarClaseSchema = z.object({
 export const crearSesionSchema = z.object({
   claseId: z.string({ error: "El ID de clase es requerido" }).min(1, "ID de clase inválido"),
 
-  fecha: z
-    .string({ error: "La fecha es requerida" })
-    .datetime({ message: "La fecha debe ser una fecha ISO 8601 válida" }),
+  fecha: fechaCalendarioSchema,
 
   temas: z
     .string()
@@ -71,9 +100,12 @@ export const crearSesionSchema = z.object({
     .optional(),
 });
 
-// ── Schema para actualizar temas/notas de una sesión (BECARIO+) ───────────────
+// ── Schema para actualizar una sesión (BECARIO+) ──────────────────────────────
 
 export const actualizarSesionSchema = z.object({
+  /** Corregir la fecha: un dedazo en el año no debe quedar permanente. */
+  fecha: fechaCalendarioSchema.optional(),
+
   temas: z
     .string()
     .max(500, "Los temas no pueden exceder 500 caracteres")

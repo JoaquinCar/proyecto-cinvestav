@@ -5,17 +5,7 @@ import { ArrowLeft, Calendar, BookOpen } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerSesionConClase } from "@/server/queries/clases";
 import { ListaAsistencia } from "@/components/asistencia/ListaAsistencia";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatFechaLarga(date: Date | string): string {
-  return new Date(date).toLocaleDateString("es-MX", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
+import { formatearFecha, aISOFecha } from "@/lib/fechas";
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +39,7 @@ export default async function AsistenciaPage({
   if (!sesion) notFound();
 
   const { clase } = sesion;
-  const fechaFormateada = formatFechaLarga(sesion.fecha);
+  const fechaFormateada = formatearFecha(sesion.fecha, "completa");
 
   return (
     <div className="space-y-6 pb-20">
@@ -110,7 +100,7 @@ export default async function AsistenciaPage({
 
             <div className="flex items-center gap-1.5 text-sm mt-1 text-muted-foreground">
               <Calendar size={13} strokeWidth={1.8} aria-hidden />
-              <time dateTime={new Date(sesion.fecha).toISOString()}>
+              <time dateTime={aISOFecha(sesion.fecha)}>
                 {fechaFormateada}
               </time>
             </div>
