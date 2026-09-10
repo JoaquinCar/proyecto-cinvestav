@@ -16,5 +16,11 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api/auth|login|privacidad|_next/static|_next/image|favicon.ico).*)"],
+  // Los archivos de /public se excluyen por extensión: sin esto, el optimizador
+  // de next/image pide /cinvestav-marca.png, el middleware lo redirige a /login
+  // y la respuesta HTML llega como "not a valid image" (400). El logo del login
+  // desaparecería justo para quien todavía no tiene sesión.
+  matcher: [
+    "/((?!api/auth|login|privacidad|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|svg|webp|avif|ico|woff2?)$).*)",
+  ],
 };

@@ -57,16 +57,16 @@
 /* ─────────── LIGHT (default) ─────────── */
 :root {
   --background:          oklch(1 0 0);
-  --foreground:          oklch(0.20 0.02 260);
+  --foreground:          oklch(0.20 0.015 184);
 
   --card:                oklch(0.985 0 0);
-  --card-foreground:     oklch(0.20 0.02 260);
+  --card-foreground:     oklch(0.20 0.015 184);
   --popover:             oklch(1 0 0);
-  --popover-foreground:  oklch(0.20 0.02 260);
+  --popover-foreground:  oklch(0.20 0.015 184);
   --surface-alt:         oklch(0.96 0 0);
 
-  /* Azul aprendizaje */
-  --primary:             oklch(0.55 0.22 264);
+  /* Verde-azulado institucional CINVESTAV (#449f93, oscurecido para contraste) */
+  --primary:             oklch(0.55 0.09 184);
   --primary-foreground:  oklch(1 0 0);
 
   /* Amarillo juego */
@@ -74,7 +74,7 @@
   --secondary-foreground: oklch(0.20 0.02 260);
 
   --muted:               oklch(0.96 0 0);
-  --muted-foreground:    oklch(0.50 0.02 260);
+  --muted-foreground:    oklch(0.50 0.015 184);
 
   /* Rosa diversión (acento puntual) */
   --accent:              oklch(0.68 0.21 0);
@@ -84,9 +84,9 @@
   --warning:             oklch(0.80 0.16 80);
   --destructive:         oklch(0.58 0.22 27);
 
-  --border:              oklch(0.90 0.005 260);
-  --input:               oklch(0.92 0.005 260);
-  --ring:                oklch(0.55 0.22 264);
+  --border:              oklch(0.90 0.008 184);
+  --input:               oklch(0.92 0.008 184);
+  --ring:                oklch(0.55 0.09 184);
 
   /* Serie categórica validada contra la superficie clara (#fafafa): banda de
      luminosidad, piso de croma, separación CVD y contraste ≥ 3:1. El amarillo de
@@ -101,13 +101,13 @@
   --radius: 0.625rem;
 
   --sidebar:                    oklch(0.985 0 0);
-  --sidebar-foreground:         oklch(0.20 0.02 260);
-  --sidebar-primary:            oklch(0.55 0.22 264);
+  --sidebar-foreground:         oklch(0.20 0.015 184);
+  --sidebar-primary:            oklch(0.55 0.09 184);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent:             oklch(0.95 0.01 264);
-  --sidebar-accent-foreground:  oklch(0.55 0.22 264);
-  --sidebar-border:             oklch(0.90 0.005 260);
-  --sidebar-ring:               oklch(0.55 0.22 264);
+  --sidebar-accent:             oklch(0.95 0.015 184);
+  --sidebar-accent-foreground:  oklch(0.55 0.09 184);
+  --sidebar-border:             oklch(0.90 0.008 184);
+  --sidebar-ring:               oklch(0.55 0.09 184);
 }
 
 /* ─────────── DARK ─────────── */
@@ -121,14 +121,14 @@
   --popover-foreground:  oklch(0.97 0 0);
   --surface-alt:         oklch(0.25 0 0);
 
-  --primary:             oklch(0.62 0.20 264);
-  --primary-foreground:  oklch(1 0 0);
+  --primary:             oklch(0.72 0.09 184);
+  --primary-foreground:  oklch(0.16 0 0);
 
   --secondary:           oklch(0.82 0.16 82);
   --secondary-foreground: oklch(0.18 0.02 260);
 
   --muted:               oklch(0.25 0 0);
-  --muted-foreground:    oklch(0.70 0.01 260);
+  --muted-foreground:    oklch(0.70 0.012 184);
 
   --accent:              oklch(0.72 0.20 2);
   --accent-foreground:   oklch(0.16 0 0);
@@ -137,9 +137,9 @@
   --warning:             oklch(0.82 0.16 82);
   --destructive:         oklch(0.65 0.20 27);
 
-  --border:              oklch(0.30 0.005 260);
-  --input:              oklch(0.30 0.005 260);
-  --ring:                oklch(0.62 0.20 264);
+  --border:              oklch(0.30 0.008 184);
+  --input:              oklch(0.30 0.008 184);
+  --ring:                oklch(0.72 0.09 184);
 
   /* Misma validación contra la superficie oscura (#171717): la banda en modo
      oscuro es más estrecha (L 0.48–0.67), así que los cinco pasos bajan. */
@@ -151,12 +151,12 @@
 
   --sidebar:                    oklch(0.20 0 0);
   --sidebar-foreground:         oklch(0.97 0 0);
-  --sidebar-primary:            oklch(0.62 0.20 264);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent:             oklch(0.27 0.02 264);
-  --sidebar-accent-foreground:  oklch(0.85 0.08 264);
-  --sidebar-border:             oklch(0.30 0.005 260);
-  --sidebar-ring:               oklch(0.62 0.20 264);
+  --sidebar-primary:            oklch(0.72 0.09 184);
+  --sidebar-primary-foreground: oklch(0.16 0 0);
+  --sidebar-accent:             oklch(0.27 0.02 184);
+  --sidebar-accent-foreground:  oklch(0.85 0.06 184);
+  --sidebar-border:             oklch(0.30 0.008 184);
+  --sidebar-ring:               oklch(0.72 0.09 184);
 }
 
 /* ─── Base ─── */
