@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
   Loader2,
+  ImageOff,
 } from "lucide-react";
 import {
   Dialog,
@@ -30,7 +31,8 @@ import {
 
 export interface ImagenClaseVista {
   id: string;
-  url: string;
+  /** URL firmada o data URI. `null` cuando no se pudo firmar la URL. */
+  url: string | null;
   titulo: string | null;
   mimeType: string;
   tamano: number;
@@ -331,22 +333,38 @@ export function ContenidoClase({
           >
             {imagenes.map((imagen) => (
               <li key={imagen.id} className="relative group">
-                <button
-                  type="button"
-                  onClick={() => setAmpliada(imagen)}
-                  className="block w-full aspect-square overflow-hidden rounded-xl border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 ring-primary"
-                  aria-label={`Ampliar imagen${imagen.titulo ? `: ${imagen.titulo}` : ""}`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- las
-                      imágenes son URLs de Supabase Storage o data URIs, no rutas
-                      locales optimizables por next/image */}
-                  <img
-                    src={imagen.url}
-                    alt={imagen.titulo ?? `Imagen de ${claseNombre}`}
-                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
-                    loading="lazy"
-                  />
-                </button>
+                {imagen.url ? (
+                  <button
+                    type="button"
+                    onClick={() => setAmpliada(imagen)}
+                    className="block w-full aspect-square overflow-hidden rounded-xl border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 ring-primary"
+                    aria-label={`Ampliar imagen${imagen.titulo ? `: ${imagen.titulo}` : ""}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- son
+                        URLs firmadas de Supabase Storage o data URIs; usar
+                        next/image cachearía en /_next/image una copia sin
+                        proteger de una foto privada */}
+                    <img
+                      src={imagen.url}
+                      alt={imagen.titulo ?? `Imagen de ${claseNombre}`}
+                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                      loading="lazy"
+                    />
+                  </button>
+                ) : (
+                  // La URL no se pudo firmar: se deja un hueco con explicación en
+                  // lugar de una imagen rota, y el resto de la página sigue viva.
+                  <div
+                    className="flex w-full aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-muted px-2 text-center"
+                    role="img"
+                    aria-label="No se pudo cargar la imagen"
+                  >
+                    <ImageOff size={18} strokeWidth={1.8} className="text-muted-foreground" aria-hidden />
+                    <span className="text-[0.7rem] leading-tight text-muted-foreground">
+                      No se pudo cargar
+                    </span>
+                  </div>
+                )}
 
                 {puedeEditarImagenes && (
                   <button
@@ -520,7 +538,7 @@ export function ContenidoClase({
             </DialogTitle>
           </DialogHeader>
 
-          {ampliada && (
+          {ampliada && ampliada.url && (
             <div className="space-y-3">
               {/* eslint-disable-next-line @next/next/no-img-element -- ver arriba */}
               <img

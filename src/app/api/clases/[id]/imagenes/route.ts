@@ -3,12 +3,16 @@ import { auth } from "@/lib/auth";
 import { subirImagenClaseSchema } from "@/lib/schemas/clase.schema";
 import { obtenerClasePorId } from "@/server/queries/clases";
 import {
-  listarImagenesDeClase,
+  listarImagenesDeClaseConUrl,
   crearImagenClase,
+  firmarImagenes,
   ImagenNoAlmacenableError,
 } from "@/server/queries/imagenes-clase";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+// Las URLs firmadas caducan, así que nada de esta respuesta puede cachearse.
+export const dynamic = "force-dynamic";
 
 // ── GET /api/clases/[id]/imagenes — listar imágenes de la clase ───────────────
 
@@ -26,7 +30,9 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
     }
 
-    const imagenes = await listarImagenesDeClase(id);
+    // Solo llega aquí quien tiene sesión válida: firmar una URL es dar acceso
+    // a la foto, y en estas fotos aparecen menores.
+    const imagenes = await listarImagenesDeClaseConUrl(id);
     return NextResponse.json(imagenes);
   } catch {
     return NextResponse.json(
@@ -66,7 +72,11 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const imagen = await crearImagenClase(id, parsed.data);
-    return NextResponse.json(imagen, { status: 201 });
+
+    // Se responde con la URL ya firmada, nunca con la referencia interna
+    // `supabase://…` que se guarda en la base.
+    const [imagenConUrl] = await firmarImagenes([imagen]);
+    return NextResponse.json(imagenConUrl, { status: 201 });
   } catch (error) {
     if (error instanceof ImagenNoAlmacenableError) {
       return NextResponse.json({ error: error.message }, { status: 422 });
