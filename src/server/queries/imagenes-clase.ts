@@ -7,8 +7,15 @@ import {
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-/** Bucket de Supabase Storage donde viven las imágenes de las clases. */
-export const BUCKET_IMAGENES = "clases";
+/**
+ * Bucket de Supabase Storage donde viven las imágenes de las clases.
+ *
+ * El bucket debe ser PÚBLICO: la subida usa la clave service_role y se salta las
+ * políticas, pero `getPublicUrl()` solo arma la cadena y no comprueba nada, así
+ * que con un bucket privado las imágenes se guardarían bien y se verían rotas,
+ * sin error en ninguna parte.
+ */
+export const BUCKET_IMAGENES = process.env.SUPABASE_BUCKET_CLASES ?? "clases-cinvestav";
 
 /**
  * Límite del respaldo en base de datos. Sin Supabase Storage la imagen se guarda
