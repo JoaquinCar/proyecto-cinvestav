@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { editarEdicionSchema } from "@/lib/schemas/edicion.schema";
+import { editarEdicionConActualSchema } from "@/lib/schemas/edicion.schema";
 import {
   obtenerEdicionPorId,
   editarEdicion,
@@ -62,7 +62,9 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const body: unknown = await request.json();
-    const parsed = editarEdicionSchema.safeParse(body);
+    // La coherencia de fechas se valida contra lo ya guardado: enviar solo
+    // `fechaFin` no puede dejar el fin antes del inicio de la edición.
+    const parsed = editarEdicionConActualSchema(existente).safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(

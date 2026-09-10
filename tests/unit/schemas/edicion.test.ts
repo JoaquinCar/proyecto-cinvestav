@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   crearEdicionSchema,
   editarEdicionSchema,
+  editarEdicionConActualSchema,
 } from "@/lib/schemas/edicion.schema";
 
 // ── Datos de prueba base ──────────────────────────────────────────────────────
@@ -227,5 +228,92 @@ describe("editarEdicionSchema", () => {
   it("rechaza año fuera de rango en edición parcial", () => {
     const result = editarEdicionSchema.safeParse({ anio: 1999 });
     expect(result.success).toBe(false);
+  });
+});
+
+// ── Coherencia de fechas en ediciones parciales ──────────────────────────────
+// Defecto: editando SOLO fechaFin se podía dejar el fin meses antes del inicio,
+// porque el .refine() solo comparaba cuando ambas fechas venían en el payload.
+// El arreglo compara contra los valores ya guardados de la edición.
+
+describe("editarEdicionConActualSchema", () => {
+  const actual = {
+    fechaInicio: new Date("2026-01-24T12:00:00.000Z"),
+    fechaFin: new Date("2026-06-27T12:00:00.000Z"),
+  };
+
+  it("rechaza fechaFin sola anterior al inicio guardado", () => {
+    const schema = editarEdicionConActualSchema(actual);
+    const result = schema.safeParse({ fechaFin: "2025-11-01T00:00:00.000Z" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path[0])).toContain("fechaFin");
+    }
+  });
+
+  it("rechaza fechaInicio sola posterior al fin guardado", () => {
+    const schema = editarEdicionConActualSchema(actual);
+    const result = schema.safeParse({ fechaInicio: "2026-12-01T00:00:00.000Z" });
+    expect(result.success).toBe(false);
+  });
+
+  it("acepta fechaFin sola posterior al inicio guardado", () => {
+    const schema = editarEdicionConActualSchema(actual);
+    const result = schema.safeParse({ fechaFin: "2026-08-01T00:00:00.000Z" });
+    expect(result.success).toBe(true);
+  });
+
+  it("sigue validando el par cuando vienen las dos", () => {
+    const schema = editarEdicionConActualSchema(actual);
+    expect(
+      schema.safeParse({
+        fechaInicio: "2027-02-01T00:00:00.000Z",
+        fechaFin: "2027-01-01T00:00:00.000Z",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("no estorba a los cambios que no tocan fechas", () => {
+    const schema = editarEdicionConActualSchema(actual);
+    expect(schema.safeParse({ minAsistencias: 7 }).success).toBe(true);
+  });
+});
+
+// ── minAsistencias ───────────────────────────────────────────────────────────
+// Es el número que decide qué niños reciben constancia: no puede ser 0, ni
+// negativo, ni un absurdo como 500.
+
+describe("minAsistencias", () => {
+  it("rechaza 0 al crear", () => {
+    const result = crearEdicionSchema.safeParse({
+      ...edicionValida,
+      minAsistencias: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza valores absurdamente altos", () => {
+    const result = crearEdicionSchema.safeParse({
+      ...edicionValida,
+      minAsistencias: 500,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza decimales", () => {
+    const result = crearEdicionSchema.safeParse({
+      ...edicionValida,
+      minAsistencias: 3.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("acepta un valor razonable", () => {
+    const result = crearEdicionSchema.safeParse({
+      ...edicionValida,
+      minAsistencias: 6,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.minAsistencias).toBe(6);
   });
 });
