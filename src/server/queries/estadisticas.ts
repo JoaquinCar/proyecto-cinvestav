@@ -480,10 +480,30 @@ export async function obtenerAnalisisProfundo(
       label: null as string | null,
     }))
     .sort((a, b) => b.cantidad - a.cantidad);
-  // El contacto con muchos registros es un grupo (no una familia): el Grupo Zarigüeyas.
-  // Se identifica por volumen para no incrustar el teléfono real en el código (repo público).
-  if (registrosPorContacto[0] && registrosPorContacto[0].cantidad >= 5) {
-    registrosPorContacto[0].label = "Grupo Zarigüeyas";
+
+  // Un contacto puede ser una familia (2-3 hermanos) o un grupo organizado que
+  // inscribe a muchos niños de golpe: en 2026 fue el Grupo Zarigüeyas, y verlo
+  // etiquetado evita leer sus 6 registros como "una familia enorme".
+  //
+  // Antes se identificaba por volumen (el contacto más numeroso con 5 o más),
+  // para no incrustar el teléfono real en un repo público. Pero el volumen no
+  // distingue un grupo de una familia grande: en cualquier edición nueva, el
+  // contacto más numeroso quedaba bautizado "Grupo Zarigüeyas" aunque el grupo
+  // no existiera ahí. El reporte inventaba un grupo.
+  //
+  // Ahora la identidad viene del entorno (CONTACTO_GRUPO = el teléfono o correo
+  // real; CONTACTO_GRUPO_ETIQUETA = cómo llamarlo). Sin configuración, ningún
+  // contacto lleva etiqueta, que es lo correcto para una edición nueva.
+  //
+  // "Sin contacto" queda excluido a propósito: no es un contacto sino el cajón
+  // de los registros sin teléfono ni correo, y aparece en todas las ediciones.
+  // Justo ese cajón era el que se llevaba la etiqueta cuando 5 o más niños
+  // venían sin datos de contacto.
+  const contactoGrupo = (process.env.CONTACTO_GRUPO ?? "").trim();
+  if (contactoGrupo && contactoGrupo !== "Sin contacto") {
+    const etiqueta = process.env.CONTACTO_GRUPO_ETIQUETA?.trim() || "Grupo Zarigüeyas";
+    const fila = registrosPorContacto.find((c) => c.contacto === contactoGrupo);
+    if (fila) fila.label = etiqueta;
   }
   const numContactos = registrosPorContacto.length;
 
