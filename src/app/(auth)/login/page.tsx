@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import LoginForm from "./LoginForm";
 
@@ -19,26 +20,25 @@ export default async function LoginPage({
         aria-hidden
         className="pointer-events-none fixed inset-0 overflow-hidden"
       >
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-10 bg-[radial-gradient(circle,var(--color-secondary),transparent_70%)]" />
-        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full opacity-[0.08] bg-[radial-gradient(circle,var(--color-success),transparent_70%)]" />
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-10 bg-[radial-gradient(circle,var(--color-primary),transparent_70%)]" />
+        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full opacity-[0.08] bg-[radial-gradient(circle,var(--color-secondary),transparent_70%)]" />
       </div>
 
       <div className="w-full max-w-md animate-fade-up">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 bg-muted border border-border">
-            {/* Atom icon */}
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden className="text-primary">
-              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="currentColor" strokeWidth="1.5" fill="none"
-                transform="rotate(60 16 16)" />
-              <ellipse cx="16" cy="16" rx="12" ry="5" stroke="currentColor" strokeWidth="1.5" fill="none"
-                transform="rotate(120 16 16)" />
-              <circle cx="16" cy="16" r="2.5" fill="currentColor" />
-            </svg>
-          </div>
+          {/* Marca institucional. alt vacío a propósito: "CINVESTAV Unidad
+              Mérida" ya se anuncia como texto justo debajo. */}
+          <Image
+            src="/cinvestav-marca.png"
+            alt=""
+            width={307}
+            height={307}
+            priority
+            className="w-[72px] h-[72px] mx-auto mb-6"
+          />
 
-          <h1 className="font-display text-4xl font-light mb-1 text-foreground">
+          <h1 className="font-display text-3xl sm:text-4xl font-light mb-1 text-foreground">
             Pasaporte{" "}
             <em className="text-primary not-italic font-semibold">
               Científico
