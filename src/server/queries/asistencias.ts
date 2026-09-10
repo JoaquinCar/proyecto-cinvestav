@@ -90,9 +90,67 @@ export async function obtenerAsistenciasDeSesion(
   }));
 }
 
+// ── Guarda de integridad entre ediciones ─────────────────────────────────────
+// Una Asistencia liga una Inscripcion (que pertenece a una edición) con una
+// Sesion (que cuelga de una Clase, que también pertenece a una edición). Nada
+// en el esquema impide que ambas sean de ediciones distintas: si eso ocurre, el
+// registro contamina las estadísticas y las constancias de las DOS ediciones.
+// Se valida antes de escribir.
+
+export class AsistenciaFueraDeEdicionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AsistenciaFueraDeEdicionError";
+  }
+}
+
+async function validarMismaEdicion(
+  items: Array<{ inscripcionId: string; sesionId: string }>,
+): Promise<void> {
+  const inscripcionIds = [...new Set(items.map((i) => i.inscripcionId))];
+  const sesionIds      = [...new Set(items.map((i) => i.sesionId))];
+
+  const [inscripciones, sesiones] = await Promise.all([
+    prisma.inscripcion.findMany({
+      where:  { id: { in: inscripcionIds } },
+      select: { id: true, edicionId: true },
+    }),
+    prisma.sesion.findMany({
+      where:  { id: { in: sesionIds } },
+      select: { id: true, clase: { select: { edicionId: true } } },
+    }),
+  ]);
+
+  const edicionDeInscripcion = new Map(
+    inscripciones.map((i) => [i.id, i.edicionId]),
+  );
+  const edicionDeSesion = new Map(
+    sesiones.map((s) => [s.id, s.clase.edicionId]),
+  );
+
+  for (const item of items) {
+    const edicionInscripcion = edicionDeInscripcion.get(item.inscripcionId);
+    const edicionSesion      = edicionDeSesion.get(item.sesionId);
+
+    if (!edicionInscripcion || !edicionSesion) {
+      throw new AsistenciaFueraDeEdicionError(
+        "La inscripción o la sesión no existen",
+      );
+    }
+
+    if (edicionInscripcion !== edicionSesion) {
+      throw new AsistenciaFueraDeEdicionError(
+        "La inscripción no pertenece a la edición de la sesión",
+      );
+    }
+  }
+}
+
 // ── Upsert de una asistencia individual ──────────────────────────────────────
 
 export async function upsertAsistencia(data: MarcarAsistenciaInput) {
+  await validarMismaEdicion([data]);
+
   return prisma.asistencia.upsert({
     where: {
       inscripcionId_sesionId: {
@@ -116,6 +174,8 @@ export async function upsertAsistencia(data: MarcarAsistenciaInput) {
 export async function batchUpsertAsistencias(
   items: Array<{ inscripcionId: string; sesionId: string; presente: boolean }>,
 ) {
+  await validarMismaEdicion(items);
+
   return prisma.$transaction(
     items.map((item) =>
       prisma.asistencia.upsert({
