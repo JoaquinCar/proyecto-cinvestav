@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx prisma generate && npx prisma migrate deploy && next build",
+  "buildCommand": "npx prisma generate && if [ \"$VERCEL_ENV\" = production ]; then npx prisma migrate deploy; fi && next build",
   "installCommand": "npm install",
   "regions": ["iad1"],
   "headers": [
