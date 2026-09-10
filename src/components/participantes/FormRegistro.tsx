@@ -22,6 +22,10 @@ import {
   BusquedaParticipante,
   type Participante,
 } from "@/components/participantes/BusquedaParticipante";
+import {
+  crearParticipante,
+  crearInscripcion,
+} from "@/lib/api/participantes";
 
 // ── Schema de validación ──────────────────────────────────────────────────────
 
@@ -48,34 +52,6 @@ const GRADOS = [
   "5° primaria",
   "6° primaria",
 ] as const;
-
-// ── Funciones API ─────────────────────────────────────────────────────────────
-
-async function crearParticipante(data: FormValues): Promise<Participante> {
-  const res = await fetch("/api/participantes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "Error al crear participante");
-  }
-  return res.json();
-}
-
-async function crearInscripcion(participanteId: string, edicionId: string) {
-  const res = await fetch("/api/inscripciones", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ participanteId, edicionId }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? "Error al inscribir participante");
-  }
-  return res.json();
-}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -175,7 +151,6 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
             ¿El participante ya estuvo en ediciones anteriores?
           </Label>
           <BusquedaParticipante
-            edicionId={edicionId}
             onSelect={handleSelectExistente}
             placeholder="Buscar por nombre o apellidos…"
           />

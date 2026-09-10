@@ -7,6 +7,19 @@ const participantes = JSON.parse(readFileSync("scripts/data/participantes-2026.j
 const sesiones = JSON.parse(readFileSync("scripts/data/asistencia-2026.json", "utf8"));
 
 async function main() {
+  // ⚠️ ESTE SCRIPT BORRA TODA LA BASE (todas las ediciones, niños y asistencias).
+  // Fue una carga única de la edición 2026 desde el Excel del organizador.
+  // NO lo copies tal cual para cargar 2027: eliminarías 2026. Para una edición
+  // nueva, crea la Edicion desde la app y carga solo sus clases/sesiones.
+  if (process.env.CONFIRMAR_BORRADO !== "si") {
+    console.error(
+      "Abortado: este script borra TODAS las ediciones.\n" +
+        "Si de verdad quieres reiniciar la base, ejecuta:\n" +
+        "  CONFIRMAR_BORRADO=si node scripts/cargar-2026.mjs",
+    );
+    process.exit(1);
+  }
+
   console.log("── Limpiando datos previos (demo) ──");
   await prisma.asistencia.deleteMany({});
   await prisma.resumenSesion.deleteMany({});

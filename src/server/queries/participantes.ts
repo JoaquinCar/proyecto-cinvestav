@@ -12,21 +12,33 @@ export type ParticipanteHistorial = Awaited<
 >;
 
 // ── Buscar participantes (búsqueda por nombre / apellidos) ────────────────────
+// `edicionId` acota el resultado a los INSCRITOS en esa edición: es el listado
+// de "Participantes · <edición>". Sin `edicionId` la búsqueda es global (todas
+// las ediciones), que es lo que necesita el buscador de reinscripción para
+// encontrar a un niño que ya participó en años anteriores.
+// Límite: el listado de una edición no se trunca a 50 (una edición puede tener
+// más niños); la búsqueda global sí, porque alimenta un typeahead.
+
+const LIMITE_BUSQUEDA_GLOBAL = 50;
+const LIMITE_LISTADO_EDICION = 500;
 
 export async function buscarParticipantes(q?: string, edicionId?: string) {
-  const where = q?.trim()
-    ? {
-        OR: [
-          { nombre:    { contains: q.trim(), mode: "insensitive" as const } },
-          { apellidos: { contains: q.trim(), mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  const where = {
+    ...(q?.trim()
+      ? {
+          OR: [
+            { nombre:    { contains: q.trim(), mode: "insensitive" as const } },
+            { apellidos: { contains: q.trim(), mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+    ...(edicionId ? { inscripciones: { some: { edicionId } } } : {}),
+  };
 
   return prisma.participante.findMany({
     where,
     orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
-    take: 50,
+    take: edicionId ? LIMITE_LISTADO_EDICION : LIMITE_BUSQUEDA_GLOBAL,
     // select explícito: NO exponer correo/teléfono (contacto de padres) ni otros
     // campos sensibles al cliente. Solo lo que la UI de búsqueda/listado usa.
     select: {

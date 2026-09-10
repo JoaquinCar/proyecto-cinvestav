@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { batchAsistenciaBodySchema } from "@/lib/schemas/asistencia.schema";
-import { batchUpsertAsistencias } from "@/server/queries/asistencias";
+import {
+  batchUpsertAsistencias,
+  AsistenciaFueraDeEdicionError,
+} from "@/server/queries/asistencias";
 
 // ── POST /api/asistencias ─────────────────────────────────────────────────────
 // Registra o actualiza asistencias en batch para una sesión.
@@ -39,7 +42,13 @@ export async function POST(request: NextRequest) {
     const resultados = await batchUpsertAsistencias(parsed.data.items);
 
     return NextResponse.json({ updated: resultados.length }, { status: 201 });
-  } catch {
+  } catch (error) {
+    // La inscripción y la sesión son de ediciones distintas (o no existen):
+    // registrar esa asistencia mezclaría los datos de dos ediciones.
+    if (error instanceof AsistenciaFueraDeEdicionError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 },

@@ -23,7 +23,6 @@ export interface Participante {
 }
 
 interface BusquedaParticipanteProps {
-  edicionId: string;
   /** Llamado cuando el usuario selecciona un participante existente */
   onSelect: (participante: Participante) => void;
   /** Llamado cuando el texto de búsqueda cambia (para pre-llenar nombre) */
@@ -42,8 +41,11 @@ function useDebouncedValue<T>(value: T, delay = 300): T {
   return debounced;
 }
 
-async function fetchParticipantes(q: string, edicionId: string): Promise<Participante[]> {
-  const params = new URLSearchParams({ q, edicionId });
+// Búsqueda GLOBAL a propósito: aquí se busca al niño que ya participó en
+// ediciones anteriores para reinscribirlo. No se envía `edicionId` porque eso
+// acotaría el resultado a los ya inscritos en la edición en curso.
+async function fetchParticipantes(q: string): Promise<Participante[]> {
+  const params = new URLSearchParams({ q });
   const res = await fetch(`/api/participantes?${params}`);
   if (!res.ok) throw new Error("Error al buscar participantes");
   const data = await res.json();
@@ -69,7 +71,6 @@ function BadgeAnterior({ anios }: { anios: number[] }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export function BusquedaParticipante({
-  edicionId,
   onSelect,
   onQueryChange,
   placeholder = "Buscar por nombre o apellidos…",
@@ -80,8 +81,8 @@ export function BusquedaParticipante({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: resultados = [], isFetching } = useQuery({
-    queryKey: ["participantes-busqueda", debouncedQuery, edicionId],
-    queryFn: () => fetchParticipantes(debouncedQuery, edicionId),
+    queryKey: ["participantes-busqueda", debouncedQuery],
+    queryFn: () => fetchParticipantes(debouncedQuery),
     enabled: debouncedQuery.trim().length >= 2,
     staleTime: 30_000,
   });
