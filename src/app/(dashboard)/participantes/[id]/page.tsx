@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { obtenerHistorialParticipante } from "@/server/queries/participantes";
 import { EstadoBadge } from "@/components/shared/EstadoBadge";
 import { BotonConstancia } from "@/components/constancias/BotonConstancia";
+import { BotonBajaInscripcion } from "@/components/participantes/BotonBajaInscripcion";
 import {
   GraduationCap,
   School,
@@ -12,6 +13,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   Circle,
+  Pencil,
 } from "lucide-react";
 
 
@@ -50,9 +52,11 @@ type InscripcionTimeline = {
 function TimelineItem({
   inscripcion,
   isLast,
+  esAdmin,
 }: {
   inscripcion: InscripcionTimeline;
   isLast: boolean;
+  esAdmin: boolean;
 }) {
   const asistencias = inscripcion.asistencias.length;
 
@@ -127,6 +131,16 @@ function TimelineItem({
             />
           </div>
         </div>
+
+        {/* Baja de esta edición — solo ADMIN */}
+        {esAdmin && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <BotonBajaInscripcion
+              inscripcionId={inscripcion.id}
+              edicionNombre={inscripcion.edicion.nombre}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -146,6 +160,8 @@ export default async function ParticipanteHistorialPage({
   const participante = await obtenerHistorialParticipante(id);
 
   if (!participante) notFound();
+
+  const esAdmin = session.user.role === "ADMIN";
 
   // Ordenar inscripciones del más reciente al más antiguo
   const inscripcionesOrdenadas = [...participante.inscripciones].sort(
@@ -205,6 +221,17 @@ export default async function ParticipanteHistorialPage({
                 <span className="tabular">{participante.edad}</span> años
               </span>
             </div>
+
+            {/* Corregir la ficha — solo ADMIN (estos datos van en la constancia) */}
+            {esAdmin && (
+              <Link
+                href={`/participantes/${participante.id}/editar`}
+                className="inline-flex items-center gap-1.5 mt-3 px-3 rounded-xl text-sm font-medium min-h-[44px] sm:min-h-0 sm:py-1.5 transition-colors bg-muted border border-border text-foreground hover:bg-secondary/10"
+              >
+                <Pencil size={14} />
+                Editar datos
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -267,6 +294,7 @@ export default async function ParticipanteHistorialPage({
                 key={inscripcion.id}
                 inscripcion={inscripcion}
                 isLast={idx === inscripcionesOrdenadas.length - 1}
+                esAdmin={esAdmin}
               />
             ))}
           </div>
