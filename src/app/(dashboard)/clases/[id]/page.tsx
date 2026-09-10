@@ -20,10 +20,13 @@ import { FormSesion } from "@/components/clases/FormSesion";
 import { FormTemasSesion } from "@/components/clases/FormTemasSesion";
 import { ContenidoClase } from "@/components/clases/ContenidoClase";
 
-// Las imágenes de la clase se sirven con URLs firmadas de caducidad corta: si
-// esta página se cachea, el HTML guardado acabaría repartiendo URLs ya vencidas
-// y la galería se vería rota. Se renderiza en cada petición.
-export const dynamic = "force-dynamic";
+// Ya no hay `export const dynamic = "force-dynamic"`. Existía porque las
+// imágenes viajaban con URLs firmadas de caducidad corta y un HTML cacheado
+// acabaría repartiendo URLs vencidas. Ahora las URLs apuntan al proxy
+// autenticado y son estables, así que ese motivo desapareció. La página sigue
+// renderizándose en cada petición sin necesidad de forzarlo: `auth()` lee la
+// cookie de sesión, lo que ya la marca como dinámica, y de hecho tiene que
+// serlo porque redirige a /login según la sesión y muestra asistencias en vivo.
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 

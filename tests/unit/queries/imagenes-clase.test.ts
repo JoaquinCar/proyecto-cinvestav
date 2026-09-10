@@ -16,17 +16,19 @@ vi.mock("@/server/db", () => ({ prisma: prismaMock }));
 
 const uploadMock = vi.fn();
 const removeMock = vi.fn();
-const createSignedUrlsMock = vi.fn();
+const downloadMock = vi.fn();
 
-// `getPublicUrl` se deja fuera del mock a propósito: el bucket es privado y
-// cualquier uso accidental debe reventar el test, no producir una URL abierta.
+// `getPublicUrl` y `createSignedUrl(s)` se dejan fuera del mock a propósito: el
+// bucket es privado y el archivo solo se sirve por el proxy autenticado, así que
+// cualquier intento de volver a repartir URLs debe reventar el test, no producir
+// una URL que dé acceso por sí sola.
 vi.mock("@/lib/supabase", () => ({
   getSupabaseAdmin: () => ({
     storage: {
       from: () => ({
         upload: uploadMock,
         remove: removeMock,
-        createSignedUrls: createSignedUrlsMock,
+        download: downloadMock,
       }),
     },
   }),
@@ -184,7 +186,7 @@ describe("orden y borrado de imágenes", () => {
   });
 });
 
-// ── Firmado de URLs (bucket privado) ──────────────────────────────────────────
+// ── Resolución de URLs para la vista (bucket privado) ─────────────────────────
 
 const filaEnStorage = {
   id: "img-storage",
@@ -215,52 +217,41 @@ function conStorage() {
   process.env.SUPABASE_SERVICE_ROLE_KEY = "clave";
 }
 
-describe("firmarImagenes", () => {
-  it("firma las imágenes que viven en Storage", async () => {
+describe("resolverImagenesParaVista", () => {
+  it("apunta las imágenes de Storage al proxy autenticado", async () => {
     conStorage();
-    createSignedUrlsMock.mockResolvedValueOnce({
-      data: [
-        {
-          error: null,
-          path: "clases/clase-1/1.webp",
-          signedUrl: "https://ejemplo.supabase.co/object/sign/x?token=abc",
-        },
-      ],
-      error: null,
-    });
 
-    const { firmarImagenes, EXPIRACION_URL_FIRMADA } = await import(
+    const { resolverImagenesParaVista } = await import(
       "@/server/queries/imagenes-clase"
     );
-    const resultado = await firmarImagenes([filaEnStorage]);
+    const [resultado] = resolverImagenesParaVista([filaEnStorage]);
 
-    expect(resultado[0].url).toBe("https://ejemplo.supabase.co/object/sign/x?token=abc");
-    expect(createSignedUrlsMock).toHaveBeenCalledWith(
-      ["clases/clase-1/1.webp"],
-      EXPIRACION_URL_FIRMADA,
-    );
+    expect(resultado.url).toBe("/api/clases/clase-1/imagenes/img-storage/archivo");
+    // Construir la URL no toca Storage: no reparte acceso, solo apunta al proxy.
+    expect(downloadMock).not.toHaveBeenCalled();
   });
 
-  it("usa una caducidad corta (30 minutos)", async () => {
-    const { EXPIRACION_URL_FIRMADA } = await import("@/server/queries/imagenes-clase");
-    expect(EXPIRACION_URL_FIRMADA).toBe(1800);
+  it("produce una URL estable y sin permiso dentro", async () => {
+    conStorage();
+
+    const { resolverImagenesParaVista } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const primera = resolverImagenesParaVista([filaEnStorage])[0].url;
+    const segunda = resolverImagenesParaVista([filaEnStorage])[0].url;
+
+    // Estable entre renders: por eso el navegador puede cachear la imagen.
+    expect(primera).toBe(segunda);
+    expect(primera).not.toContain("token");
   });
 
   it("no expone storagePath ni la referencia interna supabase://", async () => {
     conStorage();
-    createSignedUrlsMock.mockResolvedValueOnce({
-      data: [
-        {
-          error: null,
-          path: "clases/clase-1/1.webp",
-          signedUrl: "https://ejemplo.supabase.co/object/sign/x?token=abc",
-        },
-      ],
-      error: null,
-    });
 
-    const { firmarImagenes } = await import("@/server/queries/imagenes-clase");
-    const [resultado] = await firmarImagenes([filaEnStorage]);
+    const { resolverImagenesParaVista } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const [resultado] = resolverImagenesParaVista([filaEnStorage]);
 
     expect(resultado).not.toHaveProperty("storagePath");
     expect(JSON.stringify(resultado)).not.toContain("supabase://");
@@ -269,75 +260,131 @@ describe("firmarImagenes", () => {
   it("devuelve el data URI tal cual y no toca Storage", async () => {
     conStorage();
 
-    const { firmarImagenes } = await import("@/server/queries/imagenes-clase");
-    const [resultado] = await firmarImagenes([filaDataUri]);
+    const { resolverImagenesParaVista } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const [resultado] = resolverImagenesParaVista([filaDataUri]);
 
     expect(resultado.url).toBe("data:image/png;base64,AAAA");
-    expect(createSignedUrlsMock).not.toHaveBeenCalled();
+    expect(downloadMock).not.toHaveBeenCalled();
   });
 
-  it("devuelve url null cuando el firmado falla, sin lanzar", async () => {
+  it("devuelve url null si la fila no es servible, nunca la referencia interna", async () => {
     conStorage();
-    createSignedUrlsMock.mockResolvedValueOnce({
-      data: null,
-      error: { message: "bucket no encontrado" },
-    });
 
-    const { firmarImagenes } = await import("@/server/queries/imagenes-clase");
-    const [resultado] = await firmarImagenes([filaEnStorage]);
+    // Fila inconsistente: quedó la referencia interna pero sin storagePath.
+    const rota = { ...filaEnStorage, storagePath: null };
 
-    expect(resultado.url).toBeNull();
-  });
-
-  it("devuelve url null cuando el error viene por imagen", async () => {
-    conStorage();
-    createSignedUrlsMock.mockResolvedValueOnce({
-      data: [
-        { error: "Object not found", path: "clases/clase-1/1.webp", signedUrl: null },
-      ],
-      error: null,
-    });
-
-    const { firmarImagenes } = await import("@/server/queries/imagenes-clase");
-    const [resultado] = await firmarImagenes([filaEnStorage]);
-
-    expect(resultado.url).toBeNull();
-  });
-
-  it("no rompe si el cliente de Storage lanza una excepción", async () => {
-    conStorage();
-    createSignedUrlsMock.mockRejectedValueOnce(new Error("red caída"));
-
-    const { firmarImagenes } = await import("@/server/queries/imagenes-clase");
-    const [resultado] = await firmarImagenes([filaEnStorage]);
+    const { resolverImagenesParaVista } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const [resultado] = resolverImagenesParaVista([rota]);
 
     expect(resultado.url).toBeNull();
   });
 
   it("una imagen rota no tumba a las demás", async () => {
     conStorage();
-    createSignedUrlsMock.mockResolvedValueOnce({
-      data: [{ error: "Object not found", path: "clases/clase-1/1.webp", signedUrl: null }],
-      error: null,
-    });
 
-    const { firmarImagenes } = await import("@/server/queries/imagenes-clase");
-    const resultado = await firmarImagenes([filaEnStorage, filaDataUri]);
+    const rota = { ...filaEnStorage, storagePath: null };
+
+    const { resolverImagenesParaVista } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const resultado = resolverImagenesParaVista([rota, filaDataUri]);
 
     expect(resultado).toHaveLength(2);
     expect(resultado[0].url).toBeNull();
     expect(resultado[1].url).toBe("data:image/png;base64,AAAA");
   });
 
-  it("sin credenciales de Storage no intenta firmar", async () => {
+  it("apunta al proxy aunque no haya credenciales de Storage", async () => {
+    // La URL no depende de Storage: si el archivo no se puede leer, el fallo se
+    // manifiesta al pedirlo, no al construir la página.
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const { firmarImagenes } = await import("@/server/queries/imagenes-clase");
-    const [resultado] = await firmarImagenes([filaEnStorage]);
+    const { resolverImagenesParaVista } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const [resultado] = resolverImagenesParaVista([filaEnStorage]);
 
-    expect(createSignedUrlsMock).not.toHaveBeenCalled();
-    expect(resultado.url).toBeNull();
+    expect(resultado.url).toBe("/api/clases/clase-1/imagenes/img-storage/archivo");
+  });
+});
+
+// ── Descarga desde Storage (lo que hace el proxy) ─────────────────────────────
+
+describe("descargarImagenDeStorage", () => {
+  it("descarga el objeto del bucket privado con service_role", async () => {
+    conStorage();
+    const blob = new Blob([new Uint8Array([1, 2, 3])], { type: "image/webp" });
+    downloadMock.mockResolvedValueOnce({ data: blob, error: null });
+
+    const { descargarImagenDeStorage } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const resultado = await descargarImagenDeStorage("clases/clase-1/1.webp");
+
+    expect(downloadMock).toHaveBeenCalledWith("clases/clase-1/1.webp");
+    expect(resultado?.size).toBe(3);
+  });
+
+  it("devuelve null si el objeto ya no está en el bucket", async () => {
+    conStorage();
+    downloadMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: "Object not found" },
+    });
+
+    const { descargarImagenDeStorage } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+
+    expect(await descargarImagenDeStorage("clases/clase-1/1.webp")).toBeNull();
+  });
+
+  it("devuelve null si el cliente de Storage lanza una excepción", async () => {
+    conStorage();
+    downloadMock.mockRejectedValueOnce(new Error("red caída"));
+
+    const { descargarImagenDeStorage } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+
+    expect(await descargarImagenDeStorage("clases/clase-1/1.webp")).toBeNull();
+  });
+
+  it("sin credenciales de Storage ni siquiera lo intenta", async () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    const { descargarImagenDeStorage } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+
+    expect(await descargarImagenDeStorage("clases/clase-1/1.webp")).toBeNull();
+    expect(downloadMock).not.toHaveBeenCalled();
+  });
+});
+
+// ── Content-Type devuelto por el proxy ────────────────────────────────────────
+
+describe("tipoImagenSeguro", () => {
+  it("deja pasar los tipos de imagen aceptados", async () => {
+    const { tipoImagenSeguro } = await import("@/server/queries/imagenes-clase");
+
+    for (const tipo of ["image/png", "image/jpeg", "image/webp", "image/gif"]) {
+      expect(tipoImagenSeguro(tipo)).toBe(tipo);
+    }
+  });
+
+  it("no refleja tipos ejecutables aunque estén en la base", async () => {
+    const { tipoImagenSeguro } = await import("@/server/queries/imagenes-clase");
+
+    // Servirlo como text/html o SVG desde nuestro propio origen sería XSS.
+    expect(tipoImagenSeguro("text/html")).toBe("application/octet-stream");
+    expect(tipoImagenSeguro("image/svg+xml")).toBe("application/octet-stream");
   });
 });
 
@@ -345,16 +392,6 @@ describe("listarImagenesDeClaseConUrl", () => {
   it("lee de la base y devuelve las URLs ya resueltas", async () => {
     conStorage();
     prismaMock.imagenClase.findMany.mockResolvedValueOnce([filaEnStorage, filaDataUri]);
-    createSignedUrlsMock.mockResolvedValueOnce({
-      data: [
-        {
-          error: null,
-          path: "clases/clase-1/1.webp",
-          signedUrl: "https://ejemplo.supabase.co/object/sign/x?token=abc",
-        },
-      ],
-      error: null,
-    });
 
     const { listarImagenesDeClaseConUrl } = await import(
       "@/server/queries/imagenes-clase"
@@ -362,7 +399,7 @@ describe("listarImagenesDeClaseConUrl", () => {
     const resultado = await listarImagenesDeClaseConUrl("clase-1");
 
     expect(resultado.map((i) => i.url)).toEqual([
-      "https://ejemplo.supabase.co/object/sign/x?token=abc",
+      "/api/clases/clase-1/imagenes/img-storage/archivo",
       "data:image/png;base64,AAAA",
     ]);
   });
