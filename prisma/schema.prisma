@@ -99,8 +99,28 @@ model Clase {
   descripcion  String?
   createdAt    DateTime @default(now())
 
-  edicion  Edicion  @relation(fields: [edicionId], references: [id])
+  edicion  Edicion       @relation(fields: [edicionId], references: [id])
   sesiones Sesion[]
+  imagenes ImagenClase[]
+}
+
+// Imágenes de apoyo de una clase (fotos, carteles, capturas pegadas del portapapeles).
+// `url` guarda la URL pública de Supabase Storage cuando el bucket está configurado;
+// si no lo está, guarda un data URI en base64 como respaldo (ver src/server/queries/imagenes-clase.ts).
+model ImagenClase {
+  id          String   @id @default(cuid())
+  claseId     String
+  url         String
+  storagePath String?
+  titulo      String?
+  mimeType    String
+  tamano      Int      @default(0)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  clase Clase @relation(fields: [claseId], references: [id], onDelete: Cascade)
+
+  @@index([claseId])
 }
 
 model Sesion {

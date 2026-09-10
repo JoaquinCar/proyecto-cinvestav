@@ -4,6 +4,7 @@ import {
   editarClaseSchema,
   crearSesionSchema,
   actualizarSesionSchema,
+  subirImagenClaseSchema,
 } from "@/lib/schemas/clase.schema";
 
 // ── Datos de prueba base ──────────────────────────────────────────────────────
@@ -315,5 +316,64 @@ describe("actualizarSesionSchema", () => {
     if (result.success) {
       expect(result.data.temas).toBe("Física cuántica");
     }
+  });
+});
+
+// ── subirImagenClaseSchema ────────────────────────────────────────────────────
+
+describe("subirImagenClaseSchema", () => {
+  const PNG_1X1 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+  it("acepta un PNG válido en base64", () => {
+    const result = subirImagenClaseSchema.safeParse({
+      mimeType: "image/png",
+      data: PNG_1X1,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("acepta un título opcional y lo recorta", () => {
+    const result = subirImagenClaseSchema.safeParse({
+      mimeType: "image/webp",
+      data: PNG_1X1,
+      titulo: "  Cartel de la clase  ",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.titulo).toBe("Cartel de la clase");
+    }
+  });
+
+  it("rechaza formatos que no son imagen permitida", () => {
+    const result = subirImagenClaseSchema.safeParse({
+      mimeType: "application/pdf",
+      data: PNG_1X1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza contenido que no es base64", () => {
+    const result = subirImagenClaseSchema.safeParse({
+      mimeType: "image/png",
+      data: "no-es-base64-¡óé!",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza imágenes que superan el tamaño máximo", () => {
+    const result = subirImagenClaseSchema.safeParse({
+      mimeType: "image/jpeg",
+      data: "A".repeat(5 * 1024 * 1024),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza contenido vacío", () => {
+    const result = subirImagenClaseSchema.safeParse({
+      mimeType: "image/png",
+      data: "",
+    });
+    expect(result.success).toBe(false);
   });
 });
