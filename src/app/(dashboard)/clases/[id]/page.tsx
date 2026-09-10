@@ -13,12 +13,17 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerClasePorId, listarSesionesDeClase } from "@/server/queries/clases";
-import { listarImagenesDeClase } from "@/server/queries/imagenes-clase";
+import { listarImagenesDeClaseConUrl } from "@/server/queries/imagenes-clase";
 import { obtenerEdicionPorId } from "@/server/queries/ediciones";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FormSesion } from "@/components/clases/FormSesion";
 import { FormTemasSesion } from "@/components/clases/FormTemasSesion";
 import { ContenidoClase } from "@/components/clases/ContenidoClase";
+
+// Las imágenes de la clase se sirven con URLs firmadas de caducidad corta: si
+// esta página se cachea, el HTML guardado acabaría repartiendo URLs ya vencidas
+// y la galería se vería rota. Se renderiza en cada petición.
+export const dynamic = "force-dynamic";
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -72,7 +77,7 @@ export default async function ClaseDetallePage({
   const [clase, sesiones, imagenes] = await Promise.all([
     obtenerClasePorId(id),
     listarSesionesDeClase(id),
-    listarImagenesDeClase(id),
+    listarImagenesDeClaseConUrl(id),
   ]);
 
   if (!clase) notFound();

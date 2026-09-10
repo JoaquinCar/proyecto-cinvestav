@@ -24,8 +24,9 @@ vi.mock("@/server/queries/clases", () => ({
 }));
 
 vi.mock("@/server/queries/imagenes-clase", () => ({
-  listarImagenesDeClase: vi.fn(),
+  listarImagenesDeClaseConUrl: vi.fn(),
   crearImagenClase: vi.fn(),
+  firmarImagenes: vi.fn(),
   obtenerImagenClase: vi.fn(),
   eliminarImagenClase: vi.fn(),
   ImagenNoAlmacenableError: class ImagenNoAlmacenableError extends Error {
@@ -60,11 +61,24 @@ const claseMock = {
   _count: { sesiones: 2 },
 };
 
+/** Fila tal cual vive en la base: referencia interna, sin URL descargable. */
 const imagenMock = {
   id: "imagen-1",
   claseId: "clase-1",
-  url: "https://storage.supabase.co/clases/clase-1/1.webp",
+  url: "supabase://clases/clases/clase-1/1.webp",
   storagePath: "clases/clase-1/1.webp",
+  titulo: null,
+  mimeType: "image/webp",
+  tamano: 12345,
+  orden: 0,
+  createdAt: new Date("2026-01-02T00:00:00.000Z"),
+};
+
+/** La misma imagen ya resuelta para el navegador, con URL firmada. */
+const imagenFirmada = {
+  id: "imagen-1",
+  claseId: "clase-1",
+  url: "https://ejemplo.supabase.co/storage/v1/object/sign/clases/1.webp?token=abc",
   titulo: null,
   mimeType: "image/webp",
   tamano: 12345,
@@ -124,8 +138,12 @@ describe("GET /api/clases/[id]/imagenes", () => {
     const { obtenerClasePorId } = await import("@/server/queries/clases");
     vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock as never);
 
-    const { listarImagenesDeClase } = await import("@/server/queries/imagenes-clase");
-    vi.mocked(listarImagenesDeClase).mockResolvedValueOnce([imagenMock] as never);
+    const { listarImagenesDeClaseConUrl } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    vi.mocked(listarImagenesDeClaseConUrl).mockResolvedValueOnce([
+      imagenFirmada,
+    ] as never);
 
     const { GET } = await import("@/app/api/clases/[id]/imagenes/route");
     const res = await GET(makeRequest("GET", "/api/clases/clase-1/imagenes"), contextClase);
@@ -134,6 +152,32 @@ describe("GET /api/clases/[id]/imagenes", () => {
     const body = await res.json();
     expect(body).toHaveLength(1);
     expect(body[0].id).toBe("imagen-1");
+    // Sale la URL firmada; ni la ruta interna ni la referencia supabase://.
+    expect(body[0].url).toContain("/object/sign/");
+    expect(JSON.stringify(body)).not.toContain("supabase://");
+    expect(body[0]).not.toHaveProperty("storagePath");
+  });
+
+  it("responde 200 aunque alguna imagen no se haya podido firmar", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId } = await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock as never);
+
+    const { listarImagenesDeClaseConUrl } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    vi.mocked(listarImagenesDeClaseConUrl).mockResolvedValueOnce([
+      { ...imagenFirmada, url: null },
+    ] as never);
+
+    const { GET } = await import("@/app/api/clases/[id]/imagenes/route");
+    const res = await GET(makeRequest("GET", "/api/clases/clase-1/imagenes"), contextClase);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body[0].url).toBeNull();
   });
 });
 
@@ -223,8 +267,11 @@ describe("POST /api/clases/[id]/imagenes", () => {
     const { obtenerClasePorId } = await import("@/server/queries/clases");
     vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock as never);
 
-    const { crearImagenClase } = await import("@/server/queries/imagenes-clase");
+    const { crearImagenClase, firmarImagenes } = await import(
+      "@/server/queries/imagenes-clase"
+    );
     vi.mocked(crearImagenClase).mockResolvedValueOnce(imagenMock as never);
+    vi.mocked(firmarImagenes).mockResolvedValueOnce([imagenFirmada] as never);
 
     const { POST } = await import("@/app/api/clases/[id]/imagenes/route");
     const res = await POST(
@@ -240,6 +287,41 @@ describe("POST /api/clases/[id]/imagenes", () => {
       "clase-1",
       expect.objectContaining({ mimeType: "image/png" }),
     );
+
+    // La respuesta lleva la URL firmada, nunca la referencia interna.
+    const body = await res.json();
+    expect(body.url).toContain("/object/sign/");
+    expect(body).not.toHaveProperty("storagePath");
+  });
+
+  it("responde 201 con url null si el firmado falla tras subir", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId } = await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock as never);
+
+    const { crearImagenClase, firmarImagenes } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    vi.mocked(crearImagenClase).mockResolvedValueOnce(imagenMock as never);
+    vi.mocked(firmarImagenes).mockResolvedValueOnce([
+      { ...imagenFirmada, url: null },
+    ] as never);
+
+    const { POST } = await import("@/app/api/clases/[id]/imagenes/route");
+    const res = await POST(
+      makeRequest("POST", "/api/clases/clase-1/imagenes", {
+        mimeType: "image/png",
+        data: PNG_1X1,
+      }),
+      contextClase,
+    );
+
+    // La imagen ya está guardada: no se pierde el trabajo por no poder firmar.
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.url).toBeNull();
   });
 
   it("retorna 422 cuando la imagen no se puede almacenar", async () => {

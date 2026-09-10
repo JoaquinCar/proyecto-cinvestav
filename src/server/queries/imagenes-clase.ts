@@ -10,12 +10,33 @@ import {
 /**
  * Bucket de Supabase Storage donde viven las imágenes de las clases.
  *
- * El bucket debe ser PÚBLICO: la subida usa la clave service_role y se salta las
- * políticas, pero `getPublicUrl()` solo arma la cadena y no comprueba nada, así
- * que con un bucket privado las imágenes se guardarían bien y se verían rotas,
- * sin error en ninguna parte.
+ * El bucket debe ser PRIVADO: en estas fotos aparecen menores de edad y un
+ * bucket público las deja accesibles a cualquiera que tenga la URL, sin sesión.
+ * La subida usa la clave service_role, que se salta las políticas RLS, y la
+ * lectura se hace siempre con URLs firmadas de caducidad corta
+ * (`resolverUrlImagen`), nunca con `getPublicUrl()`.
  */
-export const BUCKET_IMAGENES = process.env.SUPABASE_BUCKET_CLASES ?? "clases-cinvestav";
+export const BUCKET_IMAGENES = process.env.SUPABASE_BUCKET_CLASES ?? "clases";
+
+/**
+ * Caducidad de las URLs firmadas, en segundos.
+ *
+ * 30 minutos es un equilibrio deliberado: las miniaturas se cargan con
+ * `loading="lazy"`, así que una imagen puede pedirse bastante después de que la
+ * página se renderizó (el becario baja por la galería con el teléfono ya
+ * bloqueado y desbloqueado varias veces). Menos tiempo produciría imágenes rotas
+ * en campo; más tiempo alarga la ventana en la que una URL filtrada —una captura
+ * compartida, el historial del navegador— sigue sirviendo la foto de un niño.
+ */
+export const EXPIRACION_URL_FIRMADA = 60 * 30;
+
+/**
+ * Prefijo que se guarda en `ImagenClase.url` cuando el archivo vive en Storage.
+ * No es una URL descargable a propósito: la URL real se firma en cada render, y
+ * si algún código la pintara por error el resultado es una imagen rota, nunca
+ * una foto expuesta.
+ */
+const PREFIJO_STORAGE = "supabase://";
 
 /**
  * Límite del respaldo en base de datos. Sin Supabase Storage la imagen se guarda
@@ -56,6 +77,12 @@ export type ImagenClaseDetalle = Awaited<
   ReturnType<typeof listarImagenesDeClase>
 >[number];
 
+/** Imagen lista para pintar: `url` ya es un data URI o una URL firmada vigente. */
+export type ImagenClaseConUrl = Omit<ImagenClaseDetalle, "url" | "storagePath"> & {
+  /** `null` cuando el archivo está en Storage y no se pudo firmar la URL. */
+  url: string | null;
+};
+
 export async function listarImagenesDeClase(claseId: string) {
   return prisma.imagenClase.findMany({
     where: { claseId },
@@ -64,6 +91,7 @@ export async function listarImagenesDeClase(claseId: string) {
       id: true,
       claseId: true,
       url: true,
+      storagePath: true,
       titulo: true,
       mimeType: true,
       tamano: true,
@@ -71,6 +99,79 @@ export async function listarImagenesDeClase(claseId: string) {
       createdAt: true,
     },
   });
+}
+
+/**
+ * Lista las imágenes de una clase con una URL utilizable en el navegador.
+ *
+ * Quien llame a esta función es responsable de haber comprobado la sesión y el
+ * rol: firmar una URL es dar acceso a la foto, así que nunca debe invocarse
+ * desde una vista pública.
+ *
+ * Si el firmado falla (credenciales, red, archivo borrado del bucket) la imagen
+ * viaja con `url: null` en lugar de tirar la página entera: la galería pinta un
+ * hueco y el resto de la clase sigue funcionando.
+ */
+export async function listarImagenesDeClaseConUrl(
+  claseId: string,
+): Promise<ImagenClaseConUrl[]> {
+  const imagenes = await listarImagenesDeClase(claseId);
+  return firmarImagenes(imagenes);
+}
+
+/**
+ * Convierte filas de `ImagenClase` en imágenes pintables.
+ *
+ * Las que viven en la base (respaldo data URI) se devuelven tal cual; las que
+ * viven en Storage se firman en un solo viaje con `createSignedUrls`.
+ */
+export async function firmarImagenes(
+  imagenes: ImagenClaseDetalle[],
+): Promise<ImagenClaseConUrl[]> {
+  const enStorage = imagenes.filter((imagen) => Boolean(imagen.storagePath));
+
+  const firmadas = new Map<string, string>();
+
+  if (enStorage.length > 0 && storageDisponible()) {
+    try {
+      const admin = getSupabaseAdmin();
+      const { data, error } = await admin.storage
+        .from(BUCKET_IMAGENES)
+        .createSignedUrls(
+          enStorage.map((imagen) => imagen.storagePath as string),
+          EXPIRACION_URL_FIRMADA,
+        );
+
+      if (!error && data) {
+        for (const firma of data) {
+          if (firma.path && firma.signedUrl && !firma.error) {
+            firmadas.set(firma.path, firma.signedUrl);
+          }
+        }
+      }
+    } catch {
+      // Se ignora a propósito: abajo cada imagen sin firma sale con url null.
+    }
+  }
+
+  return imagenes.map((imagen) => {
+    const { url, storagePath, ...resto } = imagen;
+
+    if (!storagePath) {
+      // Respaldo en base de datos: la propia columna ya es un data URI.
+      return { ...resto, url };
+    }
+
+    return { ...resto, url: firmadas.get(storagePath) ?? null };
+  });
+}
+
+/** Firma una sola imagen. Devuelve `null` si no se pudo. */
+export async function resolverUrlImagen(
+  imagen: ImagenClaseDetalle,
+): Promise<string | null> {
+  const [resuelta] = await firmarImagenes([imagen]);
+  return resuelta?.url ?? null;
 }
 
 export async function obtenerImagenClase(id: string) {
@@ -95,9 +196,10 @@ export async function obtenerImagenClase(id: string) {
 /**
  * Guarda una imagen de una clase.
  *
- * Si Supabase Storage está configurado sube el archivo al bucket `clases` y
- * guarda la URL pública. Si no lo está, guarda un data URI en la base de datos
- * siempre que la imagen no exceda `TAMANO_MAXIMO_DATA_URI`.
+ * Si Supabase Storage está configurado sube el archivo al bucket privado y solo
+ * guarda su ruta: la URL de lectura se firma en cada render. Si no lo está,
+ * guarda un data URI en la base de datos siempre que la imagen no exceda
+ * `TAMANO_MAXIMO_DATA_URI`.
  */
 export async function crearImagenClase(
   claseId: string,
@@ -140,11 +242,9 @@ export async function crearImagenClase(
       );
     }
 
-    const {
-      data: { publicUrl },
-    } = admin.storage.from(BUCKET_IMAGENES).getPublicUrl(path);
-
-    url = publicUrl;
+    // Nunca se guarda una URL pública: el bucket es privado y la URL de lectura
+    // se firma al renderizar. Esto solo deja constancia de dónde está el archivo.
+    url = `${PREFIJO_STORAGE}${BUCKET_IMAGENES}/${path}`;
     storagePath = path;
   } else {
     // Respaldo: sin Storage configurado la imagen vive en la base como data URI.
@@ -170,6 +270,7 @@ export async function crearImagenClase(
       id: true,
       claseId: true,
       url: true,
+      storagePath: true,
       titulo: true,
       mimeType: true,
       tamano: true,
