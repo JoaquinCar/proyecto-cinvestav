@@ -1,5 +1,58 @@
 import { prisma } from "@/server/db";
-import type { ParticipanteInput } from "@/lib/schemas/participante.schema";
+import type {
+  ParticipanteInput,
+  EditarParticipanteInput,
+} from "@/lib/schemas/participante.schema";
+
+// ── Errores de dominio ────────────────────────────────────────────────────────
+// Se lanzan desde las queries y las rutas los traducen a un código HTTP con un
+// mensaje que dice exactamente qué impide la operación (mismo criterio que
+// eliminarClase en queries/clases.ts).
+
+export class ParticipanteNoEncontradoError extends Error {
+  constructor(message = "Participante no encontrado") {
+    super(message);
+    this.name = "ParticipanteNoEncontradoError";
+  }
+}
+
+export type ConteosParticipante = {
+  inscripciones: number;
+  asistencias:   number;
+  constancias:   number;
+};
+
+export class ParticipanteConDependenciasError extends Error {
+  constructor(
+    message: string,
+    public readonly conteos: ConteosParticipante,
+  ) {
+    super(message);
+    this.name = "ParticipanteConDependenciasError";
+  }
+}
+
+export type ConteosInscripcion = {
+  asistencias: number;
+  presentes:   number;
+};
+
+export class InscripcionConAsistenciasError extends Error {
+  constructor(
+    message: string,
+    public readonly conteos: ConteosInscripcion,
+  ) {
+    super(message);
+    this.name = "InscripcionConAsistenciasError";
+  }
+}
+
+export class InscripcionConConstanciaError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InscripcionConConstanciaError";
+  }
+}
 
 // ── Tipos de retorno ──────────────────────────────────────────────────────────
 
@@ -74,6 +127,68 @@ export async function crearParticipante(data: ParticipanteInput) {
       genero:    data.genero ?? null,
     },
   });
+}
+
+// ── Editar participante ───────────────────────────────────────────────────────
+// Corrige los datos del niño (una captura mal hecha se imprime tal cual en la
+// constancia). Solo cambia lo que viene en `data`: los campos ausentes quedan
+// como estaban, porque Prisma ignora las claves con valor undefined.
+
+export async function editarParticipante(
+  id: string,
+  data: EditarParticipanteInput,
+) {
+  const existente = await prisma.participante.findUnique({
+    where:  { id },
+    select: { id: true },
+  });
+
+  if (!existente) {
+    throw new ParticipanteNoEncontradoError();
+  }
+
+  return prisma.participante.update({
+    where: { id },
+    data,
+  });
+}
+
+// ── Eliminar participante ─────────────────────────────────────────────────────
+// Borrado real, pero SOLO si no arrastra historial. Un niño con inscripciones o
+// asistencias es la evidencia que respalda una constancia oficial: no se borra
+// desde un botón. Para sacarlo de una edición concreta está la desinscripción.
+
+export async function eliminarParticipante(id: string) {
+  const existente = await prisma.participante.findUnique({
+    where:  { id },
+    select: { id: true },
+  });
+
+  if (!existente) {
+    throw new ParticipanteNoEncontradoError();
+  }
+
+  const [inscripciones, constancias, asistencias] = await Promise.all([
+    prisma.inscripcion.count({ where: { participanteId: id } }),
+    prisma.inscripcion.count({
+      where: { participanteId: id, constanciaGenerada: true },
+    }),
+    prisma.asistencia.count({
+      where: { inscripcion: { participanteId: id } },
+    }),
+  ]);
+
+  if (inscripciones > 0 || asistencias > 0) {
+    throw new ParticipanteConDependenciasError(
+      `No se puede eliminar al participante porque conserva historial: ` +
+        `${inscripciones} inscripción(es), ${asistencias} asistencia(s) registrada(s) ` +
+        `y ${constancias} constancia(s) generada(s). ` +
+        `Da de baja sus inscripciones antes de eliminarlo.`,
+      { inscripciones, asistencias, constancias },
+    );
+  }
+
+  return prisma.participante.delete({ where: { id } });
 }
 
 // ── Historial completo de un participante ─────────────────────────────────────
@@ -213,18 +328,57 @@ export async function inscribirParticipante(
 
 // ── Desinscribir participante ─────────────────────────────────────────────────
 
-export async function desinscribirParticipante(inscripcionId: string) {
+// Borra la inscripción de un niño en una edición. Las asistencias NO caen solas:
+// la relación Asistencia → Inscripcion no declara onDelete: Cascade a propósito
+// (ver prisma/schema.prisma), porque esas filas son el respaldo de la constancia
+// de ese niño en esa edición. Si hay historial, la operación se rechaza con el
+// conteo exacto; borrarlo requiere pedirlo explícitamente con `forzar`, y aun
+// así se hace en una transacción para no dejar asistencias huérfanas.
+
+export async function desinscribirParticipante(
+  inscripcionId: string,
+  opciones: { forzar?: boolean } = {},
+) {
   // Verificar que la inscripción existe antes de borrar
   const inscripcion = await prisma.inscripcion.findUnique({
     where: { id: inscripcionId },
-    select: { id: true },
+    select: { id: true, constanciaGenerada: true },
   });
 
   if (!inscripcion) {
     throw new Error("INSCRIPCION_NO_ENCONTRADA");
   }
 
-  return prisma.inscripcion.delete({
-    where: { id: inscripcionId },
-  });
+  const [asistencias, presentes] = await Promise.all([
+    prisma.asistencia.count({ where: { inscripcionId } }),
+    prisma.asistencia.count({ where: { inscripcionId, presente: true } }),
+  ]);
+
+  // Una constancia ya emitida es un documento oficial entregado: su respaldo no
+  // se borra ni pidiéndolo explícitamente.
+  if (inscripcion.constanciaGenerada) {
+    throw new InscripcionConConstanciaError(
+      "No se puede dar de baja esta inscripción porque ya tiene una constancia generada. " +
+        "La constancia entregada quedaría sin respaldo de asistencias.",
+    );
+  }
+
+  if (asistencias > 0 && !opciones.forzar) {
+    throw new InscripcionConAsistenciasError(
+      `No se puede dar de baja esta inscripción porque tiene ${asistencias} ` +
+        `registro(s) de asistencia (${presentes} con asistencia confirmada). ` +
+        `Dar de baja borra ese historial de la edición: confírmalo para continuar.`,
+      { asistencias, presentes },
+    );
+  }
+
+  if (asistencias === 0) {
+    return prisma.inscripcion.delete({ where: { id: inscripcionId } });
+  }
+
+  // Cascada explícita en la aplicación, no en la llave foránea.
+  return prisma.$transaction([
+    prisma.asistencia.deleteMany({ where: { inscripcionId } }),
+    prisma.inscripcion.delete({ where: { id: inscripcionId } }),
+  ]);
 }

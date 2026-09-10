@@ -165,6 +165,12 @@ model Asistencia {
   presente      Boolean  @default(true)
   createdAt     DateTime @default(now())
 
+  // SIN onDelete: Cascade a propósito. Estas filas son el respaldo de la
+  // constancia de un niño en una edición: si la FK borrara en cascada, dar de
+  // baja una inscripción se llevaría el historial de asistencia sin que nadie
+  // lo pidiera ni quedara rastro. La baja con historial se rechaza en la API
+  // (DELETE /api/inscripciones/[id]) y solo se ejecuta, en una transacción
+  // explícita, cuando el ADMIN lo confirma con ?forzar=true.
   inscripcion Inscripcion @relation(fields: [inscripcionId], references: [id])
   sesion      Sesion      @relation(fields: [sesionId], references: [id])
 
