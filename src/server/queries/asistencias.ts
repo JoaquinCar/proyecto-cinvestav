@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db";
 import type { MarcarAsistenciaInput } from "@/lib/schemas/asistencia.schema";
+import { assertEdicionAbierta } from "@/server/queries/edicion-cerrada";
 
 // ── Tipos de retorno ──────────────────────────────────────────────────────────
 
@@ -104,9 +105,13 @@ export class AsistenciaFueraDeEdicionError extends Error {
   }
 }
 
+/**
+ * Valida la coherencia de edición y devuelve las ediciones tocadas por el lote,
+ * para poder comprobar después que ninguna esté cerrada.
+ */
 async function validarMismaEdicion(
   items: Array<{ inscripcionId: string; sesionId: string }>,
-): Promise<void> {
+): Promise<Set<string>> {
   const inscripcionIds = [...new Set(items.map((i) => i.inscripcionId))];
   const sesionIds      = [...new Set(items.map((i) => i.sesionId))];
 
@@ -128,6 +133,8 @@ async function validarMismaEdicion(
     sesiones.map((s) => [s.id, s.clase.edicionId]),
   );
 
+  const edicionesTocadas = new Set<string>();
+
   for (const item of items) {
     const edicionInscripcion = edicionDeInscripcion.get(item.inscripcionId);
     const edicionSesion      = edicionDeSesion.get(item.sesionId);
@@ -143,13 +150,28 @@ async function validarMismaEdicion(
         "La inscripción no pertenece a la edición de la sesión",
       );
     }
+
+    edicionesTocadas.add(edicionSesion);
+  }
+
+  return edicionesTocadas;
+}
+
+// Una edición cerrada no acepta más asistencias: se comprueba ANTES de abrir la
+// transacción para que un lote sobre una edición congelada no escriba nada.
+async function validarEdicionesAbiertas(
+  items: Array<{ inscripcionId: string; sesionId: string }>,
+): Promise<void> {
+  const ediciones = await validarMismaEdicion(items);
+  for (const edicionId of ediciones) {
+    await assertEdicionAbierta(edicionId);
   }
 }
 
 // ── Upsert de una asistencia individual ──────────────────────────────────────
 
 export async function upsertAsistencia(data: MarcarAsistenciaInput) {
-  await validarMismaEdicion([data]);
+  await validarEdicionesAbiertas([data]);
 
   return prisma.asistencia.upsert({
     where: {
@@ -174,7 +196,7 @@ export async function upsertAsistencia(data: MarcarAsistenciaInput) {
 export async function batchUpsertAsistencias(
   items: Array<{ inscripcionId: string; sesionId: string; presente: boolean }>,
 ) {
-  await validarMismaEdicion(items);
+  await validarEdicionesAbiertas(items);
 
   return prisma.$transaction(
     items.map((item) =>

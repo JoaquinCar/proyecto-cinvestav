@@ -45,6 +45,15 @@ model Edicion {
   asistenciaGlobal Boolean @default(true)
 
   activa    Boolean  @default(false)
+
+  // Congelado de la edición. `activa` dice cuál es la edición en curso (solo una);
+  // `cerrada` dice que una edición ya terminó y no admite más escrituras
+  // (asistencias, sesiones, temas). Son cosas distintas: al abrir 2027, la 2026
+  // deja de ser activa pero sigue abierta hasta que se capture lo que faltaba.
+  // Es un acto explícito del ADMIN, no una deducción de fechaFin.
+  cerrada   Boolean   @default(false)
+  cerradaAt DateTime?
+
   createdAt DateTime @default(now())
 
   clases        Clase[]
