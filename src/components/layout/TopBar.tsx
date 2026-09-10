@@ -14,7 +14,12 @@ const routeLabels: Record<string, string> = {
   "/importar":      "Importar desde Excel",
 };
 
-export default function TopBar() {
+interface TopBarProps {
+  /** Año de la edición activa. Llega del servidor: el layout lo consulta. */
+  anioEdicionActiva?: number | null;
+}
+
+export default function TopBar({ anioEdicionActiva }: TopBarProps) {
   const pathname = usePathname();
   const base = "/" + pathname.split("/")[1];
   const title = routeLabels[base] ?? "Pasaporte Científico";
@@ -26,11 +31,15 @@ export default function TopBar() {
       </h2>
 
       <div className="flex items-center gap-3">
-        {/* Edición activa badge */}
-        <span className="hidden sm:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-success/10 border border-success/40 text-success">
-          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-          Edición 2026
-        </span>
+        {/* Edición activa — el año sale de la base, no del código: escrito a
+            mano decía "2026" para siempre, también en 2027. Sin edición activa
+            no se muestra nada. */}
+        {anioEdicionActiva != null && (
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-success/10 border border-success/40 text-success">
+            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+            Edición {anioEdicionActiva}
+          </span>
+        )}
 
         <button
           className="p-2 rounded-lg transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
