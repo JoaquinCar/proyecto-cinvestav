@@ -192,7 +192,7 @@ describe("crearSesionSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.claseId).toBe(sesionValida.claseId);
-      expect(result.data.fecha).toBe("2025-03-15T10:00:00.000Z");
+      expect(result.data.fecha).toEqual(new Date("2025-03-15T00:00:00.000Z"));
       expect(result.data.temas).toBe("Sistema solar");
     }
   });
@@ -237,6 +237,30 @@ describe("crearSesionSchema", () => {
       const campos = result.error.issues.map((i) => i.path[0]);
       expect(campos).toContain("fecha");
     }
+  });
+
+  it("acepta el formato 'AAAA-MM-DD' que manda <input type=\"date\">", () => {
+    // Regresión: el formulario de nueva sesión mandaba "2025-04-05" y el schema
+    // exigía un ISO 8601 completo, así que crear una sesión desde la interfaz
+    // siempre devolvía 422.
+    const result = crearSesionSchema.safeParse({ ...sesionValida, fecha: "2025-04-05" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fecha).toEqual(new Date("2025-04-05T00:00:00.000Z"));
+    }
+  });
+
+  it("normaliza a medianoche UTC sin correr el día (sábado)", () => {
+    const result = crearSesionSchema.safeParse({ ...sesionValida, fecha: "2025-03-08" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fecha.toISOString()).toBe("2025-03-08T00:00:00.000Z");
+    }
+  });
+
+  it("rechaza una fecha que no existe en el calendario", () => {
+    const result = crearSesionSchema.safeParse({ ...sesionValida, fecha: "2025-02-31" });
+    expect(result.success).toBe(false);
   });
 
   it("rechaza claseId vacío", () => {
@@ -288,6 +312,21 @@ describe("actualizarSesionSchema", () => {
     if (result.success) {
       expect(result.data.notas).toBe("El grupo fue muy participativo");
     }
+  });
+
+  it("acepta corregir la fecha de la sesión", () => {
+    // Regresión: el schema no declaraba 'fecha', así que un dedazo en el año
+    // quedaba permanente en cuanto la sesión tenía asistencias.
+    const result = actualizarSesionSchema.safeParse({ fecha: "2025-03-08" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fecha).toEqual(new Date("2025-03-08T00:00:00.000Z"));
+    }
+  });
+
+  it("rechaza una fecha con formato inválido al actualizar", () => {
+    const result = actualizarSesionSchema.safeParse({ fecha: "08/03/2025" });
+    expect(result.success).toBe(false);
   });
 
   it("acepta poner temas en null (para limpiarlos)", () => {

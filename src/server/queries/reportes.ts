@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db";
 import type { DatosReporteClase } from "@/lib/pdf/reporte-clase";
+import { formatearFecha } from "@/lib/fechas";
 
 export async function obtenerDatosReporteClase(
   claseId: string,
@@ -40,11 +41,7 @@ export async function obtenerDatosReporteClase(
   const totalParticipantes = inscripciones.length;
 
   const sesionesData = clase.sesiones.map((s) => ({
-    fecha: new Date(s.fecha).toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }),
+    fecha: formatearFecha(s.fecha, "media"),
     temas: s.temas,
     asistentes: s.asistencias.length,
     total: totalParticipantes,

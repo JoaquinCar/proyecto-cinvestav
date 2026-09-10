@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { generarPDFConstancia, type DatosConstancia } from "@/lib/pdf/constancia";
+import { formatearInstante } from "@/lib/fechas";
 
 export type ElegibilidadResult = {
   elegible: boolean;
@@ -83,11 +84,9 @@ export async function generarYGuardarConstancia(
     edicion: { nombre: edicion.nombre, anio: edicion.anio },
     asistencias: asistencias.length,
     totalSesiones,
-    fechaEmision: new Date().toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }),
+    // Instante real (no fecha de calendario): se formatea en la zona del
+    // programa, porque el servidor de Vercel corre en UTC.
+    fechaEmision: formatearInstante(),
   };
 
   const buffer = await generarPDFConstancia(datos);

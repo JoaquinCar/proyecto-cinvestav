@@ -5,12 +5,14 @@ import {
   obtenerSesionPorId,
   actualizarSesion,
   eliminarSesion,
+  obtenerRangoEdicionDeSesion,
   SesionConAsistenciasError,
 } from "@/server/queries/clases";
 import {
   assertEdicionDeSesionAbierta,
   EdicionCerradaError,
 } from "@/server/queries/edicion-cerrada";
+import { estaEnRango, mensajeFueraDeRango } from "@/lib/fechas";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -51,8 +53,23 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "No hay campos para actualizar" }, { status: 422 });
     }
 
-    // Una edición cerrada ya no admite cambios de temas ni notas.
+    // Una edición cerrada ya no admite cambios de temas, notas ni fechas.
     await assertEdicionDeSesionAbierta(id);
+
+    // Corregir la fecha es válido (un dedazo en el año quedaba permanente), pero
+    // debe seguir cayendo dentro de la edición a la que pertenece la sesión.
+    if (parsed.data.fecha !== undefined) {
+      const rango = await obtenerRangoEdicionDeSesion(id);
+      if (!rango) {
+        return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 });
+      }
+      if (!estaEnRango(parsed.data.fecha, rango.fechaInicio, rango.fechaFin)) {
+        return NextResponse.json(
+          { error: mensajeFueraDeRango(rango.fechaInicio, rango.fechaFin) },
+          { status: 422 },
+        );
+      }
+    }
 
     const sesionActualizada = await actualizarSesion(id, parsed.data);
     return NextResponse.json(sesionActualizada);
