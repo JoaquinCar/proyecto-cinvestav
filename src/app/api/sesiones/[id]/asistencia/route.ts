@@ -5,6 +5,7 @@ import {
   obtenerAsistenciasDeSesion,
   obtenerResumenAsistencia,
 } from "@/server/queries/asistencias";
+import { fallaInesperada } from "@/server/respuestas";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -24,7 +25,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const sesion = await obtenerSesionPorId(id);
     if (!sesion) {
-      return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            "Esta sesión ya no existe: alguien pudo eliminarla. Vuelve a la página de la clase para ver las sesiones actuales.",
+        },
+        { status: 404 },
+      );
     }
 
     const [asistencias, resumen] = await Promise.all([
@@ -33,10 +40,11 @@ export async function GET(_request: Request, context: RouteContext) {
     ]);
 
     return NextResponse.json({ asistencias, resumen });
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 },
+  } catch (error) {
+    return fallaInesperada(
+      "GET /api/sesiones/[id]/asistencia",
+      error,
+      "No se pudo cargar la lista de asistencia. Revisa tu conexión y vuelve a intentarlo en unos momentos.",
     );
   }
 }

@@ -6,6 +6,11 @@ import {
   AsistenciaFueraDeEdicionError,
 } from "@/server/queries/asistencias";
 import { EdicionCerradaError } from "@/server/queries/edicion-cerrada";
+import {
+  fallaInesperada,
+  leerCuerpoJson,
+  respuestaCamposInvalidos,
+} from "@/server/respuestas";
 
 // ── POST /api/asistencias ─────────────────────────────────────────────────────
 // Registra o actualiza asistencias en batch para una sesión.
@@ -25,19 +30,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Permiso insuficiente" }, { status: 403 });
     }
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Cuerpo JSON inválido" }, { status: 400 });
-    }
+    const cuerpo = await leerCuerpoJson(request);
+    if (!cuerpo.ok) return cuerpo.respuesta;
 
-    const parsed = batchAsistenciaBodySchema.safeParse(body);
+    const parsed = batchAsistenciaBodySchema.safeParse(cuerpo.datos);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Datos inválidos", detalles: parsed.error.flatten() },
-        { status: 422 },
-      );
+      return respuestaCamposInvalidos(parsed.error);
     }
 
     const resultados = await batchUpsertAsistencias(parsed.data.items);
@@ -56,9 +54,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
 
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 },
+    // El lote entero va en una transacción: si se llega aquí, no quedó ninguna
+    // marca escrita. Decirlo evita que alguien dé por guardada media lista.
+    return fallaInesperada(
+      "POST /api/asistencias",
+      error,
+      "No se pudo guardar la asistencia y no quedó registrada ninguna marca de este envío. Vuelve a marcarlas e inténtalo de nuevo.",
     );
   }
 }

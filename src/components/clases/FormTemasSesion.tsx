@@ -14,6 +14,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { mensajeDeError } from "@/lib/api/errores";
+
+const FALLO_AL_GUARDAR =
+  "No se pudieron guardar los cambios de la sesión; sigue como estaba. Vuelve a intentarlo en unos minutos.";
 
 const LARGO_MAXIMO_TEMAS = 500;
 const LARGO_MAXIMO_NOTAS = 1000;
@@ -72,16 +76,14 @@ export function FormTemasSesion({
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error ?? "Error al guardar la sesión");
+        throw new Error(json?.error ?? FALLO_AL_GUARDAR);
       }
 
-      toast.success("Sesión actualizada");
+      toast.success(`Sesión del ${fechaSesion} actualizada`);
       setAbierto(false);
       router.refresh();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Error al guardar la sesión",
-      );
+      toast.error(mensajeDeError(error, FALLO_AL_GUARDAR));
     } finally {
       setGuardando(false);
     }

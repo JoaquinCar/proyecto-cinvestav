@@ -8,6 +8,7 @@ import {
   planificarImportacion,
   type EntradaPlan,
 } from "@/server/queries/importacion";
+import { fallaInesperada } from "@/server/respuestas";
 
 // ── POST /api/importar/previsualizar ──────────────────────────────────────────
 // Lee el .xlsx, lo compara contra la base y devuelve QUÉ pasaría. No escribe nada.
@@ -65,7 +66,10 @@ export async function POST(request: Request) {
     if (err instanceof ErrorArchivo || err instanceof ErrorImportacion) {
       return NextResponse.json({ error: err.message }, { status: 422 });
     }
-    console.error("[POST /api/importar/previsualizar]", err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "POST /api/importar/previsualizar",
+      err,
+      "No se pudo revisar el archivo. No se guardó nada. Vuelve a intentarlo en unos minutos.",
+    );
   }
 }

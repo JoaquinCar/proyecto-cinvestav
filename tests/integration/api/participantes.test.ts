@@ -195,7 +195,7 @@ describe("POST /api/participantes — autenticación y validación", () => {
     expect(res.status).toBe(422);
 
     const json = await res.json();
-    expect(json.error).toMatch(/inválidos/i);
+    expect(json.error).toMatch(/revisa estos datos/i);
     expect(json.detalles).toBeDefined();
   });
 

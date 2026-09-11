@@ -5,6 +5,11 @@ vi.mock("@/server/queries/estadisticas", () => ({
   obtenerMetricasEdicion: vi.fn(),
   obtenerDatosExcel: vi.fn(),
 }));
+// Ambas rutas comprueban ahora que la edición exista antes de calcular nada:
+// sin esto, una edición borrada devolvía 200 con todo en cero (y un Excel vacío).
+vi.mock("@/server/queries/ediciones", () => ({
+  existeEdicion: vi.fn(),
+}));
 
 const sessionAdmin = {
   user: { id: "u1", email: "a@c.mx", role: "ADMIN", name: "A", image: null },
@@ -39,7 +44,11 @@ function req(method: string, path: string): Request {
 // ── GET /api/estadisticas/edicion/[id] ────────────────────────────────────────
 
 describe("GET /api/estadisticas/edicion/[id]", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const { existeEdicion } = await import("@/server/queries/ediciones");
+    vi.mocked(existeEdicion).mockResolvedValue(true);
+  });
 
   it("401 sin sesión", async () => {
     const { auth } = await import("@/lib/auth");
@@ -87,7 +96,11 @@ describe("GET /api/estadisticas/edicion/[id]", () => {
 // ── GET /api/exportar/excel/[edicionId] ───────────────────────────────────────
 
 describe("GET /api/exportar/excel/[edicionId]", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const { existeEdicion } = await import("@/server/queries/ediciones");
+    vi.mocked(existeEdicion).mockResolvedValue(true);
+  });
 
   it("401 sin sesión", async () => {
     const { auth } = await import("@/lib/auth");

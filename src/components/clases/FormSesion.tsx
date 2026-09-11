@@ -17,6 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, CalendarPlus } from "lucide-react";
+import { mensajeDeError, MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
+
+const FALLO_AL_AGREGAR =
+  "No se pudo agregar la sesión y no quedó guardada. Vuelve a intentarlo en unos minutos.";
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
 
@@ -78,22 +82,27 @@ export function FormSesion({
         notas: data.notas || undefined,
       };
 
-      const res = await fetch("/api/sesiones", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/sesiones", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        throw new Error(`${MENSAJE_SIN_CONEXION} La sesión no quedó guardada.`);
+      }
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error ?? "Error al crear la sesión");
+        throw new Error(json?.error ?? FALLO_AL_AGREGAR);
       }
 
       return res.json();
     },
 
     onSuccess: () => {
-      toast.success("Sesión agregada correctamente");
+      toast.success(`Sesión agregada a ${claseNombre}`);
       // Invalidate any query that fetches sessions for this clase
       queryClient.invalidateQueries({ queryKey: ["clase", claseId] });
       queryClient.invalidateQueries({ queryKey: ["sesiones", claseId] });
@@ -103,7 +112,7 @@ export function FormSesion({
     },
 
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al crear la sesión");
+      toast.error(mensajeDeError(err, FALLO_AL_AGREGAR));
     },
   });
 

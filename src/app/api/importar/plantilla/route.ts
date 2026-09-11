@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { generarPlantilla, plantillaDe } from "@/lib/importacion/plantillas";
 import { tipoImportacionSchema } from "@/lib/schemas/importacion.schema";
+import { fallaInesperada, mensajeCamposInvalidos } from "@/server/respuestas";
 
 const consultaSchema = z.object({
   tipo: tipoImportacionSchema,
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
   });
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Parámetros inválidos", detalles: parsed.error.flatten() },
+      { error: mensajeCamposInvalidos(parsed.error), detalles: parsed.error.flatten() },
       { status: 400 },
     );
   }
@@ -52,7 +53,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (err) {
-    console.error("[GET /api/importar/plantilla]", err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "GET /api/importar/plantilla",
+      err,
+      "No se pudo generar la plantilla de Excel. Vuelve a intentarlo en unos minutos.",
+    );
   }
 }

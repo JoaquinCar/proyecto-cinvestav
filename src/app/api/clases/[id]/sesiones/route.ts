@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { obtenerClasePorId, listarSesionesDeClase } from "@/server/queries/clases";
+import { fallaInesperada } from "@/server/respuestas";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -17,15 +18,22 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const clase = await obtenerClasePorId(id);
     if (!clase) {
-      return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            "Esta clase ya no existe: alguien pudo eliminarla. Vuelve a la lista de clases para ver las que siguen activas.",
+        },
+        { status: 404 },
+      );
     }
 
     const sesiones = await listarSesionesDeClase(id);
     return NextResponse.json({ sesiones });
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
+  } catch (error) {
+    return fallaInesperada(
+      "GET /api/clases/[id]/sesiones",
+      error,
+      "No se pudieron cargar las sesiones de la clase. Vuelve a intentarlo en unos momentos.",
     );
   }
 }

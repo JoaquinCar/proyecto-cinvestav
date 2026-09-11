@@ -42,8 +42,8 @@ export type BusquedaParticipanteInput = z.infer<typeof busquedaParticipanteSchem
 // ── Inscripción ───────────────────────────────────────────────────────────────
 
 export const inscripcionSchema = z.object({
-  participanteId: z.string().min(1, "ID de participante inválido"),
-  edicionId:      z.string().min(1, "ID de edición inválido"),
+  participanteId: z.string().min(1, "Falta indicar el participante que se va a inscribir"),
+  edicionId:      z.string().min(1, "Falta indicar la edición en la que se va a inscribir"),
 });
 
 export type InscripcionInput = z.infer<typeof inscripcionSchema>;

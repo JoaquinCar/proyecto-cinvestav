@@ -103,7 +103,7 @@ export async function editarClase(id: string, data: EditarClaseInput) {
   });
 }
 
-// ── Eliminar una clase (solo si no tiene sesiones con asistencias) ─────────────
+// ── Eliminar una clase (solo si no tiene sesiones ni asistencias) ─────────────
 
 export async function eliminarClase(id: string) {
   // Contar asistencias a través de sesiones de esta clase
@@ -115,7 +115,22 @@ export async function eliminarClase(id: string) {
 
   if (asistencias > 0) {
     throw new ClaseConAsistenciasError(
-      `No se puede eliminar la clase porque tiene ${asistencias} asistencia(s) registrada(s)`
+      `No se puede eliminar la clase porque tiene ${asistencias} asistencia(s) registrada(s). ` +
+        "Ese es el respaldo de las constancias de los niños y no se borra desde aquí.",
+    );
+  }
+
+  // Sesion → Clase no está en cascada (a propósito: borrar una clase no debe
+  // llevarse por delante el calendario). Sin esta comprobación, el `delete`
+  // reventaba contra la llave foránea y salía como "Error interno del
+  // servidor", sin decir que lo que estorbaba eran las sesiones.
+  const sesiones = await prisma.sesion.count({ where: { claseId: id } });
+
+  if (sesiones > 0) {
+    throw new ClaseConSesionesError(
+      `No se puede eliminar la clase porque tiene ${sesiones} sesión(es) programada(s). ` +
+        "Elimina primero esas sesiones desde la página de la clase y vuelve a intentarlo.",
+      sesiones,
     );
   }
 
@@ -287,7 +302,8 @@ export async function eliminarSesion(id: string) {
 
   if (conteo > 0) {
     throw new SesionConAsistenciasError(
-      `No se puede eliminar la sesión porque tiene ${conteo} asistencia(s) registrada(s)`
+      `No se puede eliminar la sesión porque tiene ${conteo} asistencia(s) registrada(s). ` +
+        "Si la sesión se capturó por error, desmarca primero a esos participantes en la lista de asistencia.",
     );
   }
 
@@ -300,6 +316,17 @@ export class ClaseConAsistenciasError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ClaseConAsistenciasError";
+  }
+}
+
+/** La clase todavía tiene sesiones en el calendario, aunque nadie haya pasado lista. */
+export class ClaseConSesionesError extends Error {
+  readonly sesiones: number;
+
+  constructor(message: string, sesiones: number) {
+    super(message);
+    this.name = "ClaseConSesionesError";
+    this.sesiones = sesiones;
   }
 }
 

@@ -9,6 +9,7 @@ import {
   planificarImportacion,
   type EntradaPlan,
 } from "@/server/queries/importacion";
+import { fallaInesperada } from "@/server/respuestas";
 
 // ── POST /api/importar ────────────────────────────────────────────────────────
 // Importación real. Reanaliza el archivo (nunca confía en lo que mandó el
@@ -69,10 +70,10 @@ export async function POST(request: Request) {
     if (err instanceof ErrorArchivo || err instanceof ErrorImportacion) {
       return NextResponse.json({ error: err.message }, { status: 422 });
     }
-    console.error("[POST /api/importar]", err);
-    return NextResponse.json(
-      { error: "Error interno: no se guardó ningún cambio." },
-      { status: 500 },
+    return fallaInesperada(
+      "POST /api/importar",
+      err,
+      "Ocurrió un problema en el servidor durante la importación y no se guardó ningún cambio: la base quedó igual que antes. Vuelve a intentarlo con el mismo archivo.",
     );
   }
 }

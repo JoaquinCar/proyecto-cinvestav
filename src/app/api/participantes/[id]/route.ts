@@ -8,6 +8,15 @@ import {
   ParticipanteNoEncontradoError,
   ParticipanteConDependenciasError,
 } from "@/server/queries/participantes";
+import {
+  fallaInesperada,
+  leerCuerpoJson,
+  respuestaCamposInvalidos,
+} from "@/server/respuestas";
+
+/** El participante buscado no está en la base. */
+const PARTICIPANTE_NO_ENCONTRADO =
+  "No se encontró a este participante: puede que alguien haya eliminado su ficha. Vuelve a la lista de participantes para ver los que siguen registrados.";
 
 // ── GET /api/participantes/[id] ───────────────────────────────────────────────
 // Devuelve el historial completo del participante:
@@ -26,7 +35,10 @@ export async function GET(
   const { id } = await params;
 
   if (!id || typeof id !== "string") {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    return NextResponse.json(
+      { error: "El enlace al participante está incompleto. Vuelve a abrirlo desde la lista de participantes." },
+      { status: 400 },
+    );
   }
 
   try {
@@ -34,15 +46,18 @@ export async function GET(
 
     if (!participante) {
       return NextResponse.json(
-        { error: "Participante no encontrado" },
+        { error: PARTICIPANTE_NO_ENCONTRADO },
         { status: 404 },
       );
     }
 
     return NextResponse.json({ participante });
   } catch (err) {
-    console.error(`[GET /api/participantes/${id}]`, err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "GET /api/participantes/[id]",
+      err,
+      "No se pudo cargar el historial del participante. Revisa tu conexión y vuelve a intentarlo en unos momentos.",
+    );
   }
 }
 
@@ -67,22 +82,18 @@ export async function PUT(
   const { id } = await params;
 
   if (!id || typeof id !== "string") {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Cuerpo JSON inválido" }, { status: 400 });
-  }
-
-  const parsed = editarParticipanteSchema.safeParse(body);
-  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Datos inválidos", detalles: parsed.error.flatten() },
-      { status: 422 },
+      { error: "El enlace al participante está incompleto. Vuelve a abrirlo desde la lista de participantes." },
+      { status: 400 },
     );
+  }
+
+  const cuerpo = await leerCuerpoJson(request);
+  if (!cuerpo.ok) return cuerpo.respuesta;
+
+  const parsed = editarParticipanteSchema.safeParse(cuerpo.datos);
+  if (!parsed.success) {
+    return respuestaCamposInvalidos(parsed.error);
   }
 
   try {
@@ -91,12 +102,15 @@ export async function PUT(
   } catch (err) {
     if (err instanceof ParticipanteNoEncontradoError) {
       return NextResponse.json(
-        { error: "Participante no encontrado" },
+        { error: PARTICIPANTE_NO_ENCONTRADO },
         { status: 404 },
       );
     }
-    console.error(`[PUT /api/participantes/${id}]`, err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "PUT /api/participantes/[id]",
+      err,
+      "No se pudieron guardar los cambios del participante; sus datos siguen como estaban. Vuelve a intentarlo en unos minutos.",
+    );
   }
 }
 
@@ -122,7 +136,10 @@ export async function DELETE(
   const { id } = await params;
 
   if (!id || typeof id !== "string") {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    return NextResponse.json(
+      { error: "El enlace al participante está incompleto. Vuelve a abrirlo desde la lista de participantes." },
+      { status: 400 },
+    );
   }
 
   try {
@@ -131,7 +148,7 @@ export async function DELETE(
   } catch (err) {
     if (err instanceof ParticipanteNoEncontradoError) {
       return NextResponse.json(
-        { error: "Participante no encontrado" },
+        { error: PARTICIPANTE_NO_ENCONTRADO },
         { status: 404 },
       );
     }
@@ -141,7 +158,10 @@ export async function DELETE(
         { status: 409 },
       );
     }
-    console.error(`[DELETE /api/participantes/${id}]`, err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "DELETE /api/participantes/[id]",
+      err,
+      "No se pudo eliminar al participante; su ficha sigue registrada. Vuelve a intentarlo en unos minutos.",
+    );
   }
 }

@@ -247,8 +247,8 @@ describe("POST /api/clases", () => {
 
     expect(res.status).toBe(422);
     const body = await res.json();
-    expect(body.error).toBe("Datos inválidos");
-    expect(body.details).toBeDefined();
+    expect(body.error).toMatch(/revisa estos datos/i);
+    expect(body.detalles).toBeDefined();
   });
 
   it("retorna 404 cuando la edición no existe", async () => {
@@ -268,7 +268,7 @@ describe("POST /api/clases", () => {
 
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.error).toMatch(/no encontrada/i);
+    expect(body.error).toMatch(/ya no existe/i);
   });
 
   it("retorna 201 con la clase creada cuando los datos son válidos", async () => {
@@ -335,7 +335,7 @@ describe("PUT /api/clases/[id]", () => {
 
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.error).toMatch(/no encontrada/i);
+    expect(body.error).toMatch(/ya no existe/i);
   });
 
   it("retorna 422 con datos inválidos", async () => {
@@ -485,7 +485,7 @@ describe("GET /api/clases/[id]/sesiones", () => {
 
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.error).toMatch(/no encontrada/i);
+    expect(body.error).toMatch(/ya no existe/i);
   });
 
   it("retorna 200 con lista de sesiones para READONLY", async () => {
@@ -580,8 +580,8 @@ describe("POST /api/sesiones", () => {
 
     expect(res.status).toBe(422);
     const body = await res.json();
-    expect(body.error).toBe("Datos inválidos");
-    expect(body.details).toBeDefined();
+    expect(body.error).toMatch(/revisa estos datos/i);
+    expect(body.detalles).toBeDefined();
   });
 
   it("retorna 404 cuando la clase no existe", async () => {
@@ -600,7 +600,7 @@ describe("POST /api/sesiones", () => {
 
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.error).toMatch(/no encontrada/i);
+    expect(body.error).toMatch(/ya no existe/i);
   });
 
   it("retorna 201 con la sesión creada cuando los datos son válidos", async () => {

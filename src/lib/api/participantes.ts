@@ -8,10 +8,24 @@ import type {
   EditarParticipanteInput,
 } from "@/lib/schemas/participante.schema";
 import type { Participante } from "@/components/participantes/BusquedaParticipante";
+import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 
 async function leerError(res: Response, porDefecto: string): Promise<never> {
   const err = await res.json().catch(() => ({}));
   throw new Error(err.error ?? porDefecto);
+}
+
+/**
+ * `fetch` solo rechaza cuando la petición ni siquiera salió. Ese error llega con
+ * un texto en inglés del navegador que no sirve de nada en pantalla: se cambia
+ * aquí, una sola vez, por uno que diga qué revisar.
+ */
+async function pedir(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new Error(MENSAJE_SIN_CONEXION);
+  }
 }
 
 /**
@@ -21,12 +35,17 @@ async function leerError(res: Response, porDefecto: string): Promise<never> {
 export async function crearParticipante(
   data: ParticipanteInput,
 ): Promise<Participante> {
-  const res = await fetch("/api/participantes", {
+  const res = await pedir("/api/participantes", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) await leerError(res, "Error al crear participante");
+  if (!res.ok) {
+    await leerError(
+      res,
+      "No se pudo guardar la ficha del participante. Vuelve a intentarlo en unos minutos.",
+    );
+  }
 
   const json = await res.json();
   return json.participante as Participante;
@@ -41,12 +60,17 @@ export async function crearInscripcion(
   participanteId: string,
   edicionId: string,
 ) {
-  const res = await fetch("/api/inscripciones", {
+  const res = await pedir("/api/inscripciones", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ participanteId, edicionId }),
   });
-  if (!res.ok) await leerError(res, "Error al inscribir participante");
+  if (!res.ok) {
+    await leerError(
+      res,
+      "No se pudo inscribir al participante en esta edición. Vuelve a intentarlo en unos minutos.",
+    );
+  }
 
   return res.json();
 }
@@ -59,12 +83,17 @@ export async function editarParticipante(
   id: string,
   data: EditarParticipanteInput,
 ): Promise<Participante> {
-  const res = await fetch(`/api/participantes/${id}`, {
+  const res = await pedir(`/api/participantes/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) await leerError(res, "Error al guardar los cambios");
+  if (!res.ok) {
+    await leerError(
+      res,
+      "No se pudieron guardar los cambios; los datos del participante siguen como estaban. Vuelve a intentarlo en unos minutos.",
+    );
+  }
 
   const json = await res.json();
   return json.participante as Participante;
@@ -76,9 +105,12 @@ export async function editarParticipante(
  * mensaje de ese 409 llega tal cual en el Error para poder mostrarlo.
  */
 export async function eliminarParticipante(id: string): Promise<void> {
-  const res = await fetch(`/api/participantes/${id}`, { method: "DELETE" });
+  const res = await pedir(`/api/participantes/${id}`, { method: "DELETE" });
   if (res.status === 204) return;
-  await leerError(res, "Error al eliminar el participante");
+  await leerError(
+    res,
+    "No se pudo eliminar al participante; su ficha sigue registrada. Vuelve a intentarlo en unos minutos.",
+  );
 }
 
 /**
@@ -91,7 +123,10 @@ export async function darDeBajaInscripcion(
   forzar = false,
 ): Promise<void> {
   const url = `/api/inscripciones/${inscripcionId}${forzar ? "?forzar=true" : ""}`;
-  const res = await fetch(url, { method: "DELETE" });
+  const res = await pedir(url, { method: "DELETE" });
   if (res.status === 204) return;
-  await leerError(res, "Error al dar de baja la inscripción");
+  await leerError(
+    res,
+    "No se pudo dar de baja al participante; sigue inscrito en la edición. Vuelve a intentarlo en unos minutos.",
+  );
 }

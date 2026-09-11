@@ -8,6 +8,15 @@ import {
   resolverImagenParaVista,
   ImagenNoAlmacenableError,
 } from "@/server/queries/imagenes-clase";
+import {
+  fallaInesperada,
+  leerCuerpoJson,
+  respuestaCamposInvalidos,
+} from "@/server/respuestas";
+
+/** La clase cuyas imágenes se piden ya no está. */
+const CLASE_NO_ENCONTRADA =
+  "Esta clase ya no existe: alguien pudo eliminarla. Vuelve a la lista de clases para ver las que siguen activas.";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -35,7 +44,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const clase = await obtenerClasePorId(id);
     if (!clase) {
-      return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: CLASE_NO_ENCONTRADA }, { status: 404 });
     }
 
     // Las URLs que salen apuntan al proxy autenticado, que vuelve a comprobar la
@@ -44,10 +53,11 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json(imagenes, {
       headers: { "Cache-Control": CACHE_LISTADO },
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 },
+  } catch (error) {
+    return fallaInesperada(
+      "GET /api/clases/[id]/imagenes",
+      error,
+      "No se pudieron cargar las imágenes de la clase. Vuelve a intentarlo en unos momentos.",
     );
   }
 }
@@ -68,17 +78,16 @@ export async function POST(request: Request, context: RouteContext) {
 
     const clase = await obtenerClasePorId(id);
     if (!clase) {
-      return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: CLASE_NO_ENCONTRADA }, { status: 404 });
     }
 
-    const body: unknown = await request.json();
-    const parsed = subirImagenClaseSchema.safeParse(body);
+    const cuerpo = await leerCuerpoJson(request);
+    if (!cuerpo.ok) return cuerpo.respuesta;
+
+    const parsed = subirImagenClaseSchema.safeParse(cuerpo.datos);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Datos inválidos", details: parsed.error.flatten() },
-        { status: 422 },
-      );
+      return respuestaCamposInvalidos(parsed.error);
     }
 
     const imagen = await crearImagenClase(id, parsed.data);
@@ -95,9 +104,10 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 422 });
     }
 
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 },
+    return fallaInesperada(
+      "POST /api/clases/[id]/imagenes",
+      error,
+      "No se pudo guardar la imagen y no quedó agregada a la clase. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

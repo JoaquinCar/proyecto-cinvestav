@@ -6,9 +6,19 @@ import {
   editarClase,
   eliminarClase,
   ClaseConAsistenciasError,
+  ClaseConSesionesError,
 } from "@/server/queries/clases";
+import {
+  fallaInesperada,
+  leerCuerpoJson,
+  respuestaCamposInvalidos,
+} from "@/server/respuestas";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+/** La clase se buscó por id y no está: el enlace o la pestaña están viejos. */
+const CLASE_NO_ENCONTRADA =
+  "Esta clase ya no existe: alguien pudo eliminarla. Vuelve a la lista de clases para ver las que siguen activas.";
 
 // ── PUT /api/clases/[id] — editar clase (solo ADMIN) ──────────────────────────
 
@@ -26,30 +36,30 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const existente = await obtenerClasePorId(id);
     if (!existente) {
-      return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: CLASE_NO_ENCONTRADA }, { status: 404 });
     }
 
-    const body: unknown = await request.json();
-    const parsed = editarClaseSchema.safeParse(body);
+    const cuerpo = await leerCuerpoJson(request);
+    if (!cuerpo.ok) return cuerpo.respuesta;
+
+    const parsed = editarClaseSchema.safeParse(cuerpo.datos);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Datos inválidos", details: parsed.error.flatten() },
-        { status: 422 }
-      );
+      return respuestaCamposInvalidos(parsed.error);
     }
 
     const claseActualizada = await editarClase(id, parsed.data);
     return NextResponse.json(claseActualizada);
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
+  } catch (error) {
+    return fallaInesperada(
+      "PUT /api/clases/[id]",
+      error,
+      "No se pudieron guardar los cambios de la clase. Vuelve a intentarlo en unos minutos.",
     );
   }
 }
 
-// ── DELETE /api/clases/[id] — eliminar si no tiene asistencias (solo ADMIN) ───
+// ── DELETE /api/clases/[id] — eliminar si no arrastra nada (solo ADMIN) ───────
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
@@ -65,7 +75,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     const existente = await obtenerClasePorId(id);
     if (!existente) {
-      return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: CLASE_NO_ENCONTRADA }, { status: 404 });
     }
 
     await eliminarClase(id);
@@ -75,9 +85,19 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
 
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
+    // Antes esto llegaba hasta el `catch` de abajo y salía como 500: la llave
+    // foránea de Sesion → Clase reventaba sin que nadie supiera por qué.
+    if (error instanceof ClaseConSesionesError) {
+      return NextResponse.json(
+        { error: error.message, sesiones: error.sesiones },
+        { status: 409 },
+      );
+    }
+
+    return fallaInesperada(
+      "DELETE /api/clases/[id]",
+      error,
+      "No se pudo eliminar la clase; sigue como estaba. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

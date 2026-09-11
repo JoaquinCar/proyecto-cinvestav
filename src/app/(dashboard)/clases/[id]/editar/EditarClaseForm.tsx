@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, Pencil, BookOpen, User, ImageIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 
 // ── Zod schema (cliente — refleja editarClaseSchema) ──────────────────────────
 
@@ -66,17 +67,20 @@ export function EditarClaseForm({ clase }: EditarClaseFormProps) {
         body: JSON.stringify(data),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setServerError(json?.error ?? "Error al guardar los cambios.");
+        setServerError(
+          json?.error ??
+            "No se pudieron guardar los cambios; la clase sigue como estaba. Vuelve a intentarlo en unos minutos.",
+        );
         return;
       }
 
       router.push(`/clases/${clase.id}`);
       router.refresh();
     } catch {
-      setServerError("Error de red. Verifica tu conexión e intenta de nuevo.");
+      setServerError(`${MENSAJE_SIN_CONEXION} Los cambios de la clase no se guardaron.`);
     } finally {
       setLoading(false);
     }

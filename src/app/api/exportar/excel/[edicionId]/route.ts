@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { obtenerDatosExcel } from "@/server/queries/estadisticas";
+import { existeEdicion } from "@/server/queries/ediciones";
+import { fallaInesperada } from "@/server/respuestas";
 import * as XLSX from "xlsx";
 
 type RouteContext = { params: Promise<{ edicionId: string }> };
@@ -15,6 +17,18 @@ export async function GET(_req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
     const { edicionId } = await context.params;
+
+    // Antes, una edición inexistente bajaba un Excel vacío sin decir nada.
+    if (!(await existeEdicion(edicionId))) {
+      return NextResponse.json(
+        {
+          error:
+            "La edición que intentas exportar ya no existe. Vuelve a la lista de ediciones y elige una.",
+        },
+        { status: 404 },
+      );
+    }
+
     const datos = await obtenerDatosExcel(edicionId);
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(datos);
@@ -28,10 +42,11 @@ export async function GET(_req: Request, context: RouteContext) {
         "Content-Disposition": `attachment; filename="participantes-${edicionId}.xlsx"`,
       },
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 },
+  } catch (error) {
+    return fallaInesperada(
+      "GET /api/exportar/excel/[edicionId]",
+      error,
+      "No se pudo generar el archivo de Excel. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

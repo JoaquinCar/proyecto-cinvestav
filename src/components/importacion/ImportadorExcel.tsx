@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 import {
   CheckCircle2,
   Download,
@@ -82,11 +83,12 @@ export function ImportadorExcel({ guias, ediciones }: Props) {
       setPrevia({ plan: datos.plan, archivo: datos.archivo });
       if (datos.plan.errores.length > 0) {
         toast.warning(
-          `El archivo tiene ${datos.plan.errores.length} error(es). Revisa el detalle.`,
+          `El archivo tiene ${datos.plan.errores.length} fila(s) con problemas y no se importará hasta corregirlas. ` +
+            "Revisa el detalle que aparece abajo.",
         );
       }
     } catch {
-      toast.error("No se pudo contactar al servidor");
+      toast.error(`${MENSAJE_SIN_CONEXION} No se revisó el archivo ni se guardó nada.`);
     } finally {
       setAnalizando(false);
     }
@@ -98,9 +100,12 @@ export function ImportadorExcel({ guias, ediciones }: Props) {
     setImportando(true);
     try {
       const res = await fetch("/api/importar", { method: "POST", body: fd });
-      const datos = await res.json();
+      const datos = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(datos.error ?? "No se pudo importar");
+        toast.error(
+          datos.error ??
+            "No se pudo importar el archivo y no se guardó ningún cambio. Revisa el detalle y vuelve a intentarlo.",
+        );
         if (datos.plan) setPrevia((p) => (p ? { ...p, plan: datos.plan } : p));
         return;
       }
@@ -108,10 +113,12 @@ export function ImportadorExcel({ guias, ediciones }: Props) {
       setPrevia(null);
       setArchivo(null);
       if (inputRef.current) inputRef.current.value = "";
-      toast.success("Importación completada");
+      toast.success(
+        `Importación completada en ${datos.edicion?.nombre ?? "la edición seleccionada"}`,
+      );
       router.refresh();
     } catch {
-      toast.error("No se pudo contactar al servidor. No se guardó ningún cambio.");
+      toast.error(`${MENSAJE_SIN_CONEXION} No se guardó ningún cambio.`);
     } finally {
       setImportando(false);
     }

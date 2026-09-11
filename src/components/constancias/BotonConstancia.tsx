@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download, Award, Loader2 } from "lucide-react";
+import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 
 interface BotonConstanciaProps {
   inscripcionId: string;
@@ -32,15 +33,20 @@ export function BotonConstancia({
       const res = await fetch(`/api/pdf/constancia/${inscripcionId}`, {
         method: "POST",
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(json.error ?? "Error al generar constancia");
+        // El servidor ya explica el caso concreto: mínimo de asistencias sin
+        // cumplir, inscripción borrada, almacenamiento de archivos caído.
+        setError(
+          json.error ??
+            "No se pudo generar la constancia y no quedó guardada. Vuelve a intentarlo en unos minutos.",
+        );
         return;
       }
       setUrl(json.url);
       setGenerada(true);
     } catch {
-      setError("Error de red. Intenta de nuevo.");
+      setError(`${MENSAJE_SIN_CONEXION} La constancia no se generó.`);
     } finally {
       setLoading(false);
     }
@@ -85,7 +91,9 @@ export function BotonConstancia({
         {loading ? "Generando…" : "Generar Constancia"}
       </button>
       {error && (
-        <p className="text-xs text-destructive">{error}</p>
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
       )}
     </div>
   );
