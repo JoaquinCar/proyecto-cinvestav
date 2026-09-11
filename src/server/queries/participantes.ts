@@ -234,54 +234,6 @@ export async function obtenerHistorialParticipante(id: string) {
   });
 }
 
-// ── Buscar participantes similares (detección de recurrentes) ─────────────────
-// Útil para que el frontend advierta al coordinador antes de registrar un posible duplicado.
-
-export async function buscarParticipantesSimilares(
-  nombre: string,
-  apellidos: string,
-) {
-  // Busca coincidencias parciales en nombre O en apellidos para detectar al
-  // mismo niño registrado en ediciones anteriores bajo una grafía ligeramente distinta.
-  const palabrasNombre    = nombre.trim().split(/\s+/).filter(Boolean);
-  const palabrasApellidos = apellidos.trim().split(/\s+/).filter(Boolean);
-
-  // Construir condiciones OR: cualquier palabra del nombre coincide en nombre/apellidos
-  const condiciones = [
-    ...palabrasNombre.map((p) => ({
-      nombre: { contains: p, mode: "insensitive" as const },
-    })),
-    ...palabrasApellidos.map((p) => ({
-      apellidos: { contains: p, mode: "insensitive" as const },
-    })),
-  ];
-
-  if (condiciones.length === 0) return [];
-
-  return prisma.participante.findMany({
-    where: { OR: condiciones },
-    orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
-    take: 10,
-    select: {
-      id: true,
-      nombre: true,
-      apellidos: true,
-      edad: true,
-      escuela: true,
-      grado: true,
-      createdAt: true,
-      inscripciones: {
-        select: {
-          id: true,
-          constanciaGenerada: true,
-          edicion: { select: { id: true, anio: true, nombre: true, activa: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
-}
-
 // ── Inscribir participante a una edición ──────────────────────────────────────
 
 export async function inscribirParticipante(
