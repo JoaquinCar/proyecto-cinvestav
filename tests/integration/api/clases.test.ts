@@ -276,7 +276,10 @@ describe("POST /api/clases", () => {
 
     expect(res.status).toBe(422);
     const body = await res.json();
-    expect(body.details.fieldErrors.fecha).toBeDefined();
+    // El cuerpo de validación es { error: <mensaje legible>, detalles: flatten() }.
+    expect(body.detalles.fieldErrors.fecha).toBeDefined();
+    // Y el mensaje que ve la persona nombra el campo, no solo "Datos inválidos".
+    expect(body.error).toMatch(/fecha/i);
 
     const { crearClaseConSesion } = await import("@/server/queries/clases");
     expect(crearClaseConSesion).not.toHaveBeenCalled();
