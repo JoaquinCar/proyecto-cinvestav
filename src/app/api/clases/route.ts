@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { crearClaseSchema } from "@/lib/schemas/clase.schema";
-import { crearClase } from "@/server/queries/clases";
-import { existeEdicion } from "@/server/queries/ediciones";
+import { crearClaseConSesion, obtenerRangoEdicion } from "@/server/queries/clases";
+import {
+  assertEdicionAbierta,
+  EdicionCerradaError,
+} from "@/server/queries/edicion-cerrada";
+import { estaEnRango, mensajeFueraDeRango } from "@/lib/fechas";
 import {
   fallaInesperada,
   leerCuerpoJson,
   respuestaCamposInvalidos,
 } from "@/server/respuestas";
 
-// ── POST /api/clases — crear clase (solo ADMIN) ───────────────────────────────
+// ── POST /api/clases — crear clase con su sesión (solo ADMIN) ─────────────────
+//
+// La clase nace con la sesión en la que se imparte: así queda lista para pasar
+// lista sin pasos extra. Ver `crearClaseConSesion`.
 
 export async function POST(request: Request) {
   try {
@@ -30,9 +37,10 @@ export async function POST(request: Request) {
       return respuestaCamposInvalidos(parsed.error);
     }
 
-    // Verificar que la edición exista
-    const existe = await existeEdicion(parsed.data.edicionId);
-    if (!existe) {
+    // El rango de la edición sirve para dos cosas a la vez: comprobar que la
+    // edición exista y validar la fecha contra ella.
+    const rango = await obtenerRangoEdicion(parsed.data.edicionId);
+    if (!rango) {
       return NextResponse.json(
         {
           error:
@@ -42,9 +50,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const clase = await crearClase(parsed.data);
+    // Una edición cerrada no admite sesiones nuevas, y esta clase trae una.
+    await assertEdicionAbierta(parsed.data.edicionId);
+
+    // Una sesión fuera del rango de su edición corrompe conteos, constancias y
+    // reportes en silencio: se rechaza en vez de avisar.
+    if (!estaEnRango(parsed.data.fecha, rango.fechaInicio, rango.fechaFin)) {
+      return NextResponse.json(
+        { error: mensajeFueraDeRango(rango.fechaInicio, rango.fechaFin) },
+        { status: 422 },
+      );
+    }
+
+    const clase = await crearClaseConSesion(parsed.data, session.user.id);
     return NextResponse.json(clase, { status: 201 });
   } catch (error) {
+    if (error instanceof EdicionCerradaError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     return fallaInesperada(
       "POST /api/clases",
       error,

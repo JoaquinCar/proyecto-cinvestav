@@ -875,7 +875,7 @@ export async function ejecutarImportacion(entrada: EntradaPlan): Promise<Resulta
 
 function descripcionClase(datos: FilaSesion): string {
   const partes: string[] = [];
-  if (datos.orden !== null) partes.push(`Sesión ${datos.orden}`);
+  if (datos.orden !== null) partes.push(`Clase ${datos.orden}`);
   if (datos.sede) partes.push(`Sede ${datos.sede}`);
   return partes.join(" · ") || datos.tema;
 }

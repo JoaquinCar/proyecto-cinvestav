@@ -13,6 +13,9 @@ const claseValida = {
   edicionId:    "clxyz1234567890abcdef0001",
   nombre:       "Astronomía",
   investigador: "Dr. Juan Pérez",
+  // La fecha es obligatoria: la clase se crea junto con la sesión en que se
+  // imparte, porque sin sesión no se le puede pasar lista.
+  fecha:        "2025-03-15",
   descripcion:  "Introducción al universo",
 };
 
@@ -130,6 +133,29 @@ describe("crearClaseSchema", () => {
     }
   });
 
+  it("rechaza una clase sin fecha: nacería sin sesión y sin poder pasar lista", () => {
+    const { fecha, ...sinFecha } = claseValida;
+    const result = crearClaseSchema.safeParse(sinFecha);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const campos = result.error.issues.map((i) => i.path[0]);
+      expect(campos).toContain("fecha");
+    }
+  });
+
+  it("normaliza la fecha al día de calendario en UTC", () => {
+    const result = crearClaseSchema.safeParse({ ...claseValida, fecha: "2025-03-15" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fecha).toEqual(new Date("2025-03-15T00:00:00.000Z"));
+    }
+  });
+
+  it("rechaza una fecha con formato inválido", () => {
+    const result = crearClaseSchema.safeParse({ ...claseValida, fecha: "15/03/2025" });
+    expect(result.success).toBe(false);
+  });
+
   it("rechaza input completamente vacío", () => {
     const result = crearClaseSchema.safeParse({});
     expect(result.success).toBe(false);
@@ -145,6 +171,20 @@ describe("editarClaseSchema", () => {
   it("acepta un objeto vacío (ningún campo es obligatorio en edición parcial)", () => {
     const result = editarClaseSchema.safeParse({});
     expect(result.success).toBe(true);
+  });
+
+  it("acepta corregir solo la fecha y la normaliza a UTC", () => {
+    const result = editarClaseSchema.safeParse({ fecha: "2025-04-12" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fecha).toEqual(new Date("2025-04-12T00:00:00.000Z"));
+      expect(result.data.nombre).toBeUndefined();
+    }
+  });
+
+  it("rechaza una fecha inexistente en el calendario", () => {
+    const result = editarClaseSchema.safeParse({ fecha: "2025-02-31" });
+    expect(result.success).toBe(false);
   });
 
   it("acepta actualizar solo el nombre", () => {

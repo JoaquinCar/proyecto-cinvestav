@@ -167,7 +167,7 @@ export default async function DashboardPage({
           </div>
           <div>
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Sesiones con datos
+              Clases con datos
             </p>
             <p className="text-foreground font-semibold text-lg">
               {asist.sesionesConDatos}
@@ -180,23 +180,23 @@ export default async function DashboardPage({
         </div>
         <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
           El <strong>registro</strong> cuenta niños únicos inscritos; la{" "}
-          <strong>asistencia</strong> son eventos sumados por sesión (un mismo niño cuenta
-          en cada sesión a la que asiste). Por eso los totales no coinciden — son métricas
+          <strong>asistencia</strong> son eventos sumados por clase (un mismo niño cuenta
+          en cada clase a la que asiste). Por eso los totales no coinciden — son métricas
           distintas, no un error de captura.
         </p>
       </div>
 
-      {/* ════════ SECCIÓN A · ASISTENCIA POR SESIÓN ════════ */}
+      {/* ════════ SECCIÓN A · ASISTENCIA POR CLASE ════════ */}
       <div className="animate-fade-up">
         <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-          Asistencia por sesión
+          Asistencia por clase
         </h2>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Asistencia promedio"
             value={asist.promedioPorSesion}
-            hint="por sesión"
+            hint="por clase"
             icon={TrendingUp}
             colorClass="text-success"
             bgClass="bg-success/10"
@@ -204,13 +204,13 @@ export default async function DashboardPage({
           <StatCard
             label="Pico de asistencia"
             value={asist.picoSesion}
-            hint="mejor sesión"
+            hint="mejor clase"
             icon={Users}
             colorClass="text-secondary"
             bgClass="bg-secondary/10"
           />
           <StatCard
-            label="Sesiones impartidas"
+            label="Clases impartidas"
             value={`${asist.sesionesConDatos}/${asist.totalSesiones}`}
             hint="con datos / total"
             icon={CalendarCheck}
@@ -230,10 +230,10 @@ export default async function DashboardPage({
         <div className="mt-4 grid grid-cols-1 gap-4">
           <PanelGrafica
             title="Tendencia de asistencia"
-            subtitle="Total de asistentes por sesión a lo largo del programa"
+            subtitle="Total de asistentes por clase a lo largo del programa"
             alto={280}
             datos={{
-              columnas: ["Sesión", "Asistentes"],
+              columnas: ["Clase", "Asistentes"],
               filas: asist.tendencia.map((t) => [t.etiqueta, t.presentes]),
             }}
           >
@@ -243,11 +243,11 @@ export default async function DashboardPage({
 
         <div className="mt-4 grid grid-cols-1 gap-4">
           <PanelGrafica
-            title="Niñas y niños por sesión"
-            subtitle="Comparativa de asistencia por género en cada sesión"
+            title="Niñas y niños por clase"
+            subtitle="Comparativa de asistencia por género en cada clase"
             alto={300}
             datos={{
-              columnas: ["Sesión", "Tema", "Niñas", "Niños", "Total"],
+              columnas: ["Clase", "Tema", "Niñas", "Niños", "Total"],
               filas: asist.porSesion.map((s) => [s.etiqueta, s.tema, s.ninas, s.ninos, s.total]),
             }}
           >

@@ -242,7 +242,7 @@ describe("parsearSesiones · archivo REAL del organizador", () => {
     const r = parsearSesiones(buffer, 2026);
     const sinDatos = r.filas.filter((f) => !f.datos.conDatos);
     expect(sinDatos).toHaveLength(5);
-    expect(sinDatos[0].datos.notas).toBe("Sesión sin datos de asistencia registrados.");
+    expect(sinDatos[0].datos.notas).toBe("Clase sin datos de asistencia registrados.");
   });
 
   it("ignora la columna «TOTAL» repetida de escuelas y la columna «MÉRIDA»", () => {

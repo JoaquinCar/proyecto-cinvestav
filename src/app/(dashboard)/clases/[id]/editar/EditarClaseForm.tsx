@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
-import { ArrowLeft, Pencil, BookOpen, User, ImageIcon } from "lucide-react";
+import { ArrowLeft, Pencil, BookOpen, User, ImageIcon, Calendar } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
@@ -14,6 +14,15 @@ import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 // ── Zod schema (cliente — refleja editarClaseSchema) ──────────────────────────
 
 const formSchema = z.object({
+  /**
+   * La fecha se corrige aquí porque la página de la clase ya no ofrece crear
+   * fechas sueltas: sin esto, un dedazo quedaría permanente.
+   */
+  fecha: z
+    .string()
+    .min(1, "Indica el día en que se imparte la clase")
+    .optional(),
+
   nombre: z
     .string({ error: "El nombre es requerido" })
     .min(1, "El nombre no puede estar vacío")
@@ -34,12 +43,22 @@ interface EditarClaseFormProps {
     id: string;
     nombre: string;
     investigador: string;
+    /** Fecha de la clase como "AAAA-MM-DD"; null si no tiene ninguna todavía. */
+    fecha: string | null;
+    /** Cuántas fechas tiene. Más de una obliga a editarlas desde la clase. */
+    totalFechas: number;
   };
+  /** Rango de la edición: acota el calendario a días válidos. */
+  edicion: { fechaInicio: string; fechaFin: string };
 }
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export function EditarClaseForm({ clase }: EditarClaseFormProps) {
+export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
+  // Con varias fechas no se sabe cuál cambiar: cada una se edita desde su
+  // tarjeta en la página de la clase. Con una o ninguna, se edita aquí.
+  const puedeEditarFecha = clase.totalFechas <= 1;
+
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,6 +72,7 @@ export function EditarClaseForm({ clase }: EditarClaseFormProps) {
     defaultValues: {
       nombre: clase.nombre,
       investigador: clase.investigador,
+      fecha: clase.fecha ?? "",
     },
   });
 
@@ -64,7 +84,15 @@ export function EditarClaseForm({ clase }: EditarClaseFormProps) {
       const res = await fetch(`/api/clases/${clase.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          nombre: data.nombre,
+          investigador: data.investigador,
+          // La fecha solo viaja si se puede editar y cambió de verdad: así una
+          // clase con varias fechas nunca manda una que el servidor rechazaría.
+          ...(puedeEditarFecha &&
+            data.fecha &&
+            data.fecha !== clase.fecha && { fecha: data.fecha }),
+        }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -172,6 +200,50 @@ export function EditarClaseForm({ clase }: EditarClaseFormProps) {
               </p>
             )}
           </div>
+
+          {/* Fecha de la clase */}
+          {puedeEditarFecha ? (
+            <div className="space-y-2">
+              <Label
+                htmlFor="fecha"
+                className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
+              >
+                <Calendar size={13} strokeWidth={2} aria-hidden />
+                Día en que se imparte
+              </Label>
+              <Input
+                id="fecha"
+                type="date"
+                min={edicion.fechaInicio}
+                max={edicion.fechaFin}
+                {...register("fecha")}
+                className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.fecha ? "border-destructive focus:ring-destructive" : ""}`}
+                aria-describedby={errors.fecha ? "fecha-error" : "fecha-hint"}
+              />
+              {errors.fecha ? (
+                <p id="fecha-error" className="text-xs text-destructive" role="alert">
+                  {errors.fecha.message}
+                </p>
+              ) : (
+                <p id="fecha-hint" className="text-xs text-muted-foreground">
+                  Debe caer dentro de la edición. Es la fecha con la que se pasa lista.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-start gap-2.5 rounded-xl bg-muted border border-border px-4 py-3">
+              <Calendar
+                size={15}
+                strokeWidth={1.8}
+                className="mt-0.5 shrink-0 text-primary"
+                aria-hidden
+              />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Esta clase tiene {clase.totalFechas} fechas. Cambia cada una desde su
+                tarjeta en la <span className="text-foreground font-medium">página de la clase</span>.
+              </p>
+            </div>
+          )}
 
           {/* Aviso: la descripción y las imágenes se gestionan en el detalle */}
           <div className="flex items-start gap-2.5 rounded-xl bg-muted border border-border px-4 py-3">

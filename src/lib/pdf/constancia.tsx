@@ -45,7 +45,7 @@ const datosTabla = (d: DatosConstancia): [string, string][] => [
   ["Escuela", d.escuela],
   ["Grado", d.grado],
   ["Edición", `${d.edicion.nombre} ${d.edicion.anio}`],
-  ["Asistencias", `${d.asistencias} de ${d.totalSesiones} sesiones`],
+  ["Asistencias", `${d.asistencias} de ${d.totalSesiones} clases`],
   ["Fecha de emisión", d.fechaEmision],
 ];
 

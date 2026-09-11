@@ -21,7 +21,7 @@ export default async function ImportarPage() {
       <div className="space-y-8">
         <PageHeader
           title="Importar desde Excel"
-          subtitle="Carga masiva de participantes, sesiones y asistencia"
+          subtitle="Carga masiva de participantes, clases y asistencia"
         />
         <div className="h-px bg-border" />
         <EmptyState
