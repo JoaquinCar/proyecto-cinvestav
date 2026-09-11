@@ -109,7 +109,7 @@ describe("GET /api/sesiones/[id]/asistencia", () => {
 
     expect(res.status).toBe(404);
     const json = await res.json();
-    expect(json.error).toMatch(/sesión no encontrada/i);
+    expect(json.error).toMatch(/esta sesión ya no existe/i);
   });
 
   it("responde 200 con lista de asistencias y resumen (rol ADMIN)", async () => {
@@ -226,7 +226,7 @@ describe("POST /api/asistencias", () => {
 
     expect(res.status).toBe(422);
     const json = await res.json();
-    expect(json.error).toMatch(/inválidos/i);
+    expect(json.error).toMatch(/revisa estos datos/i);
     expect(json.detalles).toBeDefined();
   });
 

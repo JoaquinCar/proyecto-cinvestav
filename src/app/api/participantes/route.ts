@@ -8,6 +8,12 @@ import {
   buscarParticipantes,
   crearParticipante,
 } from "@/server/queries/participantes";
+import {
+  fallaInesperada,
+  leerCuerpoJson,
+  mensajeCamposInvalidos,
+  respuestaCamposInvalidos,
+} from "@/server/respuestas";
 
 // ── GET /api/participantes?q=texto&edicionId=X ────────────────────────────────
 // Busca participantes por nombre o apellidos.
@@ -28,7 +34,7 @@ export async function GET(request: NextRequest) {
   const parsed = busquedaParticipanteSchema.safeParse(raw);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Parámetros inválidos", detalles: parsed.error.flatten() },
+      { error: mensajeCamposInvalidos(parsed.error), detalles: parsed.error.flatten() },
       { status: 400 },
     );
   }
@@ -40,8 +46,11 @@ export async function GET(request: NextRequest) {
     );
     return NextResponse.json({ participantes });
   } catch (err) {
-    console.error("[GET /api/participantes]", err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "GET /api/participantes",
+      err,
+      "No se pudo buscar entre los participantes. Revisa tu conexión y vuelve a intentarlo en unos momentos.",
+    );
   }
 }
 
@@ -60,26 +69,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Permiso insuficiente" }, { status: 403 });
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Cuerpo JSON inválido" }, { status: 400 });
-  }
+  const cuerpo = await leerCuerpoJson(request);
+  if (!cuerpo.ok) return cuerpo.respuesta;
 
-  const parsed = participanteSchema.safeParse(body);
+  const parsed = participanteSchema.safeParse(cuerpo.datos);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Datos inválidos", detalles: parsed.error.flatten() },
-      { status: 422 },
-    );
+    return respuestaCamposInvalidos(parsed.error);
   }
 
   try {
     const participante = await crearParticipante(parsed.data);
     return NextResponse.json({ participante }, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/participantes]", err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "POST /api/participantes",
+      err,
+      "No se pudo guardar la ficha del participante y no quedó registrada. Vuelve a intentarlo en unos minutos.",
+    );
   }
 }

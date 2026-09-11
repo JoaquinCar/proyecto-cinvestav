@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { mensajeDeError } from "@/lib/api/errores";
 import {
   AlignLeft,
   ImagePlus,
@@ -116,7 +117,10 @@ export function ContenidoClase({
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error ?? "Error al guardar la descripción");
+        throw new Error(
+          json?.error ??
+            "No se pudo guardar la descripción; la clase sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
+        );
       }
 
       toast.success(
@@ -126,7 +130,10 @@ export function ContenidoClase({
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Error al guardar la descripción",
+        mensajeDeError(
+          error,
+          "No se pudo guardar la descripción; la clase sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
+        ),
       );
     } finally {
       setGuardando(false);
@@ -140,7 +147,9 @@ export function ContenidoClase({
       const validos = archivos.filter((a) => esTipoAceptado(a.type));
 
       if (validos.length === 0) {
-        toast.error("Formato no permitido. Usa PNG, JPG, WebP o GIF");
+        toast.error(
+          "Ese archivo no es una imagen que se pueda subir. Usa un archivo PNG, JPG, WebP o GIF.",
+        );
         return;
       }
 
@@ -163,13 +172,19 @@ export function ContenidoClase({
 
             if (!res.ok) {
               const json = await res.json().catch(() => ({}));
-              throw new Error(json?.error ?? "Error al subir la imagen");
+              throw new Error(
+                json?.error ??
+                  "No se pudo subir la imagen y no quedó agregada a la clase. Vuelve a intentarlo en unos minutos.",
+              );
             }
 
             exitosas += 1;
           } catch (error) {
             toast.error(
-              error instanceof Error ? error.message : "Error al subir la imagen",
+              mensajeDeError(
+                error,
+                "No se pudo subir la imagen y no quedó agregada a la clase. Vuelve a intentarlo en unos minutos.",
+              ),
             );
           }
         }
@@ -234,7 +249,10 @@ export function ContenidoClase({
 
       if (!res.ok && res.status !== 204) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error ?? "Error al eliminar la imagen");
+        throw new Error(
+          json?.error ??
+            "No se pudo eliminar la imagen; sigue en la clase. Vuelve a intentarlo en unos minutos.",
+        );
       }
 
       toast.success("Imagen eliminada");
@@ -242,7 +260,10 @@ export function ContenidoClase({
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Error al eliminar la imagen",
+        mensajeDeError(
+          error,
+          "No se pudo eliminar la imagen; sigue en la clase. Vuelve a intentarlo en unos minutos.",
+        ),
       );
     }
   }

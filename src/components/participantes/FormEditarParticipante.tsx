@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { mensajeDeError } from "@/lib/api/errores";
 import { Save, Trash2, AlertTriangle, X } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
@@ -103,19 +104,30 @@ export function FormEditarParticipante({
       router.push(`/participantes/${participante.id}`);
       router.refresh();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) =>
+      toast.error(
+        `No se pudieron guardar los cambios de ${participante.nombre} ${participante.apellidos}: ` +
+          mensajeDeError(err, "el servidor no completó la operación."),
+      ),
   });
 
   // Eliminar ── el 409 del servidor trae el detalle de qué lo impide
   const mutacionEliminar = useMutation({
     mutationFn: () => eliminarParticipante(participante.id),
     onSuccess: () => {
-      toast.success("Participante eliminado");
+      toast.success(
+        `Se eliminó la ficha de ${participante.nombre} ${participante.apellidos}`,
+      );
       router.push("/participantes");
       router.refresh();
     },
     onError: (err: Error) => {
-      setErrorBorrado(err.message);
+      setErrorBorrado(
+        mensajeDeError(
+          err,
+          "No se pudo eliminar al participante; su ficha sigue registrada. Vuelve a intentarlo en unos minutos.",
+        ),
+      );
       setConfirmandoBorrado(false);
     },
   });

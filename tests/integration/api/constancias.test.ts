@@ -1,9 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/server/queries/constancias", () => ({
   verificarElegibilidad: vi.fn(),
   generarYGuardarConstancia: vi.fn(),
+  // La ruta distingue estos fallos del 500 genérico: el `catch {}` vacío que
+  // había antes convertía "falta el espacio de archivos" en "Error interno".
+  AlmacenamientoNoConfiguradoError: class AlmacenamientoNoConfiguradoError extends Error {},
+  AlmacenamientoNoDisponibleError: class AlmacenamientoNoDisponibleError extends Error {},
+  InscripcionNoEncontradaError: class InscripcionNoEncontradaError extends Error {},
 }));
 
 const sessionAdmin = {
@@ -147,7 +152,7 @@ describe("POST /api/pdf/constancia/[inscripcionId]", () => {
     });
     expect(res.status).toBe(422);
     const json = await res.json();
-    expect(json.error).toMatch(/mínimo/i);
+    expect(json.error).toMatch(/2 de las 5 asistencias/i);
   });
 
   it("201 genera constancia para ADMIN elegible", async () => {
@@ -188,5 +193,108 @@ describe("POST /api/pdf/constancia/[inscripcionId]", () => {
       params: Promise.resolve({ inscripcionId: "insc-1" }),
     });
     expect(res.status).toBe(201);
+  });
+});
+
+// ── El almacenamiento de archivos no responde ─────────────────────────────────
+// Antes, todo esto salía como 500 "Error interno del servidor" desde un catch
+// vacío: ni el cliente sabía qué pasaba ni quedaba nada en el log del servidor.
+
+describe("POST /api/pdf/constancia/[inscripcionId] — almacenamiento caído", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("503 y explica que falta configurar el almacenamiento", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+    const {
+      verificarElegibilidad,
+      generarYGuardarConstancia,
+      AlmacenamientoNoConfiguradoError,
+    } = await import("@/server/queries/constancias");
+    vi.mocked(verificarElegibilidad).mockResolvedValueOnce(elegibleMock);
+    vi.mocked(generarYGuardarConstancia).mockRejectedValueOnce(
+      new AlmacenamientoNoConfiguradoError(
+        "No se pudo guardar la constancia porque el almacenamiento de archivos no está configurado en el servidor. " +
+          "La constancia no quedó guardada. Avisa a quien administra el sistema para que complete esa configuración.",
+      ),
+    );
+
+    const { POST } = await import(
+      "@/app/api/pdf/constancia/[inscripcionId]/route"
+    );
+    const res = await POST(req("POST"), {
+      params: Promise.resolve({ inscripcionId: "insc-1" }),
+    });
+
+    // 503, no 500: el problema es del servicio de archivos y tiene arreglo.
+    expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json.error).toMatch(/no está configurado/i);
+    expect(json.error).toMatch(/no quedó guardada/i);
+    expect(json.error).not.toBe("Error interno del servidor");
+    // Y el motivo real queda en el log del servidor.
+    expect(console.error).toHaveBeenCalled();
+  });
+
+  it("503 y nombra el espacio de archivos que falta", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+    const {
+      verificarElegibilidad,
+      generarYGuardarConstancia,
+      AlmacenamientoNoDisponibleError,
+    } = await import("@/server/queries/constancias");
+    vi.mocked(verificarElegibilidad).mockResolvedValueOnce(elegibleMock);
+    vi.mocked(generarYGuardarConstancia).mockRejectedValueOnce(
+      new AlmacenamientoNoDisponibleError(
+        'No se pudo guardar la constancia porque el almacenamiento de archivos la rechazó. ' +
+          'El PDF se armó bien, pero no quedó guardado ni se marcó como entregada. ' +
+          'Avisa a quien administra el sistema y dile esto: el espacio de archivos "constancias" respondió "Bucket not found".',
+      ),
+    );
+
+    const { POST } = await import(
+      "@/app/api/pdf/constancia/[inscripcionId]/route"
+    );
+    const res = await POST(req("POST"), {
+      params: Promise.resolve({ inscripcionId: "insc-1" }),
+    });
+
+    expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json.error).toContain("constancias");
+    expect(json.error).toContain("Bucket not found");
+  });
+
+  it("500 con un fallo imprevisto: sin trazas en pantalla, con registro en el servidor", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+    const { verificarElegibilidad, generarYGuardarConstancia } = await import(
+      "@/server/queries/constancias"
+    );
+    vi.mocked(verificarElegibilidad).mockResolvedValueOnce(elegibleMock);
+    vi.mocked(generarYGuardarConstancia).mockRejectedValueOnce(
+      new Error("ECONNRESET en /Users/qa/src/server/queries/constancias.ts"),
+    );
+
+    const { POST } = await import(
+      "@/app/api/pdf/constancia/[inscripcionId]/route"
+    );
+    const res = await POST(req("POST"), {
+      params: Promise.resolve({ inscripcionId: "insc-1" }),
+    });
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.error).toMatch(/no se pudo generar la constancia/i);
+    expect(json.error).toMatch(/no quedó guardada/i);
+    expect(json.error).not.toContain("/Users/");
+    expect(json.error).not.toContain("ECONNRESET");
+    expect(console.error).toHaveBeenCalled();
   });
 });

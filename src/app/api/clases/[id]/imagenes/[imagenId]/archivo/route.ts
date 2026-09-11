@@ -7,6 +7,7 @@ import {
   tipoImagenSeguro,
   extensionImagen,
 } from "@/server/queries/imagenes-clase";
+import { fallaInesperada } from "@/server/respuestas";
 
 type RouteContext = { params: Promise<{ id: string; imagenId: string }> };
 
@@ -84,8 +85,15 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!archivo) {
       // Storage no configurado, caído, o el objeto ya no está en el bucket. La
       // galería lo pinta como un hueco; el resto de la clase sigue funcionando.
+      console.error(
+        "[GET /api/clases/[id]/imagenes/[imagenId]/archivo] el almacenamiento no devolvió el archivo",
+        { imagenId: imagen.id },
+      );
       return NextResponse.json(
-        { error: "No se pudo leer la imagen" },
+        {
+          error:
+            "No se pudo mostrar esta imagen porque el almacenamiento de archivos no respondió. El resto de la clase sigue disponible; vuelve a intentarlo en unos minutos.",
+        },
         { status: 502 },
       );
     }
@@ -107,10 +115,11 @@ export async function GET(_request: Request, context: RouteContext) {
         "X-Content-Type-Options": "nosniff",
       },
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 },
+  } catch (error) {
+    return fallaInesperada(
+      "GET /api/clases/[id]/imagenes/[imagenId]/archivo",
+      error,
+      "No se pudo mostrar esta imagen. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

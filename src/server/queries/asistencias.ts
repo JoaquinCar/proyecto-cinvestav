@@ -141,13 +141,15 @@ async function validarMismaEdicion(
 
     if (!edicionInscripcion || !edicionSesion) {
       throw new AsistenciaFueraDeEdicionError(
-        "La inscripción o la sesión no existen",
+        "No se guardó la asistencia porque el participante o la sesión ya no existen: " +
+          "alguien pudo darlos de baja mientras pasabas lista. Vuelve a cargar la lista para ver el estado actual.",
       );
     }
 
     if (edicionInscripcion !== edicionSesion) {
       throw new AsistenciaFueraDeEdicionError(
-        "La inscripción no pertenece a la edición de la sesión",
+        "No se guardó la asistencia porque el participante no está inscrito en la edición a la que pertenece esta sesión. " +
+          "Revisa que estés pasando lista en la sesión correcta.",
       );
     }
 

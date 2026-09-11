@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 
 // ── Zod schema (cliente — refleja crearClaseSchema) ───────────────────────────
 
@@ -95,17 +96,20 @@ export function FormNuevaClase({
         }),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setServerError(json?.error ?? "Error al crear la clase. Intenta de nuevo.");
+        setServerError(
+          json?.error ??
+            "No se pudo crear la clase y no quedó guardada. Vuelve a intentarlo en unos minutos.",
+        );
         return;
       }
 
       router.push(`/clases/${json.id}`);
       router.refresh();
     } catch {
-      setServerError("Error de red. Verifica tu conexión e intenta de nuevo.");
+      setServerError(`${MENSAJE_SIN_CONEXION} La clase no quedó guardada.`);
     } finally {
       setLoading(false);
     }

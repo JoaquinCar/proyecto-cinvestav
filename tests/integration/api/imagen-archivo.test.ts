@@ -240,7 +240,7 @@ describe("GET .../archivo — fallos de Storage", () => {
     expect(res.status).toBe(502);
     const body = await res.json();
     // El mensaje no revela la ruta interna del bucket.
-    expect(body.error).toBe("No se pudo leer la imagen");
+    expect(body.error).toMatch(/no se pudo mostrar esta imagen/i);
   });
 
   it("502 si el cliente de Storage lanza", async () => {

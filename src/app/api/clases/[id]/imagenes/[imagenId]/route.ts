@@ -4,6 +4,7 @@ import {
   obtenerImagenClase,
   eliminarImagenClase,
 } from "@/server/queries/imagenes-clase";
+import { fallaInesperada } from "@/server/respuestas";
 
 type RouteContext = { params: Promise<{ id: string; imagenId: string }> };
 
@@ -23,15 +24,22 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     const imagen = await obtenerImagenClase(imagenId);
     if (!imagen || imagen.claseId !== id) {
-      return NextResponse.json({ error: "Imagen no encontrada" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            "Esta imagen ya no está en la clase: alguien pudo eliminarla antes. Vuelve a cargar la página para ver las que quedan.",
+        },
+        { status: 404 },
+      );
     }
 
     await eliminarImagenClase(imagenId);
     return new NextResponse(null, { status: 204 });
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 },
+  } catch (error) {
+    return fallaInesperada(
+      "DELETE /api/clases/[id]/imagenes/[imagenId]",
+      error,
+      "No se pudo eliminar la imagen; sigue en la clase. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

@@ -5,6 +5,7 @@ import {
   obtenerEscuelasRecurrentes,
   obtenerParticipantesRecurrentes,
 } from "@/server/queries/historico";
+import { fallaInesperada } from "@/server/respuestas";
 
 export async function GET() {
   try {
@@ -18,7 +19,11 @@ export async function GET() {
       obtenerParticipantesRecurrentes(),
     ]);
     return NextResponse.json({ ediciones, escuelas, participantes });
-  } catch {
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  } catch (error) {
+    return fallaInesperada(
+      "GET /api/estadisticas/historico",
+      error,
+      "No se pudo cargar la comparación entre ediciones. Vuelve a intentarlo en unos momentos.",
+    );
   }
 }

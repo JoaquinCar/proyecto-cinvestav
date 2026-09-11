@@ -26,6 +26,24 @@ import {
   crearParticipante,
   crearInscripcion,
 } from "@/lib/api/participantes";
+import {
+  mensajeAltaSinInscripcion,
+  mensajeDeError,
+  mensajeFalloAccion,
+} from "@/lib/api/errores";
+
+/**
+ * El alta de un niño nuevo son dos pasos en el servidor: se crea la ficha y
+ * luego se inscribe en la edición. Cuando falla el segundo, la ficha YA quedó
+ * guardada, así que el aviso tiene que decirlo. Este error distingue ese caso
+ * del fallo del alta entera.
+ */
+class InscripcionTrasAltaError extends Error {
+  constructor(nombreCompleto: string, motivo: string) {
+    super(mensajeAltaSinInscripcion(nombreCompleto, motivo));
+    this.name = "InscripcionTrasAltaError";
+  }
+}
 
 // ── Schema de validación ──────────────────────────────────────────────────────
 
@@ -81,7 +99,14 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
   const mutacionNuevo = useMutation({
     mutationFn: async (data: FormValues) => {
       const participante = await crearParticipante(data);
-      await crearInscripcion(participante.id, edicionId);
+      try {
+        await crearInscripcion(participante.id, edicionId);
+      } catch (err) {
+        throw new InscripcionTrasAltaError(
+          `${data.nombre} ${data.apellidos}`,
+          mensajeDeError(err, "la inscripción no llegó a guardarse"),
+        );
+      }
     },
     onSuccess: () => {
       toast.success("Participante registrado e inscrito correctamente");
@@ -91,8 +116,20 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       setModoExistente(false);
       onSuccess?.();
     },
-    onError: (err: Error) => {
-      toast.error(err.message);
+    onError: (err: Error, data) => {
+      // La ficha se guardó y solo falló la inscripción: el mensaje ya lo
+      // explica entero, no hay que anteponerle "no se pudo registrar".
+      if (err instanceof InscripcionTrasAltaError) {
+        toast.error(err.message, { duration: 12_000 });
+        return;
+      }
+      toast.error(
+        mensajeFalloAccion(
+          "registrar",
+          `${data.nombre} ${data.apellidos}`,
+          mensajeDeError(err, "el servidor no completó el registro"),
+        ),
+      );
     },
   });
 
@@ -109,7 +146,16 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       onSuccess?.();
     },
     onError: (err: Error) => {
-      toast.error(err.message);
+      const quien = participanteExistente
+        ? `${participanteExistente.nombre} ${participanteExistente.apellidos}`
+        : "el participante";
+      toast.error(
+        mensajeFalloAccion(
+          "inscribir",
+          quien,
+          mensajeDeError(err, "el servidor no completó la inscripción"),
+        ),
+      );
     },
   });
 

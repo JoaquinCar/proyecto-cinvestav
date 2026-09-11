@@ -5,6 +5,7 @@ import {
   InscripcionConAsistenciasError,
   InscripcionConConstanciaError,
 } from "@/server/queries/participantes";
+import { fallaInesperada } from "@/server/respuestas";
 
 // ── DELETE /api/inscripciones/[id] ────────────────────────────────────────────
 // Da de baja a un participante de una edición. Solo ADMIN.
@@ -33,7 +34,10 @@ export async function DELETE(
   const { id } = await params;
 
   if (!id || typeof id !== "string") {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    return NextResponse.json(
+      { error: "El enlace de la inscripción está incompleto. Vuelve a abrirlo desde la ficha del participante." },
+      { status: 400 },
+    );
   }
 
   const forzar =
@@ -45,7 +49,10 @@ export async function DELETE(
   } catch (err) {
     if (err instanceof Error && err.message === "INSCRIPCION_NO_ENCONTRADA") {
       return NextResponse.json(
-        { error: "Inscripción no encontrada" },
+        {
+          error:
+            "Este participante ya no figura inscrito en esa edición: la baja pudo registrarse antes desde otra pantalla. Vuelve a cargar la página para ver el estado actual.",
+        },
         { status: 404 },
       );
     }
@@ -58,7 +65,10 @@ export async function DELETE(
         { status: 409 },
       );
     }
-    console.error(`[DELETE /api/inscripciones/${id}]`, err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return fallaInesperada(
+      "DELETE /api/inscripciones/[id]",
+      err,
+      "No se pudo dar de baja al participante; sigue inscrito en la edición. Vuelve a intentarlo en unos minutos.",
+    );
   }
 }

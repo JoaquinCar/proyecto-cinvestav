@@ -240,7 +240,7 @@ describe("POST /api/clases/[id]/imagenes", () => {
 
     expect(res.status).toBe(422);
     const body = await res.json();
-    expect(body.error).toMatch(/inválidos/i);
+    expect(body.error).toMatch(/revisa estos datos/i);
   });
 
   it("retorna 404 cuando la clase no existe", async () => {

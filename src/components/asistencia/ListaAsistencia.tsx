@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Search, Users } from "lucide-react";
+import { mensajeDeError, MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { BotonAsistencia } from "@/components/asistencia/BotonAsistencia";
@@ -78,11 +80,17 @@ export function ListaAsistencia({
   const queryClient = useQueryClient();
 
   // Server state
-  const { data, isLoading, isError } = useQuery<AsistenciaResponse>({
+  const { data, isLoading, isError, error } = useQuery<AsistenciaResponse>({
     queryKey: ["asistencia", sesionId],
     queryFn: async () => {
       const res = await fetch(`/api/sesiones/${sesionId}/asistencia`);
-      if (!res.ok) throw new Error("Error al cargar asistencias");
+      if (!res.ok) {
+        const cuerpo = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(
+          cuerpo.error ??
+            "No se pudo cargar la lista de asistencia. Revisa tu conexión y vuelve a intentarlo.",
+        );
+      }
       return res.json() as Promise<AsistenciaResponse>;
     },
     staleTime: 30_000,
@@ -101,14 +109,26 @@ export function ListaAsistencia({
 
   const mutation = useMutation<{ updated: number }, Error, BatchPostBody>({
     mutationFn: async (body) => {
-      const res = await fetch("/api/asistencias", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/asistencias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch {
+        // La petición no salió del teléfono: pasar lista en el aula, con mala
+        // señal, es justo el caso en el que esto ocurre.
+        throw new Error(
+          `${MENSAJE_SIN_CONEXION} Las marcas que hiciste se deshicieron: vuelve a marcarlas cuando tengas señal.`,
+        );
+      }
       if (!res.ok) {
         const errorData = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(errorData.error ?? "Error al guardar asistencias");
+        throw new Error(
+          errorData.error ??
+            "No se pudo guardar la asistencia y las marcas se deshicieron. Vuelve a marcarlas e inténtalo de nuevo.",
+        );
       }
       return res.json() as Promise<{ updated: number }>;
     },
@@ -140,10 +160,22 @@ export function ListaAsistencia({
       setPendientes((prev) => clear(prev));
       pendientesRef.current = clear(pendientesRef.current);
     },
-    onError: () => {
-      // Rollback: descartar optimismo para volver al estado del servidor
+    onError: (error) => {
+      // Rollback: descartar optimismo para volver al estado del servidor.
+      //
+      // Este rollback era MUDO: las palomitas volvían solas a su sitio y nadie
+      // se enteraba de que la lista no se había guardado. En campo eso significa
+      // dar por registrada una asistencia que no existe, así que el aviso es
+      // obligatorio y dice explícitamente que hay que volver a marcar.
       setPendientes(new Map());
       pendientesRef.current = new Map();
+      toast.error(
+        mensajeDeError(
+          error,
+          "No se pudo guardar la asistencia y las marcas se deshicieron. Vuelve a marcarlas e inténtalo de nuevo.",
+        ),
+        { duration: 10_000 },
+      );
     },
   });
 
@@ -180,12 +212,29 @@ export function ListaAsistencia({
         const items = Array.from(pendientesRef.current.entries()).map(
           ([inscripcionId, presente]) => ({ inscripcionId, sesionId, presente }),
         );
+        // Último envío al salir de la pantalla. Si falla, el aviso todavía se
+        // ve mientras no se cierre la pestaña: antes se perdía sin rastro.
         void fetch("/api/asistencias", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ items }),
           keepalive: true,
-        });
+        })
+          .then(async (res) => {
+            if (res.ok) return;
+            const cuerpo = (await res.json().catch(() => ({}))) as { error?: string };
+            toast.error(
+              cuerpo.error ??
+                "Las últimas marcas de asistencia no se guardaron al salir de la lista. Vuelve a abrirla y márcalas de nuevo.",
+              { duration: 10_000 },
+            );
+          })
+          .catch(() => {
+            toast.error(
+              `${MENSAJE_SIN_CONEXION} Las últimas marcas de asistencia no se guardaron: vuelve a abrir la lista y márcalas de nuevo.`,
+              { duration: 10_000 },
+            );
+          });
       }
     };
   }, [sesionId]);
@@ -243,8 +292,14 @@ export function ListaAsistencia({
 
   if (isError) {
     return (
-      <div className="rounded-2xl p-6 text-center text-sm bg-destructive/10 border border-destructive/40 text-destructive">
-        No se pudo cargar la lista de asistencia. Por favor recarga la página.
+      <div
+        className="rounded-2xl p-6 text-center text-sm bg-destructive/10 border border-destructive/40 text-destructive"
+        role="alert"
+      >
+        {mensajeDeError(
+          error,
+          "No se pudo cargar la lista de asistencia. Revisa tu conexión y vuelve a cargar la página.",
+        )}
       </div>
     );
   }
@@ -277,7 +332,7 @@ export function ListaAsistencia({
               className="text-xs text-destructive"
               role="alert"
             >
-              Error al guardar
+              Sin guardar
             </span>
           )}
 
