@@ -526,7 +526,7 @@ export function parsearSesiones(
       fecha: fecha as Date,
       notas:
         textoCelda(celda(cruda, "notas")) ||
-        (conDatos ? "" : "Sesión sin datos de asistencia registrados."),
+        (conDatos ? "" : "Clase sin datos de asistencia registrados."),
       conDatos,
       ninas: ninas ?? 0,
       ninos: ninos ?? 0,

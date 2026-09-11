@@ -122,7 +122,7 @@ export async function AnalisisEdicion({
         <InsightCard
           label="Asistencia promedio"
           value={a.promedioAsist}
-          hint={`por sesión (${a.sesionesConDatos} de ${a.sesionesTotal} con datos)`}
+          hint={`por clase (${a.sesionesConDatos} de ${a.sesionesTotal} con datos)`}
           icon={Activity}
           colorClass="text-success"
           bgClass="bg-success/10"
@@ -138,7 +138,7 @@ export async function AnalisisEdicion({
         <InsightCard
           label="Caída de asistencia"
           value={`${a.caidaPct}%`}
-          hint="de la 1ª a la última sesión con datos"
+          hint="de la 1ª a la última clase con datos"
           icon={TrendingDown}
           colorClass="text-destructive"
           bgClass="bg-destructive/10"
@@ -293,12 +293,12 @@ export async function AnalisisEdicion({
             subtitle={
               a.picoAsist && a.minAsist
                 ? `Del pico de ${a.picoAsist.total} se bajó a ${a.minAsist.total} — una caída del ${a.caidaPct}% hacia el final`
-                : "Asistentes por sesión"
+                : "Asistentes por clase"
             }
             alto={280}
             altoExpandido={520}
             datos={{
-              columnas: ["Sesión", "Asistentes"],
+              columnas: ["Clase", "Asistentes"],
               filas: a.retencion.map((r) => [r.etiqueta, r.presentes]),
             }}
           >
@@ -306,12 +306,12 @@ export async function AnalisisEdicion({
           </PanelGrafica>
 
           <PanelGrafica
-            title="Acompañantes por sesión"
+            title="Acompañantes por clase"
             subtitle={`Mamás y papás presentes · ${a.ratioAcompanantes} acompañantes por cada 10 niños`}
             alto={280}
             altoExpandido={520}
             datos={{
-              columnas: ["Sesión", "Mamás", "Papás", "Total"],
+              columnas: ["Clase", "Mamás", "Papás", "Total"],
               filas: a.acompanantesPorSesion.map((s) => [s.etiqueta, s.a, s.b, s.a + s.b]),
             }}
           >
@@ -350,12 +350,12 @@ export async function AnalisisEdicion({
             </PanelGrafica>
 
             <PanelGrafica
-              title="Sesiones por edición"
-              subtitle="Cuántas sesiones se impartieron"
+              title="Clases por edición"
+              subtitle="Cuántas clases se impartieron"
               alto={230}
               altoExpandido={480}
               datos={{
-                columnas: ["Edición", "Sesiones"],
+                columnas: ["Edición", "Clases"],
                 filas: ediciones.map((e) => [`${e.anio} · ${e.nombre}`, e.totalSesiones]),
               }}
             >

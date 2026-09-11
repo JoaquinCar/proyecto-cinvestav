@@ -39,7 +39,7 @@ function ReporteDoc({ d }: { d: DatosReporteClase }) {
         <View style={s.summaryRow}>
           {[
             ["Participantes", String(d.totalParticipantes)],
-            ["Sesiones", String(d.sesiones.length)],
+            ["Fechas", String(d.sesiones.length)],
             ["Asistencia prom.", `${d.promedioAsistencia}%`],
           ].map(([label, val]) => (
             <Text key={label} style={s.summaryItem}>
@@ -48,7 +48,7 @@ function ReporteDoc({ d }: { d: DatosReporteClase }) {
           ))}
         </View>
 
-        <Text style={s.h2}>Sesiones</Text>
+        <Text style={s.h2}>Fechas impartidas</Text>
         <View style={s.header}>
           <Text style={[s.cellBold, { width: 80 }]}>Fecha</Text>
           <Text style={[s.cellBold, { width: 60 }]}>Asistentes</Text>

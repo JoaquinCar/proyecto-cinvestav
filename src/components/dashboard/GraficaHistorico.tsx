@@ -23,7 +23,7 @@ interface Props {
 
 const ETIQUETA: Record<Serie, string> = {
   totalParticipantes: "participantes",
-  totalSesiones: "sesiones",
+  totalSesiones: "clases",
   promedioAsistencia: "de asistencia",
 };
 

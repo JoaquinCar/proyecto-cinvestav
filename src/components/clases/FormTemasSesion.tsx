@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { mensajeDeError } from "@/lib/api/errores";
 
 const FALLO_AL_GUARDAR =
-  "No se pudieron guardar los cambios de la sesión; sigue como estaba. Vuelve a intentarlo en unos minutos.";
+  "No se pudieron guardar los cambios de la clase; sigue como estaba. Vuelve a intentarlo en unos minutos.";
 
 const LARGO_MAXIMO_TEMAS = 500;
 const LARGO_MAXIMO_NOTAS = 1000;
@@ -33,8 +33,11 @@ interface FormTemasSesionProps {
 }
 
 /**
- * Edita fecha, temas y notas de una sesión desde la página de la clase.
- * Antes esto enlazaba a `/sesiones/[id]/temas`, una ruta que nunca existió.
+ * Edita fecha, temas y notas de la clase desde su propia página.
+ *
+ * En la interfaz no se habla de "sesiones": una clase es la charla que se
+ * imparte en una fecha, y eso es lo que se edita aquí. El nombre del
+ * componente y los ids conservan el término del modelo de datos.
  */
 export function FormTemasSesion({
   sesionId,
@@ -79,7 +82,7 @@ export function FormTemasSesion({
         throw new Error(json?.error ?? FALLO_AL_GUARDAR);
       }
 
-      toast.success(`Sesión del ${fechaSesion} actualizada`);
+      toast.success("Clase actualizada");
       setAbierto(false);
       router.refresh();
     } catch (error) {
@@ -96,7 +99,7 @@ export function FormTemasSesion({
           <button
             type="button"
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground"
-            aria-label={`Editar la sesión del ${fechaSesion}`}
+            aria-label={`Editar la clase del ${fechaSesion}`}
           >
             <Pencil size={11} strokeWidth={2} aria-hidden />
             Editar
@@ -117,7 +120,7 @@ export function FormTemasSesion({
             </div>
             <div>
               <DialogTitle className="font-display text-lg font-semibold text-foreground">
-                Editar sesión
+                Editar clase
               </DialogTitle>
               <p className="text-xs mt-0.5 text-muted-foreground">{fechaSesion}</p>
             </div>
@@ -128,7 +131,7 @@ export function FormTemasSesion({
         <div className="space-y-4 mt-2">
           <div className="space-y-2">
             <Label htmlFor="sesion-fecha-editar" className="text-sm font-medium text-foreground">
-              Fecha de la sesión
+              Día en que se imparte
             </Label>
             <Input
               id="sesion-fecha-editar"

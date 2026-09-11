@@ -10,13 +10,14 @@ import {
   Users,
   Pencil,
   FileDown,
+  ClipboardCheck,
+  ChevronRight,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerClasePorId, listarSesionesDeClase } from "@/server/queries/clases";
 import { listarImagenesDeClaseConUrl } from "@/server/queries/imagenes-clase";
 import { obtenerEdicionPorId } from "@/server/queries/ediciones";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { FormSesion } from "@/components/clases/FormSesion";
 import { FormTemasSesion } from "@/components/clases/FormTemasSesion";
 import { ContenidoClase } from "@/components/clases/ContenidoClase";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
@@ -75,6 +76,26 @@ export default async function ClaseDetallePage({
     0
   );
 
+  // Una clase es una charla impartida en una fecha: las 12 clases reales tienen
+  // exactamente una. El modelo admite varias, así que si las hay se muestran
+  // todas — lo que no existe es crear fechas sueltas desde aquí.
+  const fechaUnica = sesiones.length === 1 ? sesiones[0] : null;
+
+  // Las métricas solo aportan cuando hay varias fechas. En el caso normal —una
+  // clase, una charla— la fecha está en el encabezado y los asistentes en la
+  // tarjeta de la fecha: repetirlos en tarjetas grandes sería ruido.
+  const metricas =
+    sesiones.length > 1
+      ? [
+          { label: "Fechas", value: sesiones.length,
+            iconClass: "text-secondary-foreground", bgClass: "bg-secondary/10", icon: Calendar },
+          { label: "Asistencias totales", value: totalAsistencias,
+            iconClass: "text-success", bgClass: "bg-success/10", icon: Users },
+          { label: "Promedio / fecha", value: Math.round(totalAsistencias / sesiones.length),
+            iconClass: "text-primary", bgClass: "bg-primary/10", icon: Users },
+        ]
+      : [];
+
   return (
     <div className="space-y-8 pb-16">
       {/* Breadcrumb / back */}
@@ -118,6 +139,14 @@ export default async function ClaseDetallePage({
                 <User size={13} strokeWidth={1.8} aria-hidden />
                 <span>{clase.investigador}</span>
               </div>
+              {fechaUnica && (
+                <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
+                  <Calendar size={13} strokeWidth={1.8} aria-hidden />
+                  <time dateTime={aISOFecha(fechaUnica.fecha)}>
+                    {formatearFecha(fechaUnica.fecha, "completa")}
+                  </time>
+                </div>
+              )}
               {edicion && (
                 <div className="flex items-center gap-1.5 mt-1 text-xs">
                   <span
@@ -145,11 +174,17 @@ export default async function ClaseDetallePage({
             </a>
           {isBecarioOrAdmin && (
             <>
-              <FormSesion
-                claseId={clase.id}
-                claseNombre={clase.nombre}
-                variant="primary"
-              />
+              {/* Pasar lista es sobre la clase: si tiene una sola fecha, se
+                  entra directo; con varias, desde la tarjeta de cada fecha. */}
+              {fechaUnica && (
+                <Link
+                  href={`/asistencia/${fechaUnica.id}`}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px]"
+                >
+                  <ClipboardCheck size={16} strokeWidth={2.2} aria-hidden />
+                  Pasar lista
+                </Link>
+              )}
               {isAdmin && (
                 <Link
                   href={`/clases/${clase.id}/editar`}
@@ -168,34 +203,10 @@ export default async function ClaseDetallePage({
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
-      {/* Stats row */}
+      {/* Métricas de la clase — solo con varias fechas */}
+      {metricas.length > 0 && (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-fade-up animate-fade-up-delay-1">
-        {[
-          {
-            label: "Sesiones",
-            value: sesiones.length,
-            iconClass: "text-secondary-foreground",
-            bgClass: "bg-secondary/10",
-            icon: Calendar,
-          },
-          {
-            label: "Asistencias totales",
-            value: totalAsistencias,
-            iconClass: "text-success",
-            bgClass: "bg-success/10",
-            icon: Users,
-          },
-          {
-            label: "Promedio / sesión",
-            value:
-              sesiones.length > 0
-                ? Math.round(totalAsistencias / sesiones.length)
-                : "—",
-            iconClass: "text-primary",
-            bgClass: "bg-primary/10",
-            icon: Users,
-          },
-        ].map(({ label, value, iconClass, bgClass, icon: Icon }) => (
+        {metricas.map(({ label, value, iconClass, bgClass, icon: Icon }) => (
           <div
             key={label}
             className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2"
@@ -212,6 +223,7 @@ export default async function ClaseDetallePage({
           </div>
         ))}
       </div>
+      )}
 
       {/* Contenido: descripción e imágenes de la clase */}
       <div className="animate-fade-up animate-fade-up-delay-2">
@@ -231,36 +243,31 @@ export default async function ClaseDetallePage({
         />
       </div>
 
-      {/* Sesiones list */}
+      {/* Fecha(s) en que se imparte la clase */}
       <div className="animate-fade-up animate-fade-up-delay-2">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Sesiones
+            {sesiones.length > 1 ? "Fechas de la clase" : "Fecha de la clase"}
           </h2>
-          {isBecarioOrAdmin && sesiones.length > 0 && (
-            <FormSesion
-              claseId={clase.id}
-              claseNombre={clase.nombre}
-              variant="ghost"
-            />
-          )}
         </div>
 
         {sesiones.length === 0 ? (
           <EmptyState
-            message="Sin sesiones registradas"
+            message="Esta clase todavía no tiene fecha"
             detail={
-              isBecarioOrAdmin
-                ? "Agrega la primera sesión para comenzar a registrar asistencias."
-                : "Aún no se han registrado sesiones para esta clase."
+              isAdmin
+                ? "Sin fecha no se le puede pasar lista. Asígnasela desde Editar."
+                : "Sin fecha no se le puede pasar lista. Pide al coordinador que la asigne."
             }
             action={
-              isBecarioOrAdmin ? (
-                <FormSesion
-                  claseId={clase.id}
-                  claseNombre={clase.nombre}
-                  variant="primary"
-                />
+              isAdmin ? (
+                <Link
+                  href={`/clases/${clase.id}/editar`}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold btn-primary min-h-[44px]"
+                >
+                  <Pencil size={15} strokeWidth={2.2} aria-hidden />
+                  Asignar fecha
+                </Link>
               ) : undefined
             }
           />
@@ -273,33 +280,42 @@ export default async function ClaseDetallePage({
                   i < 4 ? `animate-fade-up-delay-${Math.min(i + 2, 4) as 1 | 2 | 3 | 4}` : ""
                 }`}
               >
-                {/* Sesion header */}
+                {/* Encabezado: fecha y acciones */}
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    {/* Session number pill */}
-                    <span
-                      className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 bg-secondary/15 text-secondary-foreground"
-                      aria-label={`Sesión ${i + 1}`}
-                    >
-                      {i + 1}
-                    </span>
-                    <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                      <Calendar size={14} strokeWidth={1.8} aria-hidden />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Calendar
+                      size={16}
+                      strokeWidth={1.8}
+                      className="shrink-0 text-secondary-foreground"
+                      aria-hidden
+                    />
+                    <div className="text-sm font-medium text-foreground">
                       <time dateTime={aISOFecha(sesion.fecha)}>
                         {formatearFecha(sesion.fecha, "completa")}
                       </time>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Attendance badge */}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-success/10 border border-success/30 text-success">
                       <Users size={11} strokeWidth={2} aria-hidden />
                       {sesion._count.asistencias}{" "}
                       {sesion._count.asistencias === 1 ? "asistente" : "asistentes"}
                     </span>
 
-                    {/* Update temas button (BECARIO+) */}
+                    {/* Con varias fechas, cada una tiene su propio "Pasar lista":
+                        arriba solo aparece cuando la clase tiene una sola. */}
+                    {isBecarioOrAdmin && sesiones.length > 1 && (
+                      <Link
+                        href={`/asistencia/${sesion.id}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-primary/10 border border-primary/30 text-primary"
+                      >
+                        Pasar lista
+                        <ChevronRight size={12} strokeWidth={2.4} aria-hidden />
+                      </Link>
+                    )}
+
+                    {/* Corregir fecha, temas y notas */}
                     {isBecarioOrAdmin && (
                       <FormTemasSesion
                         sesionId={sesion.id}

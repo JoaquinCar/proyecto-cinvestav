@@ -56,7 +56,7 @@ async function main() {
         edicionId: edicion.id,
         nombre: s.tema,
         investigador: "Investigador(a) invitado(a) · CINVESTAV",
-        descripcion: `Sesión ${s.orden} · ${s.fechaTexto} · Sede ${s.sede}`,
+        descripcion: `Clase ${s.orden} · ${s.fechaTexto} · Sede ${s.sede}`,
       },
     });
     nClases++;
@@ -65,7 +65,7 @@ async function main() {
         claseId: clase.id,
         fecha: s.fecha ? new Date(s.fecha) : edicion.fechaInicio,
         temas: s.tema,
-        notas: s.conDatos ? null : "Sesión sin datos de asistencia registrados.",
+        notas: s.conDatos ? null : "Clase sin datos de asistencia registrados.",
       },
     });
     if (s.conDatos) {

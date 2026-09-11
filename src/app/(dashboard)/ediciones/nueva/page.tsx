@@ -274,7 +274,7 @@ export default function NuevaEdicionPage() {
               aria-describedby="minAsistencias-ayuda"
             />
             <p id="minAsistencias-ayuda" className="text-xs text-muted-foreground">
-              Número mínimo de sesiones a las que un niño debe asistir para recibir
+              Número mínimo de clases a las que un niño debe asistir para recibir
               constancia. En 2026 fueron 6.
             </p>
             {errors.minAsistencias && (
