@@ -25,13 +25,14 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/server/queries/clases", () => ({
   listarClasesDeEdicion: vi.fn(),
   obtenerClasePorId:     vi.fn(),
-  crearClase:            vi.fn(),
+  crearClaseConSesion:   vi.fn(),
   editarClase:           vi.fn(),
   eliminarClase:         vi.fn(),
   listarSesionesDeClase: vi.fn(),
   obtenerSesionPorId:    vi.fn(),
   crearSesion:           vi.fn(),
   actualizarSesion:      vi.fn(),
+  obtenerRangoEdicion:         vi.fn(),
   obtenerRangoEdicionDeClase:  vi.fn(),
   obtenerRangoEdicionDeSesion: vi.fn(),
   eliminarSesion:        vi.fn(),
@@ -45,6 +46,12 @@ vi.mock("@/server/queries/clases", () => ({
     constructor(message: string) {
       super(message);
       this.name = "SesionConAsistenciasError";
+    }
+  },
+  VariasSesionesError: class VariasSesionesError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "VariasSesionesError";
     }
   },
 }));
@@ -165,7 +172,9 @@ describe("GET /api/ediciones/[id]/clases", () => {
     vi.mocked(existeEdicion).mockResolvedValueOnce(true);
 
     const { listarClasesDeEdicion } = await import("@/server/queries/clases");
-    vi.mocked(listarClasesDeEdicion).mockResolvedValueOnce([claseMock]);
+    vi.mocked(listarClasesDeEdicion).mockResolvedValueOnce([
+      { ...claseMock, sesiones: [{ fecha: new Date("2025-03-15T00:00:00.000Z") }] },
+    ]);
 
     const { GET } = await import("@/app/api/ediciones/[id]/clases/route");
     const req = makeRequest("GET", "/api/ediciones/edicion-1/clases");
@@ -203,17 +212,24 @@ describe("GET /api/ediciones/[id]/clases", () => {
 describe("POST /api/clases", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  // En el programa real una clase ES una charla impartida en una fecha: las 12
+  // clases de producción tienen exactamente una sesión. Por eso crear la clase
+  // pide su fecha y crea la sesión en el mismo paso — antes nacía con cero
+  // sesiones y no se le podía pasar lista hasta "agregarle" una a mano.
+
+  const cuerpoValido = {
+    edicionId: "clxyz1234567890abcdef0001",
+    nombre: "Robótica",
+    investigador: "Dr. Martínez",
+    fecha: "2025-03-15",
+  };
+
   it("retorna 401 cuando no hay sesión activa", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const { POST } = await import("@/app/api/clases/route");
-    const req = makeRequest("POST", "/api/clases", {
-      edicionId: "clxyz1234567890abcdef0001",
-      nombre: "Robótica",
-      investigador: "Dr. Martínez",
-    });
-    const res = await POST(req);
+    const res = await POST(makeRequest("POST", "/api/clases", cuerpoValido));
 
     expect(res.status).toBe(401);
     const body = await res.json();
@@ -225,12 +241,7 @@ describe("POST /api/clases", () => {
     vi.mocked(auth).mockResolvedValueOnce(sessionBecario as never);
 
     const { POST } = await import("@/app/api/clases/route");
-    const req = makeRequest("POST", "/api/clases", {
-      edicionId: "clxyz1234567890abcdef0001",
-      nombre: "Robótica",
-      investigador: "Dr. Martínez",
-    });
-    const res = await POST(req);
+    const res = await POST(makeRequest("POST", "/api/clases", cuerpoValido));
 
     expect(res.status).toBe(403);
     const body = await res.json();
@@ -251,12 +262,9 @@ describe("POST /api/clases", () => {
     expect(body.detalles).toBeDefined();
   });
 
-  it("retorna 404 cuando la edición no existe", async () => {
+  it("retorna 422 cuando no se manda fecha: una clase sin sesión no sirve", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
-
-    const { existeEdicion } = await import("@/server/queries/ediciones");
-    vi.mocked(existeEdicion).mockResolvedValueOnce(false);
 
     const { POST } = await import("@/app/api/clases/route");
     const req = makeRequest("POST", "/api/clases", {
@@ -266,32 +274,105 @@ describe("POST /api/clases", () => {
     });
     const res = await POST(req);
 
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.details.fieldErrors.fecha).toBeDefined();
+
+    const { crearClaseConSesion } = await import("@/server/queries/clases");
+    expect(crearClaseConSesion).not.toHaveBeenCalled();
+  });
+
+  it("retorna 404 cuando la edición no existe", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerRangoEdicion } = await import("@/server/queries/clases");
+    vi.mocked(obtenerRangoEdicion).mockResolvedValueOnce(null);
+
+    const { POST } = await import("@/app/api/clases/route");
+    const res = await POST(makeRequest("POST", "/api/clases", cuerpoValido));
+
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toMatch(/ya no existe/i);
   });
 
-  it("retorna 201 con la clase creada cuando los datos son válidos", async () => {
+  it("retorna 422 cuando la fecha cae fuera del rango de la edición", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
 
-    const { existeEdicion } = await import("@/server/queries/ediciones");
-    vi.mocked(existeEdicion).mockResolvedValueOnce(true);
-
-    const { crearClase } = await import("@/server/queries/clases");
-    vi.mocked(crearClase).mockResolvedValueOnce(claseMock);
+    const { obtenerRangoEdicion, crearClaseConSesion } = await import(
+      "@/server/queries/clases"
+    );
+    vi.mocked(obtenerRangoEdicion).mockResolvedValueOnce(rangoEdicionMock);
 
     const { POST } = await import("@/app/api/clases/route");
-    const req = makeRequest("POST", "/api/clases", {
-      edicionId: "clxyz1234567890abcdef0001",
+    const res = await POST(
+      makeRequest("POST", "/api/clases", { ...cuerpoValido, fecha: "2025-12-25" }),
+    );
+
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error).toMatch(/dentro de la edición/i);
+    expect(crearClaseConSesion).not.toHaveBeenCalled();
+  });
+
+  it("retorna 409 cuando la edición está cerrada", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerRangoEdicion, crearClaseConSesion } = await import(
+      "@/server/queries/clases"
+    );
+    vi.mocked(obtenerRangoEdicion).mockResolvedValueOnce(rangoEdicionMock);
+
+    const { assertEdicionAbierta, EdicionCerradaError } = await import(
+      "@/server/queries/edicion-cerrada"
+    );
+    vi.mocked(assertEdicionAbierta).mockRejectedValueOnce(
+      new EdicionCerradaError("La edición 2025 está cerrada y no admite cambios."),
+    );
+
+    const { POST } = await import("@/app/api/clases/route");
+    const res = await POST(makeRequest("POST", "/api/clases", cuerpoValido));
+
+    expect(res.status).toBe(409);
+    expect(crearClaseConSesion).not.toHaveBeenCalled();
+  });
+
+  it("retorna 201 y crea clase Y sesión en el mismo paso", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerRangoEdicion, crearClaseConSesion } = await import(
+      "@/server/queries/clases"
+    );
+    vi.mocked(obtenerRangoEdicion).mockResolvedValueOnce(rangoEdicionMock);
+    vi.mocked(crearClaseConSesion).mockResolvedValueOnce({
+      ...claseMock,
       nombre: "Astronomía",
-      investigador: "Dr. Juan Pérez",
-    });
-    const res = await POST(req);
+      sesionId: "sesion-nueva",
+    } as never);
+
+    const { POST } = await import("@/app/api/clases/route");
+    const res = await POST(
+      makeRequest("POST", "/api/clases", {
+        ...cuerpoValido,
+        nombre: "Astronomía",
+        investigador: "Dr. Juan Pérez",
+        fecha: "2025-03-15",
+      }),
+    );
 
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.nombre).toBe("Astronomía");
+    expect(body.sesionId).toBe("sesion-nueva");
+
+    // La fecha llega normalizada a medianoche UTC del día escrito.
+    const [datos, autorId] = vi.mocked(crearClaseConSesion).mock.calls[0];
+    expect(datos.fecha).toEqual(new Date("2025-03-15T00:00:00.000Z"));
+    expect(autorId).toBe("user-1");
   });
 });
 
@@ -372,6 +453,86 @@ describe("PUT /api/clases/[id]", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.nombre).toBe("Astronomía Avanzada");
+  });
+
+  // ── Corregir la fecha de la clase ───────────────────────────────────────────
+  // Al quitar "Agregar Sesión" del detalle, editar la clase es el único sitio
+  // donde se arregla un dedazo en la fecha.
+
+  const claseUnaSesion = { ...claseMock, _count: { sesiones: 1 } };
+
+  it("actualiza la fecha de la sesión de la clase", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId, obtenerRangoEdicionDeClase, editarClase } =
+      await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseUnaSesion);
+    vi.mocked(obtenerRangoEdicionDeClase).mockResolvedValueOnce(rangoEdicionMock);
+    vi.mocked(editarClase).mockResolvedValueOnce(claseUnaSesion);
+
+    const { PUT } = await import("@/app/api/clases/[id]/route");
+    const req = makeRequest("PUT", "/api/clases/clase-1", { fecha: "2025-04-12" });
+    const res = await PUT(req, { params: Promise.resolve({ id: "clase-1" }) });
+
+    expect(res.status).toBe(200);
+    const [, datos] = vi.mocked(editarClase).mock.calls[0];
+    expect(datos.fecha).toEqual(new Date("2025-04-12T00:00:00.000Z"));
+  });
+
+  it("rechaza una fecha fuera del rango de la edición", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId, obtenerRangoEdicionDeClase, editarClase } =
+      await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseUnaSesion);
+    vi.mocked(obtenerRangoEdicionDeClase).mockResolvedValueOnce(rangoEdicionMock);
+
+    const { PUT } = await import("@/app/api/clases/[id]/route");
+    const req = makeRequest("PUT", "/api/clases/clase-1", { fecha: "2024-01-01" });
+    const res = await PUT(req, { params: Promise.resolve({ id: "clase-1" }) });
+
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error).toMatch(/dentro de la edición/i);
+    expect(editarClase).not.toHaveBeenCalled();
+  });
+
+  it("retorna 409 si la clase tiene varias sesiones y no se sabe cuál cambiar", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId, obtenerRangoEdicionDeClase, editarClase, VariasSesionesError } =
+      await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock);
+    vi.mocked(obtenerRangoEdicionDeClase).mockResolvedValueOnce(rangoEdicionMock);
+    vi.mocked(editarClase).mockRejectedValueOnce(
+      new VariasSesionesError("La clase tiene 3 sesiones"),
+    );
+
+    const { PUT } = await import("@/app/api/clases/[id]/route");
+    const req = makeRequest("PUT", "/api/clases/clase-1", { fecha: "2025-04-12" });
+    const res = await PUT(req, { params: Promise.resolve({ id: "clase-1" }) });
+
+    expect(res.status).toBe(409);
+  });
+
+  it("no consulta el rango de la edición cuando no se cambia la fecha", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId, obtenerRangoEdicionDeClase, editarClase } =
+      await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseUnaSesion);
+    vi.mocked(editarClase).mockResolvedValueOnce(claseUnaSesion);
+
+    const { PUT } = await import("@/app/api/clases/[id]/route");
+    const req = makeRequest("PUT", "/api/clases/clase-1", { nombre: "Otro nombre" });
+    const res = await PUT(req, { params: Promise.resolve({ id: "clase-1" }) });
+
+    expect(res.status).toBe(200);
+    expect(obtenerRangoEdicionDeClase).not.toHaveBeenCalled();
   });
 });
 

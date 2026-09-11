@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { listarEdiciones } from "@/server/queries/ediciones";
+import { aISOFecha } from "@/lib/fechas";
 import { FormNuevaClase } from "./FormNuevaClase";
 
 export const metadata: Metadata = {
@@ -35,6 +36,8 @@ export default async function NuevaClasePage({
         nombre: e.nombre,
         anio: e.anio,
         activa: e.activa,
+        fechaInicio: aISOFecha(e.fechaInicio),
+        fechaFin: aISOFecha(e.fechaFin),
       }))}
       edicionInicialId={edicionInicial.id}
     />

@@ -33,6 +33,12 @@ export const fechaCalendarioSchema = z
 
 // ── Schema para crear una clase ───────────────────────────────────────────────
 
+/**
+ * Crear una clase crea también su sesión: en el programa una clase ES una
+ * charla impartida en una fecha (las 12 clases reales tienen exactamente una
+ * sesión). Por eso `fecha` es obligatoria — sin ella la clase nacía con cero
+ * sesiones y no se le podía pasar lista hasta "agregarle" una a mano.
+ */
 export const crearClaseSchema = z.object({
   edicionId: z.string({ error: "Falta indicar la edición" }).min(1, "Selecciona la edición a la que pertenece la clase"),
 
@@ -48,9 +54,19 @@ export const crearClaseSchema = z.object({
     .max(200, "El nombre del investigador no puede exceder 200 caracteres")
     .trim(),
 
+  /** Día en que se imparte la clase. Se crea con ella, en la misma transacción. */
+  fecha: fechaCalendarioSchema,
+
   descripcion: z
     .string()
     .max(1000, "La descripción no puede exceder 1000 caracteres")
+    .trim()
+    .optional(),
+
+  /** Temas de la sesión; opcionales, se suelen capturar después de impartirla. */
+  temas: z
+    .string()
+    .max(500, "Los temas no pueden exceder 500 caracteres")
     .trim()
     .optional(),
 });
@@ -58,6 +74,13 @@ export const crearClaseSchema = z.object({
 // ── Schema para editar una clase (todos los campos opcionales) ────────────────
 
 export const editarClaseSchema = z.object({
+  /**
+   * Fecha de la sesión de la clase. Vive aquí porque el detalle de la clase ya
+   * no ofrece "Agregar Sesión": si la fecha no se pudiera corregir al editar,
+   * un dedazo quedaría permanente.
+   */
+  fecha: fechaCalendarioSchema.optional(),
+
   nombre: z
     .string()
     .min(1, "El nombre no puede estar vacío")

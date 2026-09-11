@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookOpen, User, ChevronRight, Calendar } from "lucide-react";
+import { formatearFecha } from "@/lib/fechas";
 
 export interface ClaseCardData {
   id: string;
@@ -7,9 +8,8 @@ export interface ClaseCardData {
   investigador: string;
   descripcion?: string | null;
   edicionId: string;
-  _count: {
-    sesiones: number;
-  };
+  /** Fechas en que se imparte. Lo normal es una: la clase ES esa charla. */
+  sesiones: { fecha: Date | string }[];
 }
 
 interface ClaseCardProps {
@@ -19,7 +19,15 @@ interface ClaseCardProps {
 }
 
 export function ClaseCard({ clase, totalParticipantes }: ClaseCardProps) {
-  const sesiones = clase._count.sesiones;
+  // Una fecha (el caso real): se muestra el día. Ninguna: la clase aún no se
+  // puede impartir y conviene que se note. Varias: se dice cuántas.
+  const fechas = clase.sesiones;
+  const etiquetaFecha =
+    fechas.length === 1
+      ? formatearFecha(fechas[0].fecha, "media")
+      : fechas.length === 0
+        ? "Sin fecha"
+        : `${fechas.length} fechas`;
 
   return (
     <Link
@@ -71,10 +79,16 @@ export function ClaseCard({ clase, totalParticipantes }: ClaseCardProps) {
 
       {/* Badges row */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Sesiones badge */}
-        <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-secondary/10 border border-secondary/30 text-secondary-foreground">
+        {/* Día en que se imparte */}
+        <span
+          className={
+            fechas.length === 0
+              ? "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-muted border border-border text-muted-foreground"
+              : "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-secondary/10 border border-secondary/30 text-secondary-foreground"
+          }
+        >
           <Calendar size={11} strokeWidth={2} aria-hidden />
-          {sesiones} {sesiones === 1 ? "sesión" : "sesiones"}
+          {etiquetaFecha}
         </span>
 
         {/* Participantes badge (optional) */}

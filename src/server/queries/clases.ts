@@ -24,6 +24,12 @@ export async function listarClasesDeEdicion(edicionId: string) {
       investigador: true,
       descripcion:  true,
       createdAt:    true,
+      // Las fechas viajan con la clase: la tarjeta muestra el día en que se
+      // imparte, que es lo que la persona reconoce.
+      sesiones: {
+        orderBy: { fecha: "asc" as const },
+        select:  { fecha: true },
+      },
       _count: {
         select: {
           sesiones: true,
@@ -77,29 +83,102 @@ export async function obtenerClasePorId(id: string) {
   });
 }
 
-// ── Crear una clase ───────────────────────────────────────────────────────────
+// ── Crear una clase con su sesión ─────────────────────────────────────────────
 
-export async function crearClase(data: CrearClaseInput) {
-  return prisma.clase.create({
-    data: {
-      edicionId:    data.edicionId,
-      nombre:       data.nombre,
-      investigador: data.investigador,
-      descripcion:  data.descripcion ?? null,
-    },
+/**
+ * Crea la clase y la sesión en la que se imparte, en una sola transacción.
+ *
+ * En el programa una clase ES una charla en una fecha: las 12 clases reales
+ * tienen exactamente una sesión, y sus nombres son títulos de charla. Antes la
+ * clase nacía con cero sesiones y era inservible —no se le podía pasar lista—
+ * hasta que alguien le "agregaba" una desde el detalle. La transacción es lo
+ * que impide que vuelva a existir ese estado intermedio: si la sesión falla, la
+ * clase tampoco se guarda.
+ */
+export async function crearClaseConSesion(
+  data: CrearClaseInput,
+  registradaPorId?: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const clase = await tx.clase.create({
+      data: {
+        edicionId:    data.edicionId,
+        nombre:       data.nombre,
+        investigador: data.investigador,
+        descripcion:  data.descripcion ?? null,
+      },
+    });
+
+    const sesion = await tx.sesion.create({
+      data: {
+        claseId:         clase.id,
+        // El schema ya normalizó la fecha a medianoche UTC del día de calendario.
+        fecha:           data.fecha,
+        temas:           data.temas ?? null,
+        registradaPorId: registradaPorId ?? null,
+      },
+    });
+
+    return { ...clase, sesionId: sesion.id };
   });
 }
 
 // ── Editar una clase existente ────────────────────────────────────────────────
 
-export async function editarClase(id: string, data: EditarClaseInput) {
-  return prisma.clase.update({
-    where: { id },
-    data: {
-      ...(data.nombre       !== undefined && { nombre:       data.nombre }),
-      ...(data.investigador !== undefined && { investigador: data.investigador }),
-      ...(data.descripcion  !== undefined && { descripcion:  data.descripcion }),
-    },
+/**
+ * Edita los datos de la clase y, si viene `fecha`, la de su sesión.
+ *
+ * La fecha se corrige desde aquí porque el detalle de la clase ya no ofrece
+ * "Agregar Sesión": sin esto, un dedazo en la fecha quedaría permanente.
+ *
+ * Los tres casos posibles de una clase:
+ *   • Una sesión (lo normal): se le cambia la fecha.
+ *   • Ninguna (clases del flujo viejo): se le crea, y así queda utilizable.
+ *   • Varias: no hay forma de saber cuál cambiar, así que se rechaza y cada una
+ *     se edita desde su tarjeta en el detalle de la clase.
+ */
+export async function editarClase(
+  id: string,
+  data: EditarClaseInput,
+  registradaPorId?: string,
+) {
+  const campos = {
+    ...(data.nombre       !== undefined && { nombre:       data.nombre }),
+    ...(data.investigador !== undefined && { investigador: data.investigador }),
+    ...(data.descripcion  !== undefined && { descripcion:  data.descripcion }),
+  };
+
+  if (data.fecha === undefined) {
+    return prisma.clase.update({ where: { id }, data: campos });
+  }
+
+  const fecha = data.fecha;
+
+  return prisma.$transaction(async (tx) => {
+    const clase = await tx.clase.update({ where: { id }, data: campos });
+
+    const sesiones = await tx.sesion.findMany({
+      where:   { claseId: id },
+      orderBy: { fecha: "asc" },
+      select:  { id: true },
+    });
+
+    if (sesiones.length > 1) {
+      throw new VariasSesionesError(
+        `Esta clase tiene ${sesiones.length} sesiones: cambia la fecha de cada una ` +
+        `desde su tarjeta en la página de la clase.`,
+      );
+    }
+
+    if (sesiones.length === 0) {
+      await tx.sesion.create({
+        data: { claseId: id, fecha, registradaPorId: registradaPorId ?? null },
+      });
+    } else {
+      await tx.sesion.update({ where: { id: sesiones[0].id }, data: { fecha } });
+    }
+
+    return clase;
   });
 }
 
@@ -253,6 +332,24 @@ export type RangoEdicion = {
   fechaFin:    Date;
 };
 
+/**
+ * Rango de una edición por su id. Hace falta al crear una clase: la clase aún
+ * no existe, así que no se puede llegar a la edición a través de ella.
+ */
+export async function obtenerRangoEdicion(
+  edicionId: string,
+): Promise<RangoEdicion | null> {
+  const edicion = await prisma.edicion.findUnique({
+    where:  { id: edicionId },
+    select: { id: true, nombre: true, anio: true, fechaInicio: true, fechaFin: true },
+  });
+
+  if (!edicion) return null;
+
+  const { id, ...resto } = edicion;
+  return { edicionId: id, ...resto };
+}
+
 export async function obtenerRangoEdicionDeClase(
   claseId: string,
 ): Promise<RangoEdicion | null> {
@@ -334,5 +431,13 @@ export class SesionConAsistenciasError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SesionConAsistenciasError";
+  }
+}
+
+/** La clase tiene más de una sesión: no se puede adivinar a cuál cambiarle la fecha. */
+export class VariasSesionesError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "VariasSesionesError";
   }
 }

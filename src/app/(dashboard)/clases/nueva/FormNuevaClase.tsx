@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, BookOpen, User, AlignLeft, Layers } from "lucide-react";
+import { ArrowLeft, BookOpen, User, AlignLeft, Layers, Calendar } from "lucide-react";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,10 @@ const formSchema = z.object({
     .max(200, "El nombre del investigador no puede exceder 200 caracteres")
     .trim(),
 
+  fecha: z
+    .string({ error: "La fecha es requerida" })
+    .min(1, "Indica el día en que se imparte la clase"),
+
   descripcion: z
     .string()
     .max(1000, "La descripción no puede exceder 1000 caracteres")
@@ -45,6 +49,9 @@ interface EdicionOpcion {
   nombre: string;
   anio: number;
   activa: boolean;
+  /** Rango de la edición como "AAAA-MM-DD": acota el selector de fecha. */
+  fechaInicio: string;
+  fechaFin: string;
 }
 
 interface FormNuevaClaseProps {
@@ -74,11 +81,17 @@ export function FormNuevaClase({
       edicionId: edicionInicialId,
       nombre: "",
       investigador: "",
+      fecha: "",
       descripcion: "",
     },
   });
 
   const registroEdicion = register("edicionId");
+
+  // El `<input type="date">` se acota al rango de la edición elegida: así el
+  // calendario del teléfono no ofrece días que el servidor va a rechazar.
+  const edicionElegida =
+    ediciones.find((e) => e.id === edicionId) ?? ediciones[0];
 
   async function onSubmit(data: FormData) {
     setLoading(true);
@@ -92,6 +105,7 @@ export function FormNuevaClase({
           edicionId: data.edicionId,
           nombre: data.nombre,
           investigador: data.investigador,
+          fecha: data.fecha,
           descripcion: data.descripcion || undefined,
         }),
       });
@@ -139,7 +153,7 @@ export function FormNuevaClase({
               Nueva <em className="text-primary not-italic font-semibold">Clase</em>
             </h1>
             <p className="text-sm mt-0.5 text-muted-foreground">
-              Agrega una clase al catálogo del programa
+              Una clase es una charla impartida en una fecha
             </p>
           </div>
         </div>
@@ -209,7 +223,7 @@ export function FormNuevaClase({
             <Input
               id="nombre"
               type="text"
-              placeholder="Ej: Astronomía, Robótica, Genética…"
+              placeholder="Ej: ¿Cuántos años tienen los peces?"
               {...register("nombre")}
               className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.nombre ? "border-destructive focus:ring-destructive" : ""}`}
               aria-describedby={errors.nombre ? "nombre-error" : undefined}
@@ -247,6 +261,36 @@ export function FormNuevaClase({
             ) : (
               <p id="investigador-hint" className="text-xs text-muted-foreground">
                 Nombre completo del investigador CINVESTAV que imparte la clase
+              </p>
+            )}
+          </div>
+
+          {/* Fecha */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="fecha"
+              className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
+            >
+              <Calendar size={13} strokeWidth={2} aria-hidden />
+              Día en que se imparte
+            </Label>
+            <Input
+              id="fecha"
+              type="date"
+              min={edicionElegida?.fechaInicio}
+              max={edicionElegida?.fechaFin}
+              {...register("fecha")}
+              className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.fecha ? "border-destructive focus:ring-destructive" : ""}`}
+              aria-describedby={errors.fecha ? "fecha-error" : "fecha-hint"}
+            />
+            {errors.fecha ? (
+              <p id="fecha-error" className="text-xs text-destructive" role="alert">
+                {errors.fecha.message}
+              </p>
+            ) : (
+              <p id="fecha-hint" className="text-xs text-muted-foreground">
+                Con la fecha, la clase queda lista para pasar lista. Debe caer dentro
+                de la edición; después puedes corregirla desde Editar.
               </p>
             )}
           </div>

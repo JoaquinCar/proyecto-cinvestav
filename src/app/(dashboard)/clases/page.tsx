@@ -70,7 +70,7 @@ export default async function ClasesPage({
     ediciones[0];
 
   const clases = await listarClasesDeEdicion(edicionSeleccionada.id);
-  const totalSesiones = clases.reduce((acc, c) => acc + c._count.sesiones, 0);
+  const clasesConFecha = clases.filter((c) => c._count.sesiones > 0).length;
 
   const estadisticas = [
     {
@@ -81,8 +81,8 @@ export default async function ClasesPage({
       bgClass: "bg-primary/10",
     },
     {
-      label: "Total de sesiones",
-      value: totalSesiones,
+      label: "Clases con fecha",
+      value: clasesConFecha,
       icon: Calendar,
       colorClass: "text-success",
       bgClass: "bg-success/10",

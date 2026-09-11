@@ -3,11 +3,18 @@ import { auth } from "@/lib/auth";
 import { editarClaseSchema } from "@/lib/schemas/clase.schema";
 import {
   obtenerClasePorId,
+  obtenerRangoEdicionDeClase,
   editarClase,
   eliminarClase,
   ClaseConAsistenciasError,
   ClaseConSesionesError,
+  VariasSesionesError,
 } from "@/server/queries/clases";
+import {
+  assertEdicionDeClaseAbierta,
+  EdicionCerradaError,
+} from "@/server/queries/edicion-cerrada";
+import { estaEnRango, mensajeFueraDeRango } from "@/lib/fechas";
 import {
   fallaInesperada,
   leerCuerpoJson,
@@ -48,9 +55,33 @@ export async function PUT(request: Request, context: RouteContext) {
       return respuestaCamposInvalidos(parsed.error);
     }
 
-    const claseActualizada = await editarClase(id, parsed.data);
+    // Cambiar la fecha mueve la sesión de la clase: mismas guardas que crearla.
+    if (parsed.data.fecha !== undefined) {
+      await assertEdicionDeClaseAbierta(id);
+
+      const rango = await obtenerRangoEdicionDeClase(id);
+      if (!rango) {
+        return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+      }
+      if (!estaEnRango(parsed.data.fecha, rango.fechaInicio, rango.fechaFin)) {
+        return NextResponse.json(
+          { error: mensajeFueraDeRango(rango.fechaInicio, rango.fechaFin) },
+          { status: 422 },
+        );
+      }
+    }
+
+    const claseActualizada = await editarClase(id, parsed.data, session.user.id);
     return NextResponse.json(claseActualizada);
   } catch (error) {
+    // La clase tiene varias sesiones: cuál mover es ambiguo, no se adivina.
+    if (error instanceof VariasSesionesError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+    if (error instanceof EdicionCerradaError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
     return fallaInesperada(
       "PUT /api/clases/[id]",
       error,
