@@ -49,7 +49,7 @@ export const COLUMNAS_PARTICIPANTES: DefinicionColumna[] = [
   d("grado", "Grado", false, ["grado escolar", "ano escolar", "grado que cursa"],
     "Texto libre, tal como lo escribe la familia. Vacío → «Sin especificar».", "Texto libre (4°, Sexto, 2do de secundaria…)"),
   d("nivel", "Nivel", false, ["nivel escolar", "nivel educativo"],
-    "Si se deja vacío se deduce del grado, la escuela y la edad.", "Preescolar · Primaria · Secundaria · Media superior · Sin escuela"),
+    "Si se deja vacío se deduce del grado, la escuela y la edad.", "Preescolar · Primaria · Secundaria · Media superior · Universidad · Sin escuela"),
   d("escuela", "Escuela", false, ["escuela de procedencia", "institucion", "colegio"],
     "Vacío o «-» → «Sin escuela».", "Texto libre"),
   d("ciudad", "Ciudad", false, ["municipio", "localidad"],

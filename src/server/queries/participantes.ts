@@ -3,6 +3,7 @@ import type {
   ParticipanteInput,
   EditarParticipanteInput,
 } from "@/lib/schemas/participante.schema";
+import { derivarNivel } from "@/lib/importacion/texto";
 
 // ── Errores de dominio ────────────────────────────────────────────────────────
 // Se lanzan desde las queries y las rutas los traducen a un código HTTP con un
@@ -116,6 +117,13 @@ export async function buscarParticipantes(q?: string, edicionId?: string) {
 
 // ── Crear participante ────────────────────────────────────────────────────────
 
+// El `nivel` se deriva aquí con la MISMA función que usa el importador de
+// Excel. Antes no se escribía, y el resultado era que todo niño capturado a
+// mano quedaba con nivel null y salía como "Sin especificar" en las gráficas
+// por nivel escolar — mientras que los importados sí aparecían. Ahora que el
+// formulario ofrece preescolar, secundaria, preparatoria y universidad, eso
+// dejaría fuera de las gráficas justo a los niveles nuevos.
+
 export async function crearParticipante(data: ParticipanteInput) {
   return prisma.participante.create({
     data: {
@@ -125,6 +133,7 @@ export async function crearParticipante(data: ParticipanteInput) {
       escuela:   data.escuela,
       grado:     data.grado,
       genero:    data.genero ?? null,
+      nivel:     derivarNivel(data.grado, data.escuela, data.edad),
     },
   });
 }
@@ -140,16 +149,32 @@ export async function editarParticipante(
 ) {
   const existente = await prisma.participante.findUnique({
     where:  { id },
-    select: { id: true },
+    select: { id: true, grado: true, escuela: true, edad: true },
   });
 
   if (!existente) {
     throw new ParticipanteNoEncontradoError();
   }
 
+  // El nivel se recalcula SOLO si cambió algo de lo que lo determina. Hay
+  // fichas cuyo nivel vino explícito en el Excel del organizador: corregir una
+  // falta de ortografía en el nombre no debe pisarlo.
+  const cambiaEscolaridad =
+    data.grado   !== undefined ||
+    data.escuela !== undefined ||
+    data.edad    !== undefined;
+
+  const nivel = cambiaEscolaridad
+    ? derivarNivel(
+        data.grado   ?? existente.grado,
+        data.escuela ?? existente.escuela,
+        data.edad    ?? existente.edad,
+      )
+    : undefined;
+
   return prisma.participante.update({
     where: { id },
-    data,
+    data: nivel === undefined ? data : { ...data, nivel },
   });
 }
 

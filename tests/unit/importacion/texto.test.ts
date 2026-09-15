@@ -102,8 +102,15 @@ describe("aNivel / derivarNivel", () => {
     expect(aNivel("Primaria")).toEqual({ ok: true, valor: "PRIMARIA" });
   });
 
+  it("acepta Universidad: es un nivel más desde que el formulario lo ofrece", () => {
+    // Antes «Universidad» servía de ejemplo de nivel inventado. Dejó de serlo:
+    // el formulario de registro ya permite capturarlo y `derivarNivel` lo
+    // reconoce, así que el importador también tiene que aceptarlo.
+    expect(aNivel("Universidad")).toEqual({ ok: true, valor: "UNIVERSIDAD" });
+  });
+
   it("rechaza un nivel inventado", () => {
-    const r = aNivel("Universidad");
+    const r = aNivel("Posgrado");
     expect(r.ok).toBe(false);
   });
 

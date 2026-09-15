@@ -14,7 +14,9 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -26,6 +28,7 @@ import {
   crearParticipante,
   crearInscripcion,
 } from "@/lib/api/participantes";
+import { GRADOS_POR_NIVEL, NIVEL_GRUPO_LABEL, NIVELES_ORDENADOS } from "@/lib/grados";
 import {
   mensajeAltaSinInscripcion,
   mensajeDeError,
@@ -61,15 +64,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const GRADOS = [
-  "1° primaria",
-  "2° primaria",
-  "3° primaria",
-  "4° primaria",
-  "5° primaria",
-  "6° primaria",
-] as const;
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -336,10 +330,15 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
                     <SelectValue placeholder="Selecciona…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {GRADOS.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
-                      </SelectItem>
+                    {NIVELES_ORDENADOS.map((nivel) => (
+                      <SelectGroup key={nivel}>
+                        <SelectLabel>{NIVEL_GRUPO_LABEL[nivel]}</SelectLabel>
+                        {GRADOS_POR_NIVEL[nivel].map((g) => (
+                          <SelectItem key={g} value={g}>
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>

@@ -151,6 +151,7 @@ export type Nivel =
   | "PRIMARIA"
   | "SECUNDARIA"
   | "MEDIA_SUPERIOR"
+  | "UNIVERSIDAD"
   | "SIN_ESCUELA";
 
 const NIVELES: Record<string, Nivel> = {
@@ -163,9 +164,14 @@ const NIVELES: Record<string, Nivel> = {
   bachillerato: "MEDIA_SUPERIOR",
   preparatoria: "MEDIA_SUPERIOR",
   prepa: "MEDIA_SUPERIOR",
+  universidad: "UNIVERSIDAD",
+  universitario: "UNIVERSIDAD",
+  licenciatura: "UNIVERSIDAD",
+  "educacion superior": "UNIVERSIDAD",
   "sin escuela": "SIN_ESCUELA",
   ninguno: "SIN_ESCUELA",
   "no va a escuela": "SIN_ESCUELA",
+  "no estudia": "SIN_ESCUELA",
 };
 
 export function aNivel(valor: unknown, columna = "Nivel"): Conversion<Nivel | null> {
@@ -176,7 +182,7 @@ export function aNivel(valor: unknown, columna = "Nivel"): Conversion<Nivel | nu
   if (!n) {
     return {
       ok: false,
-      mensaje: `la columna «${columna}» dice «${texto}», se esperaba Preescolar, Primaria, Secundaria, Media superior o Sin escuela`,
+      mensaje: `la columna «${columna}» dice «${texto}», se esperaba Preescolar, Primaria, Secundaria, Media superior, Universidad o Sin escuela`,
     };
   }
   return { ok: true, valor: n };
@@ -190,10 +196,19 @@ export function aNivel(valor: unknown, columna = "Nivel"): Conversion<Nivel | nu
 export function derivarNivel(grado: string, escuela: string, edad: number): Nivel {
   const crudo = `${grado} ${escuela}`;
   const t = normalizar(crudo);
-  if (/no va a escuela|no asiste/.test(t)) return "SIN_ESCUELA";
+  if (/no va a escuela|no asiste|no estudia/.test(t)) return "SIN_ESCUELA";
   // El grado manda sobre la escuela: «Preescolar» + «Sin escuela» es preescolar.
   if (/preescolar|pre escolar|kinder|preesc/.test(t)) return "PREESCOLAR";
-  if (/semestre|prepa|cecyte|bachill|media superior/.test(t)) return "MEDIA_SUPERIOR";
+  // Media superior ANTES que universidad, y no al revés: las prepas de la UADY
+  // y varias privadas llevan «Universidad» en el nombre de la escuela
+  // («Prepa de la Universidad Autónoma»). Si universidad ganara, esos alumnos
+  // de prepa se contarían como universitarios.
+  if (/prepa|cecyte|bachill|media superior|cobay|conalep/.test(t)) return "MEDIA_SUPERIOR";
+  if (/universidad|universitari|licenciatura|ingenieria|facultad/.test(t)) return "UNIVERSIDAD";
+  // «Semestre» a secas sigue significando prepa: así está capturado el único
+  // caso real («5.º Semestre» en el CECYTEY). Va después de universidad para
+  // que «1er semestre» + «Universidad Modelo» no acabe en media superior.
+  if (/semestre/.test(t)) return "MEDIA_SUPERIOR";
   if (/secundaria|sec\.|secund|esc\. sec/.test(t)) return "SECUNDARIA";
   if (/sin escuela/.test(t)) return "SIN_ESCUELA";
   if (/primaria|grado|°|º/.test(crudo.toLowerCase())) {
