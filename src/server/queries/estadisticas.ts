@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
+import type { Nivel } from "@/lib/importacion/texto";
 
 // Orden lógico de los grados homologados para las gráficas.
 function ordenGrado(g: string): number {
@@ -91,7 +92,7 @@ export async function obtenerMetricasEdicion(
     const g = i.participante.grado;
     escuelaCounts.set(e, (escuelaCounts.get(e) ?? 0) + 1);
     gradoCounts.set(g, (gradoCounts.get(g) ?? 0) + 1);
-    const n = NIVEL_LABEL[i.participante.nivel ?? ""] ?? "Sin especificar";
+    const n = etiquetaNivel(i.participante.nivel);
     nivelCounts.set(n, (nivelCounts.get(n) ?? 0) + 1);
     const c = i.participante.ciudad?.trim() || "Sin especificar";
     ciudadCounts.set(c, (ciudadCounts.get(c) ?? 0) + 1);
@@ -197,11 +198,14 @@ export async function obtenerMetricasEdicion(
 // del organizador). No hay nombres individuales: son conteos por sesión.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const NIVEL_LABEL: Record<string, string> = {
+// Toda la unión `Nivel` tiene que estar aquí: un nivel sin etiqueta cae en
+// "Sin especificar" y su barra sale sin nombre en la gráfica.
+const NIVEL_LABEL: Record<Nivel, string> = {
   PREESCOLAR: "Preescolar",
   PRIMARIA: "Primaria",
   SECUNDARIA: "Secundaria",
   MEDIA_SUPERIOR: "Media superior",
+  UNIVERSIDAD: "Universidad",
   SIN_ESCUELA: "Sin escuela",
 };
 const NIVEL_ORDEN: Record<string, number> = {
@@ -209,8 +213,19 @@ const NIVEL_ORDEN: Record<string, number> = {
   Primaria: 1,
   Secundaria: 2,
   "Media superior": 3,
-  "Sin escuela": 4,
+  Universidad: 4,
+  "Sin escuela": 5,
 };
+
+/**
+ * `Participante.nivel` es texto libre en la base (se llenó con el importador y
+ * puede estar vacío en fichas antiguas). Esto lo traduce a la etiqueta que va
+ * en la gráfica y nunca deja a nadie sin agrupar.
+ */
+function etiquetaNivel(nivel: string | null | undefined): string {
+  if (!nivel) return "Sin especificar";
+  return NIVEL_LABEL[nivel as Nivel] ?? "Sin especificar";
+}
 
 export type MetricasAsistencia = {
   sesionesConDatos: number;
@@ -433,7 +448,7 @@ export async function obtenerAnalisisProfundo(
   // Género por nivel
   const nivelMap = new Map<string, { a: number; b: number }>();
   for (const p of parts) {
-    const lbl = NIVEL_LABEL[p.nivel ?? ""] ?? "Sin especificar";
+    const lbl = etiquetaNivel(p.nivel);
     if (!nivelMap.has(lbl)) nivelMap.set(lbl, { a: 0, b: 0 });
     const slot = nivelMap.get(lbl)!;
     if (p.genero === "FEMENINO") slot.a++;
@@ -608,7 +623,13 @@ export async function obtenerDatosExcel(edicionId: string) {
     Edad: i.participante.edad,
     Género: generoLabel(i.participante.genero),
     Grado: safe(i.participante.grado),
-    Nivel: NIVEL_LABEL[i.participante.nivel ?? ""] ?? i.participante.nivel ?? "—",
+    // En el export se respeta lo que hay en la base cuando no es un nivel
+    // conocido: la hoja la revisa una persona y un valor raro tiene que verse,
+    // no quedar escondido detrás de "Sin especificar".
+    Nivel:
+      NIVEL_LABEL[i.participante.nivel as Nivel] ??
+      i.participante.nivel ??
+      "—",
     Escuela: safe(i.participante.escuela),
     Ciudad: safe(i.participante.ciudad),
     Correo: safe(i.participante.correo),

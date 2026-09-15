@@ -14,7 +14,9 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -26,6 +28,14 @@ import {
   crearParticipante,
   crearInscripcion,
 } from "@/lib/api/participantes";
+import {
+  CampoAcompanante,
+  ACOMPANANTE_VACIO,
+  aEleccionAcompanante,
+  acompananteIncompleto,
+  type EstadoAcompanante,
+} from "@/components/acompanantes/CampoAcompanante";
+import { GRADOS_POR_NIVEL, NIVEL_GRUPO_LABEL, NIVELES_ORDENADOS } from "@/lib/grados";
 import {
   mensajeAltaSinInscripcion,
   mensajeDeError,
@@ -62,15 +72,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const GRADOS = [
-  "1° primaria",
-  "2° primaria",
-  "3° primaria",
-  "4° primaria",
-  "5° primaria",
-  "6° primaria",
-] as const;
-
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface FormRegistroProps {
@@ -86,6 +87,13 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
     useState<Participante | null>(null);
   const [modoExistente, setModoExistente] = useState(false);
 
+  // El acompañante vive fuera de react-hook-form porque no es del niño: es de
+  // la inscripción de este año. Se manda igual tanto si el niño es nuevo como
+  // si ya participó antes — de hecho, reinscribiendo es cuando más cambia.
+  const [acompanante, setAcompanante] =
+    useState<EstadoAcompanante>(ACOMPANANTE_VACIO);
+  const [errorAcompanante, setErrorAcompanante] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -100,7 +108,11 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
     mutationFn: async (data: FormValues) => {
       const participante = await crearParticipante(data);
       try {
-        await crearInscripcion(participante.id, edicionId);
+        await crearInscripcion(
+          participante.id,
+          edicionId,
+          aEleccionAcompanante(acompanante),
+        );
       } catch (err) {
         throw new InscripcionTrasAltaError(
           `${data.nombre} ${data.apellidos}`,
@@ -114,6 +126,8 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       reset();
       setParticipanteExistente(null);
       setModoExistente(false);
+      setAcompanante(ACOMPANANTE_VACIO);
+      setErrorAcompanante(null);
       onSuccess?.();
     },
     onError: (err: Error, data) => {
@@ -136,13 +150,19 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
   // Mutación: flujo inscribir existente
   const mutacionExistente = useMutation({
     mutationFn: () =>
-      crearInscripcion(participanteExistente!.id, edicionId),
+      crearInscripcion(
+        participanteExistente!.id,
+        edicionId,
+        aEleccionAcompanante(acompanante),
+      ),
     onSuccess: () => {
       toast.success("Participante inscrito en esta edición");
       queryClient.invalidateQueries({ queryKey: ["participantes", edicionId] });
       reset();
       setParticipanteExistente(null);
       setModoExistente(false);
+      setAcompanante(ACOMPANANTE_VACIO);
+      setErrorAcompanante(null);
       onSuccess?.();
     },
     onError: (err: Error) => {
@@ -180,6 +200,16 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
   }
 
   function onSubmit(data: FormValues) {
+    // Un acompañante con teléfono pero sin nombre se descartaría en silencio al
+    // guardar: quien lo capturó creería que quedó registrado.
+    if (acompananteIncompleto(acompanante)) {
+      setErrorAcompanante(
+        "Escribe al menos el nombre del acompañante, o quítalo si el niño viene solo.",
+      );
+      return;
+    }
+    setErrorAcompanante(null);
+
     if (modoExistente && participanteExistente) {
       mutacionExistente.mutate();
     } else {
@@ -336,10 +366,15 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
                     <SelectValue placeholder="Selecciona…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {GRADOS.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
-                      </SelectItem>
+                    {NIVELES_ORDENADOS.map((nivel) => (
+                      <SelectGroup key={nivel}>
+                        <SelectLabel>{NIVEL_GRUPO_LABEL[nivel]}</SelectLabel>
+                        {GRADOS_POR_NIVEL[nivel].map((g) => (
+                          <SelectItem key={g} value={g}>
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>
@@ -398,6 +433,18 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
           </div>
         </div>
       </fieldset>
+
+      {/* Acompañante — fuera del fieldset: aunque el niño ya esté registrado,
+          con quién viene ESTE año es lo que se está capturando ahora. */}
+      <CampoAcompanante
+        valor={acompanante}
+        onChange={(v) => {
+          setAcompanante(v);
+          setErrorAcompanante(null);
+        }}
+        error={errorAcompanante}
+        disabled={isLoading}
+      />
 
       {/* Botón de envío */}
       <Button

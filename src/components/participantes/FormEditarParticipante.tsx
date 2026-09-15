@@ -21,20 +21,15 @@ import {
   editarParticipante,
   eliminarParticipante,
 } from "@/lib/api/participantes";
+import { GRADOS } from "@/lib/grados";
 
 // ── Grados sugeridos ──────────────────────────────────────────────────────────
-// Van en un <datalist>, no en un <select>: hay fichas importadas con grados
-// fuera de esta lista ("3° secundaria", "Preescolar") y un select los borraría
-// al guardar.
-
-const GRADOS_SUGERIDOS = [
-  "1° primaria",
-  "2° primaria",
-  "3° primaria",
-  "4° primaria",
-  "5° primaria",
-  "6° primaria",
-] as const;
+// Van en un <datalist>, no en un <select>: hay 34 grafías distintas entre las
+// fichas importadas ("3ero Primaria", "5.º Semestre", "no asiste a la escuela")
+// y un select cerrado las borraría al guardar. Aquí se sugiere, no se impone.
+//
+// Las sugerencias son las mismas que ofrece el formulario de registro — un solo
+// catálogo, para no acabar con dos listas que se contradicen.
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -215,7 +210,7 @@ export function FormEditarParticipante({
               className={claseCampo(!!errors.grado)}
             />
             <datalist id="grados-sugeridos">
-              {GRADOS_SUGERIDOS.map((g) => (
+              {GRADOS.map((g) => (
                 <option key={g} value={g} />
               ))}
             </datalist>

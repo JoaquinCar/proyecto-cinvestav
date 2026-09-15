@@ -3,6 +3,11 @@ import type {
   ParticipanteInput,
   EditarParticipanteInput,
 } from "@/lib/schemas/participante.schema";
+import {
+  resolverAcompanante,
+  type EleccionAcompanante,
+} from "@/server/queries/acompanantes";
+import { derivarNivel } from "@/lib/importacion/texto";
 
 // ── Errores de dominio ────────────────────────────────────────────────────────
 // Se lanzan desde las queries y las rutas los traducen a un código HTTP con un
@@ -116,6 +121,13 @@ export async function buscarParticipantes(q?: string, edicionId?: string) {
 
 // ── Crear participante ────────────────────────────────────────────────────────
 
+// El `nivel` se deriva aquí con la MISMA función que usa el importador de
+// Excel. Antes no se escribía, y el resultado era que todo niño capturado a
+// mano quedaba con nivel null y salía como "Sin especificar" en las gráficas
+// por nivel escolar — mientras que los importados sí aparecían. Ahora que el
+// formulario ofrece preescolar, secundaria, preparatoria y universidad, eso
+// dejaría fuera de las gráficas justo a los niveles nuevos.
+
 export async function crearParticipante(data: ParticipanteInput) {
   return prisma.participante.create({
     data: {
@@ -125,6 +137,7 @@ export async function crearParticipante(data: ParticipanteInput) {
       escuela:   data.escuela,
       grado:     data.grado,
       genero:    data.genero ?? null,
+      nivel:     derivarNivel(data.grado, data.escuela, data.edad),
     },
   });
 }
@@ -140,16 +153,32 @@ export async function editarParticipante(
 ) {
   const existente = await prisma.participante.findUnique({
     where:  { id },
-    select: { id: true },
+    select: { id: true, grado: true, escuela: true, edad: true },
   });
 
   if (!existente) {
     throw new ParticipanteNoEncontradoError();
   }
 
+  // El nivel se recalcula SOLO si cambió algo de lo que lo determina. Hay
+  // fichas cuyo nivel vino explícito en el Excel del organizador: corregir una
+  // falta de ortografía en el nombre no debe pisarlo.
+  const cambiaEscolaridad =
+    data.grado   !== undefined ||
+    data.escuela !== undefined ||
+    data.edad    !== undefined;
+
+  const nivel = cambiaEscolaridad
+    ? derivarNivel(
+        data.grado   ?? existente.grado,
+        data.escuela ?? existente.escuela,
+        data.edad    ?? existente.edad,
+      )
+    : undefined;
+
   return prisma.participante.update({
     where: { id },
-    data,
+    data: nivel === undefined ? data : { ...data, nivel },
   });
 }
 
@@ -199,6 +228,18 @@ export async function obtenerHistorialParticipante(id: string) {
     include: {
       inscripciones: {
         include: {
+          // Con quién llegó el niño ESE año. Va por inscripción, no por
+          // participante, porque puede cambiar de una edición a otra.
+          acompanante: {
+            select: {
+              id:         true,
+              nombre:     true,
+              apellidos:  true,
+              telefono:   true,
+              correo:     true,
+              parentesco: true,
+            },
+          },
           edicion: {
             select: {
               id:               true,
@@ -239,6 +280,13 @@ export async function obtenerHistorialParticipante(id: string) {
 export async function inscribirParticipante(
   participanteId: string,
   edicionId: string,
+  /**
+   * Acompañante del niño en ESTA edición. Opcional: la mayoría llega sin nadie
+   * a quien registrar, y pedirlo estorbaría a quien inscribe desde el teléfono.
+   * Cuando viene, o se reutiliza uno ya capturado (`acompananteId` — el caso de
+   * los hermanos) o se crea en el momento (`acompanante`).
+   */
+  acompanante?: EleccionAcompanante,
 ) {
   // Verificar que la edición existe y está activa
   const edicion = await prisma.edicion.findUnique({
@@ -264,15 +312,27 @@ export async function inscribirParticipante(
     throw new Error("PARTICIPANTE_NO_ENCONTRADO");
   }
 
+  // El acompañante se resuelve ANTES de crear la inscripción: si el id elegido
+  // ya no existe, se falla aquí sin haber inscrito a nadie a medias.
+  const acompananteId = acompanante
+    ? await resolverAcompanante(acompanante)
+    : null;
+
   // Crear inscripción (falla con P2002 si ya existe el unique[participanteId, edicionId])
   return prisma.inscripcion.create({
-    data: { participanteId, edicionId },
+    data: { participanteId, edicionId, acompananteId },
     include: {
       participante: {
         select: { id: true, nombre: true, apellidos: true },
       },
       edicion: {
         select: { id: true, anio: true, nombre: true },
+      },
+      acompanante: {
+        select: {
+          id: true, nombre: true, apellidos: true,
+          telefono: true, correo: true, parentesco: true,
+        },
       },
     },
   });

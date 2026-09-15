@@ -6,6 +6,8 @@ import { obtenerHistorialParticipante } from "@/server/queries/participantes";
 import { EstadoBadge } from "@/components/shared/EstadoBadge";
 import { BotonConstancia } from "@/components/constancias/BotonConstancia";
 import { BotonBajaInscripcion } from "@/components/participantes/BotonBajaInscripcion";
+import { GestorAcompanante } from "@/components/acompanantes/GestorAcompanante";
+import type { Acompanante } from "@/lib/api/acompanantes";
 import {
   GraduationCap,
   School,
@@ -38,6 +40,8 @@ type InscripcionTimeline = {
   id: string;
   constanciaGenerada: boolean;
   constanciaUrl?: string | null;
+  /** Con quién vino el niño ESA edición; null cuando vino solo. */
+  acompanante: Acompanante | null;
   edicion: {
     id: string;
     anio: number;
@@ -53,10 +57,13 @@ function TimelineItem({
   inscripcion,
   isLast,
   esAdmin,
+  puedeCapturar,
 }: {
   inscripcion: InscripcionTimeline;
   isLast: boolean;
   esAdmin: boolean;
+  /** ADMIN y BECARIO pueden asignar acompañante; READONLY solo consulta. */
+  puedeCapturar: boolean;
 }) {
   const asistencias = inscripcion.asistencias.length;
 
@@ -132,6 +139,16 @@ function TimelineItem({
           </div>
         </div>
 
+        {/* Con quién vino ese año */}
+        <div className="mt-3 pt-3 border-t border-border">
+          <GestorAcompanante
+            inscripcionId={inscripcion.id}
+            acompanante={inscripcion.acompanante}
+            puedeEditar={puedeCapturar}
+            edicionNombre={inscripcion.edicion.nombre}
+          />
+        </div>
+
         {/* Baja de esta edición — solo ADMIN */}
         {esAdmin && (
           <div className="mt-3 pt-3 border-t border-border">
@@ -162,6 +179,8 @@ export default async function ParticipanteHistorialPage({
   if (!participante) notFound();
 
   const esAdmin = session.user.role === "ADMIN";
+  // El becario es quien está en campo y se entera de que hoy vino la abuela.
+  const puedeCapturar = esAdmin || session.user.role === "BECARIO";
 
   // Ordenar inscripciones del más reciente al más antiguo
   const inscripcionesOrdenadas = [...participante.inscripciones].sort(
@@ -295,6 +314,7 @@ export default async function ParticipanteHistorialPage({
                 inscripcion={inscripcion}
                 isLast={idx === inscripcionesOrdenadas.length - 1}
                 esAdmin={esAdmin}
+                puedeCapturar={puedeCapturar}
               />
             ))}
           </div>

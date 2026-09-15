@@ -85,19 +85,70 @@ enum Genero {
   MASCULINO
 }
 
+// El adulto (o el grupo organizado) con el que llega el niño.
+//
+// Es una PERSONA global, igual que Participante: existe una vez y se reutiliza
+// año tras año y entre hermanos. Ese es el punto — en 2026, un mismo contacto
+// inscribió a 25 niños y siete parejas de hermanos compartieron el suyo. Si
+// cada inscripción guardara su propia copia del adulto, la ficha "a quién
+// acompaña" no podría existir y se capturarían duplicados.
+//
+// NO sustituye a Participante.correo / telefono: esos campos siguen guardando
+// el contacto tal como vino del Excel y no se tocan aquí.
+model Acompanante {
+  id         String     @id @default(cuid())
+  nombre     String
+  apellidos  String?
+  telefono   String?
+  correo     String?
+  parentesco Parentesco @default(OTRO)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  inscripciones Inscripcion[]
+
+  @@index([nombre, apellidos])
+}
+
+// Quién es ese adulto respecto del niño. Incluye GRUPO e INSTITUCION a
+// propósito: el contacto que trae a 25 niños no es su tutor, es un colectivo, y
+// obligarlo a decir "TUTOR" falsearía el dato.
+enum Parentesco {
+  MADRE
+  PADRE
+  ABUELA
+  ABUELO
+  TIA
+  TIO
+  TUTOR
+  GRUPO
+  INSTITUCION
+  OTRO
+}
+
 model Inscripcion {
   id                 String   @id @default(cuid())
   participanteId     String
   edicionId          String
+  // Quién acompañó al niño ESTA edición. Vive en la inscripción y no en el
+  // participante porque cambia de un año a otro: un niño puede venir con su
+  // mamá en 2026 y con su abuela en 2027, y ambas cosas deben quedar
+  // registradas. Opcional: muchos niños llegan solos.
+  acompananteId      String?
   constanciaUrl      String?
   constanciaGenerada Boolean  @default(false)
   createdAt          DateTime @default(now())
 
   participante Participante @relation(fields: [participanteId], references: [id])
   edicion      Edicion      @relation(fields: [edicionId], references: [id])
+  // Restrict, no SetNull: borrar a un acompañante que todavía acompaña a
+  // alguien desligaría en silencio a varios niños a la vez. Primero se quita de
+  // cada inscripción (PUT/DELETE .../acompanante) y después se borra.
+  acompanante  Acompanante? @relation(fields: [acompananteId], references: [id], onDelete: Restrict)
   asistencias  Asistencia[]
 
   @@unique([participanteId, edicionId])
+  @@index([acompananteId])
 }
 
 model Clase {
