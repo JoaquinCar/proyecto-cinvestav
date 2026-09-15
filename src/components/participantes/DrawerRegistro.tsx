@@ -150,7 +150,7 @@ export function DrawerRegistro({
     <Button
       type="button"
       onClick={() => setOpen(true)}
-      className="btn-primary fixed bottom-6 right-5 z-30 sm:static sm:bottom-auto sm:right-auto rounded-full sm:rounded-xl h-14 w-14 sm:h-11 sm:w-auto sm:px-4 shadow-lg sm:shadow-none flex items-center justify-center gap-2"
+      className="btn-primary fixed bottom-24 right-5 z-[60] sm:static sm:bottom-auto sm:right-auto rounded-full sm:rounded-xl h-14 w-14 sm:h-11 sm:w-auto sm:px-4 shadow-lg sm:shadow-none flex items-center justify-center gap-2"
       aria-label="Registrar participante"
     >
       <UserPlus size={20} className="sm:size-4" strokeWidth={2} />
@@ -208,7 +208,7 @@ export function FABRegistro({
       <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-primary fixed bottom-6 right-5 z-30 rounded-full h-14 w-14 flex items-center justify-center shadow-lg sm:hidden"
+        className="btn-primary fixed bottom-24 right-5 z-[60] rounded-full h-14 w-14 flex items-center justify-center shadow-lg sm:hidden"
         aria-label="Registrar participante"
       >
         <UserPlus size={22} strokeWidth={2} />
