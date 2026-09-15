@@ -3,6 +3,10 @@ import { auth } from "@/lib/auth";
 import { inscripcionSchema } from "@/lib/schemas/participante.schema";
 import { inscribirParticipante } from "@/server/queries/participantes";
 import {
+  AcompananteNoEncontradoError,
+  type EleccionAcompanante,
+} from "@/server/queries/acompanantes";
+import {
   fallaInesperada,
   leerCuerpoJson,
   respuestaCamposInvalidos,
@@ -31,13 +35,33 @@ export async function POST(request: NextRequest) {
     return respuestaCamposInvalidos(parsed.error);
   }
 
+  // El acompañante viaja en la inscripción, no en el alta del participante: es
+  // de la edición. Si no viene, la inscripción se crea igual — la mayoría de
+  // los niños llega sin nadie a quien registrar.
+  const { acompananteId, acompanante } = parsed.data;
+  const eleccion: EleccionAcompanante | undefined = acompananteId
+    ? { acompananteId }
+    : acompanante
+      ? { acompanante }
+      : undefined;
+
   try {
     const inscripcion = await inscribirParticipante(
       parsed.data.participanteId,
       parsed.data.edicionId,
+      eleccion,
     );
     return NextResponse.json({ inscripcion }, { status: 201 });
   } catch (err) {
+    if (err instanceof AcompananteNoEncontradoError) {
+      return NextResponse.json(
+        {
+          error:
+            "El acompañante que elegiste ya no existe: puede que alguien lo haya eliminado mientras llenabas el formulario. Búscalo de nuevo o captúralo como nuevo.",
+        },
+        { status: 404 },
+      );
+    }
     if (err instanceof Error) {
       if (err.message === "EDICION_NO_ENCONTRADA") {
         return NextResponse.json(

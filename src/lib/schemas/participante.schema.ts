@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { acompananteSchema } from "@/lib/schemas/acompanante.schema";
 
 // ── Participante ──────────────────────────────────────────────────────────────
 
@@ -41,9 +42,24 @@ export type BusquedaParticipanteInput = z.infer<typeof busquedaParticipanteSchem
 
 // ── Inscripción ───────────────────────────────────────────────────────────────
 
-export const inscripcionSchema = z.object({
-  participanteId: z.string().min(1, "Falta indicar el participante que se va a inscribir"),
-  edicionId:      z.string().min(1, "Falta indicar la edición en la que se va a inscribir"),
-});
+// El acompañante viaja aquí, en la inscripción, y no en el alta del
+// participante: es de la edición, no del niño. Y es opcional — registrar a
+// quien viene solo no debe pedir nada de más.
+
+export const inscripcionSchema = z
+  .object({
+    participanteId: z.string().min(1, "Falta indicar el participante que se va a inscribir"),
+    edicionId:      z.string().min(1, "Falta indicar la edición en la que se va a inscribir"),
+
+    /** Acompañante que YA existe: el segundo hermano reutiliza el del primero. */
+    acompananteId: z.string().min(1).optional(),
+
+    /** Acompañante que nadie había capturado todavía: se crea y se liga. */
+    acompanante: acompananteSchema.optional(),
+  })
+  .refine((d) => !(d.acompananteId && d.acompanante), {
+    message:
+      "Elige un acompañante de la lista o captura uno nuevo, pero no las dos cosas a la vez",
+  });
 
 export type InscripcionInput = z.infer<typeof inscripcionSchema>;

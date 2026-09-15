@@ -3,6 +3,10 @@ import type {
   ParticipanteInput,
   EditarParticipanteInput,
 } from "@/lib/schemas/participante.schema";
+import {
+  resolverAcompanante,
+  type EleccionAcompanante,
+} from "@/server/queries/acompanantes";
 import { derivarNivel } from "@/lib/importacion/texto";
 
 // ── Errores de dominio ────────────────────────────────────────────────────────
@@ -224,6 +228,18 @@ export async function obtenerHistorialParticipante(id: string) {
     include: {
       inscripciones: {
         include: {
+          // Con quién llegó el niño ESE año. Va por inscripción, no por
+          // participante, porque puede cambiar de una edición a otra.
+          acompanante: {
+            select: {
+              id:         true,
+              nombre:     true,
+              apellidos:  true,
+              telefono:   true,
+              correo:     true,
+              parentesco: true,
+            },
+          },
           edicion: {
             select: {
               id:               true,
@@ -264,6 +280,13 @@ export async function obtenerHistorialParticipante(id: string) {
 export async function inscribirParticipante(
   participanteId: string,
   edicionId: string,
+  /**
+   * Acompañante del niño en ESTA edición. Opcional: la mayoría llega sin nadie
+   * a quien registrar, y pedirlo estorbaría a quien inscribe desde el teléfono.
+   * Cuando viene, o se reutiliza uno ya capturado (`acompananteId` — el caso de
+   * los hermanos) o se crea en el momento (`acompanante`).
+   */
+  acompanante?: EleccionAcompanante,
 ) {
   // Verificar que la edición existe y está activa
   const edicion = await prisma.edicion.findUnique({
@@ -289,15 +312,27 @@ export async function inscribirParticipante(
     throw new Error("PARTICIPANTE_NO_ENCONTRADO");
   }
 
+  // El acompañante se resuelve ANTES de crear la inscripción: si el id elegido
+  // ya no existe, se falla aquí sin haber inscrito a nadie a medias.
+  const acompananteId = acompanante
+    ? await resolverAcompanante(acompanante)
+    : null;
+
   // Crear inscripción (falla con P2002 si ya existe el unique[participanteId, edicionId])
   return prisma.inscripcion.create({
-    data: { participanteId, edicionId },
+    data: { participanteId, edicionId, acompananteId },
     include: {
       participante: {
         select: { id: true, nombre: true, apellidos: true },
       },
       edicion: {
         select: { id: true, anio: true, nombre: true },
+      },
+      acompanante: {
+        select: {
+          id: true, nombre: true, apellidos: true,
+          telefono: true, correo: true, parentesco: true,
+        },
       },
     },
   });
