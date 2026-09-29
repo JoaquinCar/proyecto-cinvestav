@@ -280,6 +280,40 @@ export const subirImagenClaseSchema = z.object({
     .optional(),
 });
 
+/**
+ * Tope de imágenes que se pueden reordenar de una vez.
+ *
+ * No es un límite del dominio sino del cuerpo de la petición: el reordenado
+ * manda la lista COMPLETA de ids de la sesión, y 500 cuids son ~12 KB. Una
+ * sesión real tiene decenas de fotos; muy por encima de eso lo que hay es un
+ * cliente roto o alguien probando.
+ */
+const MAXIMO_IMAGENES_REORDENADAS = 500;
+
+/**
+ * Nuevo orden de las imágenes de una sesión: la lista completa de ids, de la
+ * primera a la última.
+ *
+ * Aquí solo se valida la forma. Que la lista sea exactamente el conjunto de
+ * imágenes de esa sesión —ni de más, ni de menos, ni repetidas— se comprueba
+ * contra la base dentro de la transacción, que es el único sitio donde ese dato
+ * no puede cambiar mientras se mira.
+ */
+export const reordenarImagenesSchema = z.object({
+  orden: z
+    .array(
+      z
+        .string({ error: "Cada imagen se identifica con su id" })
+        .min(1, "Hay un id de imagen vacío en la lista"),
+      { error: "Falta la lista con el nuevo orden de las imágenes" },
+    )
+    .min(1, "La lista con el nuevo orden no puede estar vacía")
+    .max(
+      MAXIMO_IMAGENES_REORDENADAS,
+      `No se pueden reordenar más de ${MAXIMO_IMAGENES_REORDENADAS} imágenes a la vez`,
+    ),
+});
+
 // ── Tipos inferidos ───────────────────────────────────────────────────────────
 
 export type CrearClaseInput     = z.infer<typeof crearClaseSchema>;
@@ -287,3 +321,4 @@ export type EditarClaseInput    = z.infer<typeof editarClaseSchema>;
 export type CrearSesionInput    = z.infer<typeof crearSesionSchema>;
 export type ActualizarSesionInput = z.infer<typeof actualizarSesionSchema>;
 export type SubirImagenClaseInput = z.infer<typeof subirImagenClaseSchema>;
+export type ReordenarImagenesInput = z.infer<typeof reordenarImagenesSchema>;

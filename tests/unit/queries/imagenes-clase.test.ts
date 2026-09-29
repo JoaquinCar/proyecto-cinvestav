@@ -9,7 +9,10 @@ const prismaMock = {
     findUnique: vi.fn(),
     delete: vi.fn(),
     findMany: vi.fn(),
+    update: vi.fn(),
   },
+  // El borrado compacta el `orden` de las que quedan dentro de una transacción.
+  $transaction: vi.fn(),
 };
 
 vi.mock("@/server/db", () => ({ prisma: prismaMock }));
@@ -43,6 +46,11 @@ const envOriginal = { ...process.env };
 beforeEach(() => {
   vi.clearAllMocks();
   prismaMock.imagenClase.findFirst.mockResolvedValue(null);
+  prismaMock.imagenClase.findMany.mockResolvedValue([]);
+  prismaMock.imagenClase.update.mockResolvedValue({});
+  prismaMock.$transaction.mockImplementation(
+    async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock),
+  );
   prismaMock.imagenClase.create.mockImplementation(
     async ({ data }: { data: Record<string, unknown> }) => ({ id: "img-1", ...data }),
   );
@@ -163,6 +171,7 @@ describe("orden y borrado de imágenes", () => {
 
     prismaMock.imagenClase.findUnique.mockResolvedValueOnce({
       id: "img-1",
+      claseId: "clase-1",
       storagePath: "clases/clase-1/1.png",
     });
     prismaMock.imagenClase.delete.mockResolvedValueOnce({ id: "img-1" });
@@ -173,6 +182,36 @@ describe("orden y borrado de imágenes", () => {
 
     expect(removeMock).toHaveBeenCalledWith(["clases/clase-1/1.png"]);
     expect(prismaMock.imagenClase.delete).toHaveBeenCalled();
+  });
+
+  it("compacta el orden de las que quedan: borrar no deja huecos", async () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    prismaMock.imagenClase.findUnique.mockResolvedValueOnce({
+      id: "img-media",
+      claseId: "clase-1",
+      storagePath: null,
+    });
+    prismaMock.imagenClase.delete.mockResolvedValueOnce({ id: "img-media" });
+    // Se borró la que estaba en la posición 1: quedan 0, 2 y 3.
+    prismaMock.imagenClase.findMany.mockResolvedValueOnce([
+      { id: "a", orden: 0 },
+      { id: "c", orden: 2 },
+      { id: "d", orden: 3 },
+    ]);
+
+    const { eliminarImagenClase } = await import("@/server/queries/imagenes-clase");
+    await eliminarImagenClase("img-media");
+
+    const escrituras = prismaMock.imagenClase.update.mock.calls.map(
+      (c) => (c[0] as { where: { id: string }; data: { orden: number } }),
+    );
+    // La primera ya estaba en su sitio; las otras bajan una posición.
+    expect(escrituras.map((e) => [e.where.id, e.data.orden])).toEqual([
+      ["c", 1],
+      ["d", 2],
+    ]);
   });
 
   it("devuelve null si la imagen no existe", async () => {

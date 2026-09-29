@@ -10,6 +10,7 @@ const routeLabels: Record<string, string> = {
   "/participantes": "Participantes",
   "/clases":        "Sesiones",
   "/eventos":       "Eventos Especiales",
+  "/biblioteca":    "Biblioteca de Fotos",
   "/asistencia":    "Control de Asistencia",
   "/estadisticas":  "Estadísticas Históricas",
   "/importar":      "Importar desde Excel",

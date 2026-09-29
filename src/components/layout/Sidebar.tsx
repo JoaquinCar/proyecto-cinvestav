@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
   PartyPopper,
   Award,
+  Images,
   LogOut,
 } from "lucide-react";
 
@@ -25,6 +26,9 @@ const navItems = [
   // Entrada propia, como pidió el cliente. Por dentro es el mismo listado
   // acotado a `tipo = EVENTO`; ver src/components/clases/PanelSesiones.tsx.
   { href: "/eventos",      label: "Eventos",       icon: PartyPopper,     match: (p: string) => p.startsWith("/eventos") },
+  // Todas las fotos de la edición, agrupadas por sesión. Es donde se arma el
+  // orden con el que saldrán en el reporte.
+  { href: "/biblioteca",   label: "Biblioteca",    icon: Images,          match: (p: string) => p.startsWith("/biblioteca") },
   { href: "/asistencia",   label: "Asistencia",    icon: ClipboardCheck,  match: (p: string) => p.startsWith("/asistencia") || p.includes("/asistencia") },
   { href: "/constancias",  label: "Constancias",   icon: Award,           match: (p: string) => p.startsWith("/constancias") },
   { href: "/estadisticas", label: "Estadísticas",  icon: BarChart3,       match: (p: string) => p.startsWith("/estadisticas") },
