@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { crearClaseSchema, editarClaseSchema } from "@/lib/schemas/clase.schema";
+import {
+  crearClaseSchema,
+  editarClaseSchema,
+  RAMAS_CREAR_CLASE,
+} from "@/lib/schemas/clase.schema";
+import { TIPOS_SESION, exigeInvestigador } from "@/lib/tipos-sesion";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // El tipo de actividad al crear y editar una sesión.
@@ -111,6 +116,47 @@ describe("crearClaseSchema · investigador según el tipo", () => {
     expect(r.success).toBe(false);
     if (!r.success) {
       expect(r.error.issues.map((i) => i.path[0])).toContain("investigador");
+    }
+  });
+});
+
+describe("las ramas del schema respetan exigeInvestigador", () => {
+  // `crearClaseSchema` es una unión con una rama por tipo, y cada rama decide
+  // por su cuenta si el investigador es obligatorio. Esta prueba es lo que
+  // impide que una rama se quede atrás cuando alguien cambie la regla: si
+  // `exigeInvestigador` dice una cosa y la rama hace otra, falla aquí.
+  it.each(TIPOS_SESION.map((t) => t.valor))(
+    "la rama de %s exige investigador si y solo si exigeInvestigador lo dice",
+    (tipo) => {
+      const sinInvestigador = {
+        edicionId: "clxyz1234567890abcdef0001",
+        nombre: "Actividad",
+        fecha: "2025-03-15",
+        tipo,
+      };
+      const r = RAMAS_CREAR_CLASE[tipo].safeParse(sinInvestigador);
+      expect(r.success).toBe(!exigeInvestigador(tipo));
+    },
+  );
+});
+
+describe("todos los campos vacíos se reportan de una vez", () => {
+  it("un formulario en blanco nombra también el investigador", () => {
+    // Regresión: con un `superRefine` de objeto, el investigador solo salía en
+    // el SEGUNDO intento, cuando el resto ya validaba. Quien manda el
+    // formulario vacío tiene que enterarse de todo lo que falta a la primera.
+    const r = crearClaseSchema.safeParse({
+      edicionId: "",
+      nombre: "",
+      investigador: "",
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const campos = r.error.issues.map((i) => i.path[0]);
+      expect(campos).toContain("edicionId");
+      expect(campos).toContain("nombre");
+      expect(campos).toContain("fecha");
+      expect(campos).toContain("investigador");
     }
   });
 });

@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { aFechaCalendario } from "@/lib/fechas";
-import {
-  VALORES_TIPO_SESION,
-  TIPO_SESION_POR_DEFECTO,
-  exigeInvestigador,
-} from "@/lib/tipos-sesion";
+import { VALORES_TIPO_SESION, TIPO_SESION_POR_DEFECTO } from "@/lib/tipos-sesion";
 
 // ── Fecha de calendario ───────────────────────────────────────────────────────
 
@@ -50,9 +46,11 @@ export const tipoSesionSchema = z.enum(VALORES_TIPO_SESION, {
 });
 
 /**
- * Nombre del investigador tal como puede llegar del formulario: ausente, vacío
- * o con espacios. Lo normaliza a `null` cuando no hay nadie que registrar; que
- * pueda faltar o no lo decide el tipo, en el `superRefine` de cada schema.
+ * Nombre del investigador cuando PUEDE faltar (eventos especiales).
+ *
+ * Normaliza a `null` lo que llega ausente, vacío o con espacios: un `<input>`
+ * que nadie tocó manda `""`, y eso significa «no lo imparte nadie», no «campo
+ * sin llenar».
  */
 const investigadorOpcionalSchema = z
   .string()
@@ -62,60 +60,110 @@ const investigadorOpcionalSchema = z
   .nullish()
   .transform((v) => v ?? null);
 
+/** Nombre del investigador cuando es OBLIGATORIO (pasaporte y lectura). */
+const investigadorRequeridoSchema = z
+  .string({ error: "El investigador es requerido" })
+  .trim()
+  .min(1, "El nombre del investigador no puede estar vacío")
+  .max(200, "El nombre del investigador no puede exceder 200 caracteres");
+
 // ── Schema para crear una clase ───────────────────────────────────────────────
+
+/** Los campos que no dependen del tipo. */
+const camposComunesClase = {
+  edicionId: z.string({ error: "Falta indicar la edición" }).min(1, "Selecciona la edición a la que pertenece la sesión"),
+
+  nombre: z
+    .string({ error: "El nombre es requerido" })
+    .min(1, "El nombre no puede estar vacío")
+    .max(200, "El nombre no puede exceder 200 caracteres")
+    .trim(),
+
+  /** Día en que se imparte. Se crea con la clase, en la misma transacción. */
+  fecha: fechaCalendarioSchema,
+
+  descripcion: z
+    .string()
+    .max(1000, "La descripción no puede exceder 1000 caracteres")
+    .trim()
+    .optional(),
+
+  /** Temas de la sesión; opcionales, se suelen capturar después de impartirla. */
+  temas: z
+    .string()
+    .max(500, "Los temas no pueden exceder 500 caracteres")
+    .trim()
+    .optional(),
+};
 
 /**
  * Crear una clase crea también su sesión: en el programa una clase ES una
  * charla impartida en una fecha (las 12 clases reales tienen exactamente una
  * sesión). Por eso `fecha` es obligatoria — sin ella la clase nacía con cero
  * sesiones y no se le podía pasar lista hasta "agregarle" una a mano.
+ *
+ * POR QUÉ UNA UNIÓN DISCRIMINADA Y NO UN `superRefine`
+ *
+ * El investigador es obligatorio en unos tipos y no en otros, así que es una
+ * regla cruzada entre dos campos. La versión obvia —un objeto con
+ * `.superRefine()`— tiene un defecto que se nota justo cuando más molesta: un
+ * refinamiento de objeto solo corre si TODO el resto del objeto validó. Mandar
+ * el formulario vacío devolvía «revisa nombre, edición y fecha», el usuario los
+ * llenaba, volvía a mandar, y solo ENTONCES se enteraba de que además faltaba
+ * el investigador. Dos viajes para un formulario en blanco.
+ *
+ * Con una rama por tipo, el investigador es un campo normal dentro de su rama y
+ * se reporta a la vez que los demás. `tipo` se rellena antes (ver el
+ * `preprocess`) para que la unión siempre tenga discriminante.
+ *
+ * Qué rama exige investigador lo decide `exigeInvestigador`, el mismo helper
+ * que usan los formularios y la ruta de edición; la prueba
+ * «las ramas del schema respetan exigeInvestigador» impide que se separen.
  */
-export const crearClaseSchema = z
-  .object({
-    edicionId: z.string({ error: "Falta indicar la edición" }).min(1, "Selecciona la edición a la que pertenece la sesión"),
+const ramaPasaporte = z.object({
+  ...camposComunesClase,
+  tipo: z.literal("PASAPORTE"),
+  investigador: investigadorRequeridoSchema,
+});
 
-    nombre: z
-      .string({ error: "El nombre es requerido" })
-      .min(1, "El nombre no puede estar vacío")
-      .max(200, "El nombre no puede exceder 200 caracteres")
-      .trim(),
+const ramaLectura = z.object({
+  ...camposComunesClase,
+  tipo: z.literal("LECTURA"),
+  investigador: investigadorRequeridoSchema,
+});
 
-    /** Sesión de pasaporte, de lectura o evento especial. */
-    tipo: tipoSesionSchema.default(TIPO_SESION_POR_DEFECTO),
+const ramaEvento = z.object({
+  ...camposComunesClase,
+  tipo: z.literal("EVENTO"),
+  // Aquí y solo aquí puede faltar: una clausura no la imparte ningún
+  // investigador. Si lo ponen, se guarda.
+  investigador: investigadorOpcionalSchema,
+});
 
-    /**
-     * Obligatorio salvo en los eventos especiales: una clausura o un día del
-     * niño no los imparte nadie. La comprobación cruzada está más abajo.
-     */
-    investigador: investigadorOpcionalSchema,
-
-    /** Día en que se imparte la clase. Se crea con ella, en la misma transacción. */
-    fecha: fechaCalendarioSchema,
-
-    descripcion: z
-      .string()
-      .max(1000, "La descripción no puede exceder 1000 caracteres")
-      .trim()
-      .optional(),
-
-    /** Temas de la sesión; opcionales, se suelen capturar después de impartirla. */
-    temas: z
-      .string()
-      .max(500, "Los temas no pueden exceder 500 caracteres")
-      .trim()
-      .optional(),
-  })
-  .superRefine((datos, ctx) => {
-    // El error cuelga de `investigador` a propósito: así el formulario lo pinta
-    // en su campo y `respuestaCamposInvalidos` lo nombra en el mensaje.
-    if (exigeInvestigador(datos.tipo) && datos.investigador === null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["investigador"],
-        message: "El nombre del investigador no puede estar vacío",
-      });
+export const crearClaseSchema = z.preprocess(
+  // Sin `tipo` la unión no sabría por dónde entrar. Se rellena con el mismo
+  // valor por defecto que tiene la columna, así que un cliente viejo —o una
+  // petición escrita a mano— sigue creando exactamente lo que creaba antes.
+  (valor) => {
+    if (typeof valor !== "object" || valor === null || Array.isArray(valor)) {
+      return valor;
     }
-  });
+    const obj = valor as Record<string, unknown>;
+    return obj.tipo === undefined || obj.tipo === null
+      ? { ...obj, tipo: TIPO_SESION_POR_DEFECTO }
+      : obj;
+  },
+  z.discriminatedUnion("tipo", [ramaPasaporte, ramaLectura, ramaEvento], {
+    error: "Elige si es sesión de pasaporte, de lectura o un evento especial",
+  }),
+);
+
+/** Las ramas, expuestas para que las pruebas comprueben que no se desvían. */
+export const RAMAS_CREAR_CLASE = {
+  PASAPORTE: ramaPasaporte,
+  LECTURA: ramaLectura,
+  EVENTO: ramaEvento,
+} as const;
 
 // ── Schema para editar una clase (todos los campos opcionales) ────────────────
 
