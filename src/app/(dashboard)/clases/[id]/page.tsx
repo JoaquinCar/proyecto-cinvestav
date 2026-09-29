@@ -10,6 +10,7 @@ import {
   Pencil,
   FileDown,
   ClipboardCheck,
+  ClipboardList,
   ChevronRight,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
@@ -186,6 +187,14 @@ export default async function ClaseDetallePage({
 
           {/* Actions — envuelven en pantalla chica para que no se corte "Editar" */}
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            {/* La lista que se anexa: niños asistentes y staff de la sesión. */}
+            <Link
+              href={`/clases/${clase.id}/lista`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 bg-muted border border-border text-primary"
+            >
+              <ClipboardList size={15} />
+              Lista de la sesión
+            </Link>
             <a
               href={`/api/pdf/reporte-clase/${clase.id}`}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 bg-muted border border-border text-primary"

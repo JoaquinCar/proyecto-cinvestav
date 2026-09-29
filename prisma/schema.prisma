@@ -227,6 +227,8 @@ model Clase {
   edicion  Edicion       @relation(fields: [edicionId], references: [id])
   sesiones Sesion[]
   imagenes ImagenClase[]
+  // Quién imparte u organiza esta sesión (ver `model Staff`, más abajo).
+  staff    StaffClase[]
 
   // Las pantallas listan «las sesiones de pasaporte de esta edición» o «los
   // eventos de esta edición»: siempre edición + tipo.
@@ -344,6 +346,85 @@ model Asistencia {
   sesion      Sesion      @relation(fields: [sesionId], references: [id])
 
   @@unique([inscripcionId, sesionId])
+}
+
+// STAFF — quien IMPARTE U ORGANIZA una sesión.
+//
+// Es la tercera clase de persona del sistema y no se confunde con ninguna de
+// las otras dos:
+//   · `Participante` es el niño.
+//   · `Acompanante` es el adulto con el que LLEGA el niño.
+//   · `Staff` es quien está del otro lado: el investigador que da la charla, el
+//     becario que pasa lista, quien coordina o apoya en logística.
+//   · `User` es una CUENTA del sistema. Un becario suele ser las dos cosas,
+//     pero la mayoría del staff no tiene cuenta (y no debe tenerla para salir
+//     en la lista), así que Staff no cuelga de User ni al revés.
+//
+// GLOBAL, como Participante y Acompanante — no por edición. El mismo becario
+// vuelve año tras año y a veinte sesiones del mismo año: una ficha por persona
+// es lo único que permite contar en cuántas participó. La edición no se pierde,
+// se deduce por las sesiones a las que está asignado (StaffClase → Clase →
+// Edicion), igual que la edición de un acompañante se deduce por sus
+// inscripciones.
+model Staff {
+  id          String   @id @default(cuid())
+  nombre      String
+  apellidos   String?
+  telefono    String?
+  correo      String?
+  rol         RolStaff @default(OTRO)
+  // Su adscripción tal como quiere que aparezca en la lista: "CINVESTAV
+  // Mérida", "UADY", "Cinvestav — Depto. de Física Aplicada". Texto libre a
+  // propósito: es una etiqueta para el anexo, no una entidad del sistema.
+  institucion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sesiones StaffClase[]
+
+  @@index([nombre, apellidos])
+}
+
+// Qué hace esa persona en el programa. Análogo a `Parentesco`: describe a la
+// persona, no una relación laboral ni un permiso del sistema. NO se confunde
+// con `Role` (ADMIN / BECARIO / READONLY), que es lo que una CUENTA puede hacer.
+enum RolStaff {
+  INVESTIGADOR
+  BECARIO
+  COORDINACION
+  APOYO
+  VOLUNTARIO
+  OTRO
+}
+
+// Enlace staff ↔ sesión (`Clase`, que en pantalla se llama «sesión»).
+//
+// Tabla de enlace explícita y no una m-n implícita de Prisma: la implícita crea
+// una tabla `_ClaseToStaff` que nadie puede documentar ni consultar desde SQL
+// con nombres reconocibles, y aquí hace falta poder decir desde cuándo está
+// asignada una persona.
+//
+// El `@@unique` es el corazón del asunto: asignar dos veces a la misma persona
+// a la misma sesión es imposible a nivel de base, no solo de interfaz.
+model StaffClase {
+  id        String   @id @default(cuid())
+  staffId   String
+  claseId   String
+  createdAt DateTime @default(now())
+
+  // Cascade sobre la sesión: la asignación no significa nada sin ella, y sin
+  // esto un `DELETE` de una sesión sin fechas ni asistencias reventaría contra
+  // la llave foránea con un error que no dice qué estorba (el mismo problema
+  // que ya documenta `eliminarClase`).
+  clase Clase @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  // Restrict sobre la persona: mismo criterio que `Inscripcion.acompananteId`.
+  // Borrar a alguien que sigue asignado lo sacaría en silencio de varias
+  // sesiones a la vez; primero se le quita de cada una.
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Restrict)
+
+  @@unique([staffId, claseId])
+  @@index([claseId])
+  @@index([staffId])
 }
 
 // NEXTAUTH — requerido por @auth/prisma-adapter (JWT strategy, sin modelo Session)
