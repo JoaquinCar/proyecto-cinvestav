@@ -252,6 +252,10 @@ export async function obtenerHistorialParticipante(id: string) {
               porcentajeMinimo: true,
             },
           },
+          // Se traen TODAS las asistencias presentes, del tipo que sean: el
+          // historial del niño tiene que enseñar también la clausura a la que
+          // fue. Cuáles de ellas suman al mínimo de la constancia se decide
+          // después, con `cuentaParaConstancia` sobre `sesion.clase.tipo`.
           asistencias: {
             where: { presente: true },
             include: {
@@ -261,7 +265,7 @@ export async function obtenerHistorialParticipante(id: string) {
                   fecha:  true,
                   temas:  true,
                   clase: {
-                    select: { id: true, nombre: true },
+                    select: { id: true, nombre: true, tipo: true },
                   },
                 },
               },

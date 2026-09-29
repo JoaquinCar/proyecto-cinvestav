@@ -6,10 +6,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
-import { ArrowLeft, Pencil, BookOpen, User, ImageIcon, Calendar } from "lucide-react";
+import { ArrowLeft, Pencil, BookOpen, User, ImageIcon, Calendar, Tags } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
+import {
+  TIPOS_SESION,
+  VALORES_TIPO_SESION,
+  descripcionTipo,
+  exigeInvestigador,
+  cuentaParaConstancia,
+  type TipoSesion,
+} from "@/lib/tipos-sesion";
+import { IconoTipoSesion, clasesTipoSesion } from "@/components/clases/BadgeTipoSesion";
 
 // ── Zod schema (cliente — refleja editarClaseSchema) ──────────────────────────
 
@@ -29,12 +38,27 @@ const formSchema = z.object({
     .max(200, "El nombre no puede exceder 200 caracteres")
     .trim(),
 
+  tipo: z.enum(VALORES_TIPO_SESION, {
+    error: "Elige si es sesión de pasaporte, de lectura o un evento especial",
+  }),
+
   investigador: z
-    .string({ error: "El investigador es requerido" })
-    .min(1, "El nombre del investigador no puede estar vacío")
+    .string()
     .max(200, "El nombre del investigador no puede exceder 200 caracteres")
-    .trim(),
-});
+    .trim()
+    .optional(),
+})
+  // Mismo criterio que el servidor: el investigador solo es obligatorio cuando
+  // el tipo lo pide. Cambiar una charla a evento permite dejarlo vacío.
+  .superRefine((datos, ctx) => {
+    if (exigeInvestigador(datos.tipo) && !datos.investigador) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["investigador"],
+        message: "El nombre del investigador no puede estar vacío",
+      });
+    }
+  });
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -42,7 +66,9 @@ interface EditarClaseFormProps {
   clase: {
     id: string;
     nombre: string;
-    investigador: string;
+    tipo: TipoSesion;
+    /** Null en los eventos especiales: no los imparte ningún investigador. */
+    investigador: string | null;
     /** Fecha de la clase como "AAAA-MM-DD"; null si no tiene ninguna todavía. */
     fecha: string | null;
     /** Cuántas fechas tiene. Más de una obliga a editarlas desde la clase. */
@@ -66,15 +92,25 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: clase.nombre,
-      investigador: clase.investigador,
+      tipo: clase.tipo,
+      investigador: clase.investigador ?? "",
       fecha: clase.fecha ?? "",
     },
   });
+
+  const tipo = watch("tipo");
+  const investigadorObligatorio = exigeInvestigador(tipo);
+  // Cambiar el tipo cambia si esa asistencia sigue contando: hay que decirlo
+  // antes de guardar, porque puede dejar a un niño sin constancia (o dársela).
+  const cambiaElConteo =
+    tipo !== clase.tipo &&
+    cuentaParaConstancia(tipo) !== cuentaParaConstancia(clase.tipo);
 
   async function onSubmit(data: FormData) {
     setLoading(true);
@@ -86,7 +122,10 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: data.nombre,
-          investigador: data.investigador,
+          tipo: data.tipo,
+          // Vacío significa "sin investigador"; el servidor solo lo acepta si
+          // el tipo final lo permite.
+          investigador: data.investigador || null,
           // La fecha solo viaja si se puede editar y cambió de verdad: así una
           // clase con varias fechas nunca manda una que el servidor rechazaría.
           ...(puedeEditarFecha &&
@@ -162,7 +201,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
               className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
             >
               <BookOpen size={13} strokeWidth={2} aria-hidden />
-              Nombre de la sesión
+              Nombre
             </Label>
             <Input
               id="nombre"
@@ -178,6 +217,73 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
             )}
           </div>
 
+          {/* Tipo de actividad */}
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground mb-2">
+              <Tags size={13} strokeWidth={2} aria-hidden />
+              Tipo
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {TIPOS_SESION.map((opcion) => {
+                const activo = tipo === opcion.valor;
+                return (
+                  <label
+                    key={opcion.valor}
+                    className={[
+                      "flex sm:flex-col items-start gap-2 sm:gap-1.5 rounded-xl border p-3 cursor-pointer transition-colors min-h-[44px]",
+                      "focus-within:outline-none focus-within:ring-2 ring-primary",
+                      activo
+                        ? clasesTipoSesion(opcion.valor)
+                        : "bg-muted border-border text-muted-foreground hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="radio"
+                      value={opcion.valor}
+                      {...register("tipo")}
+                      className="sr-only"
+                    />
+                    <span className="flex items-center gap-1.5 font-semibold text-sm">
+                      <IconoTipoSesion tipo={opcion.valor} size={15} />
+                      {opcion.corta}
+                    </span>
+                    <span
+                      className={`text-xs leading-snug ${activo ? "opacity-80" : "text-muted-foreground"}`}
+                    >
+                      {opcion.ayuda}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {errors.tipo && (
+              <p className="text-xs text-destructive" role="alert">
+                {errors.tipo.message}
+              </p>
+            )}
+            {/* Cambiar el tipo mueve asistencias dentro o fuera del conteo de
+                la constancia. Avisarlo aquí es más barato que explicarlo
+                después, cuando a un niño le cambió el número sin motivo
+                aparente. */}
+            {cambiaElConteo && (
+              <p className="text-xs leading-relaxed rounded-lg px-3 py-2 bg-destructive/10 border border-destructive/35 text-foreground">
+                {cuentaParaConstancia(tipo) ? (
+                  <>
+                    Al cambiarla a <strong>{descripcionTipo(tipo).etiqueta.toLowerCase()}</strong>, las
+                    asistencias ya registradas <strong>empezarán a contar</strong> para el mínimo
+                    de la constancia.
+                  </>
+                ) : (
+                  <>
+                    Al cambiarla a <strong>{descripcionTipo(tipo).etiqueta.toLowerCase()}</strong>, las
+                    asistencias ya registradas <strong>dejarán de contar</strong> para el mínimo de
+                    la constancia. No se borran, pero algún niño puede quedarse por debajo.
+                  </>
+                )}
+              </p>
+            )}
+          </fieldset>
+
           {/* Investigador */}
           <div className="space-y-2">
             <Label
@@ -186,18 +292,32 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
             >
               <User size={13} strokeWidth={2} aria-hidden />
               Investigador responsable
+              {!investigadorObligatorio && (
+                <span className="text-xs font-normal text-muted-foreground/60">
+                  (opcional)
+                </span>
+              )}
             </Label>
             <Input
               id="investigador"
               type="text"
+              placeholder={
+                investigadorObligatorio ? undefined : "Déjalo vacío si no lo imparte nadie"
+              }
               {...register("investigador")}
               className={`h-11 rounded-lg bg-muted border-border transition-colors focus:ring-primary ${errors.investigador ? "border-destructive focus:ring-destructive" : ""}`}
               aria-describedby={errors.investigador ? "investigador-error" : undefined}
             />
-            {errors.investigador && (
+            {errors.investigador ? (
               <p id="investigador-error" className="text-xs text-destructive" role="alert">
                 {errors.investigador.message}
               </p>
+            ) : (
+              !investigadorObligatorio && (
+                <p className="text-xs text-muted-foreground">
+                  Un evento especial no lo imparte ningún investigador. Puedes dejarlo vacío.
+                </p>
+              )
             )}
           </div>
 

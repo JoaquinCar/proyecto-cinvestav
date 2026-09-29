@@ -49,6 +49,7 @@ export default async function EditarClasePage({
       clase={{
         id: clase.id,
         nombre: clase.nombre,
+        tipo: clase.tipo,
         investigador: clase.investigador,
         // Con una sola fecha (el caso real) es la de la clase; con varias, el
         // formulario no la ofrece y cada una se edita desde la propia clase.

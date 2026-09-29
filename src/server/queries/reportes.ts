@@ -61,7 +61,13 @@ export async function obtenerDatosReporteClase(
       : 0;
 
   return {
-    clase: { nombre: clase.nombre, investigador: clase.investigador },
+    clase: {
+      nombre: clase.nombre,
+      tipo: clase.tipo,
+      // Un evento especial no lo imparte nadie: el PDF omite la línea en vez
+      // de escribir "Investigador: null".
+      investigador: clase.investigador,
+    },
     edicion: { nombre: clase.edicion.nombre, anio: clase.edicion.anio },
     sesiones: sesionesData,
     participantes: participantesData,

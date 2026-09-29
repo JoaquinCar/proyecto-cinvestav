@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardCheck, BookOpen, User, Calendar, ChevronRight, Users } from "lucide-react";
+import { ClipboardCheck, User, Calendar, ChevronRight, Users } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/server/db";
 import { listarClasesConSesiones } from "@/server/queries/clases";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { formatearFecha } from "@/lib/fechas";
+import {
+  BadgeTipoSesion,
+  IconoTipoSesion,
+  clasesTipoSesion,
+} from "@/components/clases/BadgeTipoSesion";
 
 export const metadata: Metadata = { title: "Asistencia" };
 
@@ -15,6 +20,11 @@ export const metadata: Metadata = { title: "Asistencia" };
 // esta pantalla es una lista de clases y entrar en una lleva directo a pasar
 // lista. El modelo sigue permitiendo varias fechas por clase; cuando las hay,
 // se listan bajo la clase en vez de esconderlas.
+//
+// Aquí conviven LOS TRES TIPOS a propósito: a un evento especial también se le
+// pasa lista, y quien está en el patio con el teléfono quiere una sola lista
+// del día, no dos pantallas. Lo que los distingue es la insignia de color, y
+// el orden: primero el pasaporte, después las lecturas, al final los eventos.
 
 export default async function AsistenciaHubPage() {
   const session = await auth();
@@ -42,7 +52,14 @@ export default async function AsistenciaHubPage() {
     );
   }
 
-  const clases = await listarClasesConSesiones(edicion.id);
+  const todas = await listarClasesConSesiones(edicion.id);
+
+  // Pasaporte primero: es lo que se pasa lista todas las semanas. Los eventos
+  // al final porque son uno o dos al año.
+  const ORDEN_TIPO = { PASAPORTE: 0, LECTURA: 1, EVENTO: 2 } as const;
+  const clases = [...todas].sort(
+    (a, b) => ORDEN_TIPO[a.tipo] - ORDEN_TIPO[b.tipo],
+  );
 
   return (
     <div className="space-y-8">
@@ -75,22 +92,29 @@ export default async function AsistenciaHubPage() {
                     href={`/asistencia/${fechaUnica.id}`}
                     className="flex items-center gap-3 bg-card border border-border rounded-2xl px-4 py-4 min-h-[72px] transition-colors hover:bg-muted active:bg-muted"
                   >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10">
-                      <BookOpen size={18} strokeWidth={1.8} className="text-primary" aria-hidden />
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${clasesTipoSesion(clase.tipo)}`}
+                    >
+                      <IconoTipoSesion tipo={clase.tipo} size={18} />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <p className="font-display text-sm sm:text-base font-semibold text-foreground line-clamp-2">
                         {clase.nombre}
                       </p>
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-0.5">
-                        <User size={11} strokeWidth={1.8} aria-hidden />
-                        {clase.investigador}
-                      </p>
+                      {clase.investigador && (
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-0.5">
+                          <User size={11} strokeWidth={1.8} aria-hidden />
+                          {clase.investigador}
+                        </p>
+                      )}
                       <p className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 first-letter:uppercase">
                         <Calendar size={11} strokeWidth={1.8} aria-hidden />
                         {formatearFecha(fechaUnica.fecha, "diaSemana")}
                       </p>
+                      <span className="inline-flex mt-1.5">
+                        <BadgeTipoSesion tipo={clase.tipo} />
+                      </span>
                     </div>
 
                     <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-success/10 text-success shrink-0 tabular">
@@ -120,17 +144,24 @@ export default async function AsistenciaHubPage() {
                 className="bg-card border border-border rounded-2xl overflow-hidden"
               >
                 <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10">
-                    <BookOpen size={18} strokeWidth={1.8} className="text-primary" aria-hidden />
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${clasesTipoSesion(clase.tipo)}`}
+                  >
+                    <IconoTipoSesion tipo={clase.tipo} size={18} />
                   </div>
                   <div className="min-w-0">
                     <h2 className="font-display text-sm sm:text-base font-semibold text-foreground line-clamp-2">
                       {clase.nombre}
                     </h2>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-0.5">
-                      <User size={11} strokeWidth={1.8} aria-hidden />
-                      {clase.investigador}
-                    </p>
+                    {clase.investigador && (
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground truncate mt-0.5">
+                        <User size={11} strokeWidth={1.8} aria-hidden />
+                        {clase.investigador}
+                      </p>
+                    )}
+                    <span className="inline-flex mt-1.5">
+                      <BadgeTipoSesion tipo={clase.tipo} />
+                    </span>
                   </div>
                 </div>
 
@@ -199,7 +230,7 @@ function Header({ subtitle }: { subtitle?: string }) {
       <div>
         <h1 className="font-display text-3xl font-semibold text-foreground">Asistencia</h1>
         <p className="text-sm text-muted-foreground">
-          {subtitle ?? "Registro de asistencias por sesión"}
+          {subtitle ?? "Registro de asistencias por sesión y evento"}
         </p>
       </div>
     </div>

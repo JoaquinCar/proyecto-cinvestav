@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { aFechaCalendario } from "@/lib/fechas";
+import {
+  VALORES_TIPO_SESION,
+  TIPO_SESION_POR_DEFECTO,
+  exigeInvestigador,
+} from "@/lib/tipos-sesion";
 
 // ── Fecha de calendario ───────────────────────────────────────────────────────
 
@@ -31,6 +36,32 @@ export const fechaCalendarioSchema = z
   )
   .transform(aFechaCalendario);
 
+// ── Tipo de actividad ─────────────────────────────────────────────────────────
+
+/**
+ * Qué clase de actividad es: sesión de pasaporte, de lectura o evento especial.
+ *
+ * Sin el campo se asume PASAPORTE, el mismo criterio que el DEFAULT de la
+ * columna: así un cliente viejo —o una petición escrita a mano— sigue creando
+ * lo que creaba antes.
+ */
+export const tipoSesionSchema = z.enum(VALORES_TIPO_SESION, {
+  error: "Elige si es sesión de pasaporte, de lectura o un evento especial",
+});
+
+/**
+ * Nombre del investigador tal como puede llegar del formulario: ausente, vacío
+ * o con espacios. Lo normaliza a `null` cuando no hay nadie que registrar; que
+ * pueda faltar o no lo decide el tipo, en el `superRefine` de cada schema.
+ */
+const investigadorOpcionalSchema = z
+  .string()
+  .max(200, "El nombre del investigador no puede exceder 200 caracteres")
+  .trim()
+  .transform((v) => (v === "" ? null : v))
+  .nullish()
+  .transform((v) => v ?? null);
+
 // ── Schema para crear una clase ───────────────────────────────────────────────
 
 /**
@@ -39,37 +70,52 @@ export const fechaCalendarioSchema = z
  * sesión). Por eso `fecha` es obligatoria — sin ella la clase nacía con cero
  * sesiones y no se le podía pasar lista hasta "agregarle" una a mano.
  */
-export const crearClaseSchema = z.object({
-  edicionId: z.string({ error: "Falta indicar la edición" }).min(1, "Selecciona la edición a la que pertenece la sesión"),
+export const crearClaseSchema = z
+  .object({
+    edicionId: z.string({ error: "Falta indicar la edición" }).min(1, "Selecciona la edición a la que pertenece la sesión"),
 
-  nombre: z
-    .string({ error: "El nombre es requerido" })
-    .min(1, "El nombre no puede estar vacío")
-    .max(200, "El nombre no puede exceder 200 caracteres")
-    .trim(),
+    nombre: z
+      .string({ error: "El nombre es requerido" })
+      .min(1, "El nombre no puede estar vacío")
+      .max(200, "El nombre no puede exceder 200 caracteres")
+      .trim(),
 
-  investigador: z
-    .string({ error: "El investigador es requerido" })
-    .min(1, "El nombre del investigador no puede estar vacío")
-    .max(200, "El nombre del investigador no puede exceder 200 caracteres")
-    .trim(),
+    /** Sesión de pasaporte, de lectura o evento especial. */
+    tipo: tipoSesionSchema.default(TIPO_SESION_POR_DEFECTO),
 
-  /** Día en que se imparte la clase. Se crea con ella, en la misma transacción. */
-  fecha: fechaCalendarioSchema,
+    /**
+     * Obligatorio salvo en los eventos especiales: una clausura o un día del
+     * niño no los imparte nadie. La comprobación cruzada está más abajo.
+     */
+    investigador: investigadorOpcionalSchema,
 
-  descripcion: z
-    .string()
-    .max(1000, "La descripción no puede exceder 1000 caracteres")
-    .trim()
-    .optional(),
+    /** Día en que se imparte la clase. Se crea con ella, en la misma transacción. */
+    fecha: fechaCalendarioSchema,
 
-  /** Temas de la sesión; opcionales, se suelen capturar después de impartirla. */
-  temas: z
-    .string()
-    .max(500, "Los temas no pueden exceder 500 caracteres")
-    .trim()
-    .optional(),
-});
+    descripcion: z
+      .string()
+      .max(1000, "La descripción no puede exceder 1000 caracteres")
+      .trim()
+      .optional(),
+
+    /** Temas de la sesión; opcionales, se suelen capturar después de impartirla. */
+    temas: z
+      .string()
+      .max(500, "Los temas no pueden exceder 500 caracteres")
+      .trim()
+      .optional(),
+  })
+  .superRefine((datos, ctx) => {
+    // El error cuelga de `investigador` a propósito: así el formulario lo pinta
+    // en su campo y `respuestaCamposInvalidos` lo nombra en el mensaje.
+    if (exigeInvestigador(datos.tipo) && datos.investigador === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["investigador"],
+        message: "El nombre del investigador no puede estar vacío",
+      });
+    }
+  });
 
 // ── Schema para editar una clase (todos los campos opcionales) ────────────────
 
@@ -88,12 +134,19 @@ export const editarClaseSchema = z.object({
     .trim()
     .optional(),
 
-  investigador: z
-    .string()
-    .min(1, "El nombre del investigador no puede estar vacío")
-    .max(200, "El nombre del investigador no puede exceder 200 caracteres")
-    .trim()
-    .optional(),
+  /**
+   * Cambiar el tipo de una sesión ya creada. Es lo que permite corregir una
+   * captura equivocada sin borrarla y rehacerla —lo que se llevaría por delante
+   * las asistencias—, y cambia si esa asistencia cuenta o no para la constancia.
+   */
+  tipo: tipoSesionSchema.optional(),
+
+  /**
+   * `null` deja la sesión sin investigador. Solo vale para un evento especial,
+   * y como aquí no se sabe el tipo final —puede no venir en la petición— esa
+   * comprobación se hace en la ruta, con el tipo ya resuelto contra lo guardado.
+   */
+  investigador: investigadorOpcionalSchema.optional(),
 
   descripcion: z
     .string()

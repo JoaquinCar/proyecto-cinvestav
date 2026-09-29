@@ -1,11 +1,20 @@
 import Link from "next/link";
-import { BookOpen, User, ChevronRight, Calendar } from "lucide-react";
+import { User, ChevronRight, Calendar } from "lucide-react";
 import { formatearFecha } from "@/lib/fechas";
+import { descripcionTipo, type TipoSesion } from "@/lib/tipos-sesion";
+import {
+  BadgeTipoSesion,
+  IconoTipoSesion,
+  clasesTipoSesion,
+} from "@/components/clases/BadgeTipoSesion";
 
 export interface ClaseCardData {
   id: string;
   nombre: string;
-  investigador: string;
+  /** Sesión de pasaporte, de lectura o evento especial. */
+  tipo: TipoSesion;
+  /** Null en los eventos especiales: una clausura no la imparte nadie. */
+  investigador: string | null;
   descripcion?: string | null;
   edicionId: string;
   /** Fechas en que se imparte. Lo normal es una: la clase ES esa charla. */
@@ -29,32 +38,40 @@ export function ClaseCard({ clase, totalParticipantes }: ClaseCardProps) {
         ? "Sin fecha"
         : `${fechas.length} fechas`;
 
+  const d = descripcionTipo(clase.tipo);
+
   return (
     <Link
       href={`/clases/${clase.id}`}
       className="group block bg-card border border-border rounded-2xl p-5 transition-all duration-200 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 ring-primary"
-      aria-label={`Ver sesión ${clase.nombre} — ${clase.investigador}`}
+      aria-label={
+        clase.investigador
+          ? `Ver ${d.etiqueta.toLowerCase()}: ${clase.nombre} — ${clase.investigador}`
+          : `Ver ${d.etiqueta.toLowerCase()}: ${clase.nombre}`
+      }
     >
       {/* Top row */}
       <div className="flex items-start justify-between gap-3 mb-3">
         {/* Icon + title */}
         <div className="flex items-start gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-secondary/10">
-            <BookOpen
-              size={17}
-              strokeWidth={1.8}
-              className="text-secondary-foreground"
-              aria-hidden
-            />
+          {/* El marco del ícono toma el color del tipo: se distingue de un
+              vistazo antes de leer la insignia. */}
+          <div
+            className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 border ${clasesTipoSesion(clase.tipo)}`}
+          >
+            <IconoTipoSesion tipo={clase.tipo} size={17} />
           </div>
           <div className="min-w-0">
             <p className="font-display text-base font-semibold leading-snug truncate text-foreground">
               {clase.nombre}
             </p>
-            <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-              <User size={11} strokeWidth={1.8} aria-hidden />
-              <span className="truncate">{clase.investigador}</span>
-            </div>
+            {/* Un evento sin investigador no pinta una línea vacía. */}
+            {clase.investigador && (
+              <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+                <User size={11} strokeWidth={1.8} aria-hidden />
+                <span className="truncate">{clase.investigador}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -79,6 +96,8 @@ export function ClaseCard({ clase, totalParticipantes }: ClaseCardProps) {
 
       {/* Badges row */}
       <div className="flex flex-wrap items-center gap-2">
+        <BadgeTipoSesion tipo={clase.tipo} />
+
         {/* Día en que se imparte */}
         <span
           className={

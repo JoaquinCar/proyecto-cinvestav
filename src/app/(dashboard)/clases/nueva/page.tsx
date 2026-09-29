@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { listarEdiciones } from "@/server/queries/ediciones";
 import { aISOFecha } from "@/lib/fechas";
+import { esTipoSesion, TIPO_SESION_POR_DEFECTO } from "@/lib/tipos-sesion";
 import { FormNuevaClase } from "./FormNuevaClase";
 
 export const metadata: Metadata = {
@@ -12,13 +13,17 @@ export const metadata: Metadata = {
 export default async function NuevaClasePage({
   searchParams,
 }: {
-  searchParams: Promise<{ edicion?: string }>;
+  searchParams: Promise<{ edicion?: string; tipo?: string }>;
 }) {
   const session = await auth();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/clases");
 
-  const { edicion: edicionParam } = await searchParams;
+  const { edicion: edicionParam, tipo: tipoParam } = await searchParams;
+
+  // El tipo llega del botón que trajo aquí: desde /eventos viene EVENTO. Un
+  // valor inventado se ignora y se cae al de siempre, como en el listado.
+  const tipoInicial = esTipoSesion(tipoParam) ? tipoParam : TIPO_SESION_POR_DEFECTO;
   const ediciones = await listarEdiciones();
 
   // Una clase requiere edición: sin ediciones no hay nada que crear.
@@ -40,6 +45,7 @@ export default async function NuevaClasePage({
         fechaFin: aISOFecha(e.fechaFin),
       }))}
       edicionInicialId={edicionInicial.id}
+      tipoInicial={tipoInicial}
     />
   );
 }

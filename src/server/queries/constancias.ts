@@ -2,6 +2,10 @@ import { prisma } from "@/server/db";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { generarPDFConstancia, type DatosConstancia } from "@/lib/pdf/constancia";
 import { formatearInstante } from "@/lib/fechas";
+// Qué asistencias suman al mínimo y qué sesiones forman el denominador NO se
+// decide en este archivo: se decide en src/lib/tipos-sesion.ts, que es el único
+// sitio donde se cambia. Aquí solo se aplican los dos filtros.
+import { ASISTENCIAS_QUE_CUENTAN, CLASES_QUE_CUENTAN } from "@/lib/tipos-sesion";
 
 // ── Fallos del almacenamiento de archivos ─────────────────────────────────────
 // La constancia se arma en memoria y se guarda en el almacenamiento de archivos
@@ -62,10 +66,13 @@ export async function verificarElegibilidad(
     include: {
       edicion: {
         include: {
-          clases: { include: { sesiones: { select: { id: true } } } },
+          clases: {
+            where: CLASES_QUE_CUENTAN,
+            include: { sesiones: { select: { id: true } } },
+          },
         },
       },
-      asistencias: { where: { presente: true }, select: { id: true } },
+      asistencias: { where: ASISTENCIAS_QUE_CUENTAN, select: { id: true } },
     },
   });
 
@@ -106,10 +113,13 @@ export async function generarYGuardarConstancia(
       participante: true,
       edicion: {
         include: {
-          clases: { include: { sesiones: { select: { id: true } } } },
+          clases: {
+            where: CLASES_QUE_CUENTAN,
+            include: { sesiones: { select: { id: true } } },
+          },
         },
       },
-      asistencias: { where: { presente: true }, select: { id: true } },
+      asistencias: { where: ASISTENCIAS_QUE_CUENTAN, select: { id: true } },
     },
   });
 
