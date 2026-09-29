@@ -35,6 +35,9 @@ if (process.env.PRUEBAS_DB === "1" && !esLocal) {
 // Año propio y distinto del de las demás pruebas contra base real (2091-2094
 // ya están tomados): vitest corre los archivos en paralelo y `Edicion.anio` es
 // único, así que dos pruebas con el mismo año se pisan.
+// Ojo con `elegible` vs `cumpleMinimo`: desde que la constancia es de todo
+// inscrito, `elegible` significa "ningún ADMIN lo excluyó" y el mínimo de
+// asistencias se reporta aparte. Lo que se comprueba aquí es el mínimo.
 const ANIO = 2095;
 const MARCA = "QA-TIPOS-SESION";
 
@@ -275,7 +278,7 @@ describe.skipIf(!habilitado)("tipos de sesión contra la base real", () => {
     const antes = await verificarElegibilidad(inscripcion.id);
     expect(antes?.asistencias).toBe(2);
     expect(antes?.minimo).toBe(3);
-    expect(antes?.elegible).toBe(false);
+    expect(antes?.cumpleMinimo).toBe(false);
 
     // Una charla más —de pasaporte— sí lo cruza.
     const p3 = await crearActividad({ nombre: "Charla 3", tipo: "PASAPORTE", dia: "03-22" });
@@ -285,7 +288,7 @@ describe.skipIf(!habilitado)("tipos de sesión contra la base real", () => {
 
     const despues = await verificarElegibilidad(inscripcion.id);
     expect(despues?.asistencias).toBe(3);
-    expect(despues?.elegible).toBe(true);
+    expect(despues?.cumpleMinimo).toBe(true);
   });
 
   it("el denominador del porcentaje mínimo solo cuenta sesiones de pasaporte", async () => {
@@ -320,7 +323,7 @@ describe.skipIf(!habilitado)("tipos de sesión contra la base real", () => {
     const r = await verificarElegibilidad(inscripcion.id);
     expect(r?.modo).toBe("porcentaje");
     expect(r?.asistencias).toBe(2);
-    expect(r?.elegible).toBe(true);
+    expect(r?.cumpleMinimo).toBe(true);
   });
 
   it("las asistencias a cada tipo quedan guardadas por separado", async () => {
@@ -430,7 +433,7 @@ describe.skipIf(!habilitado)("tipos de sesión contra la base real", () => {
     // …pero para la constancia solo cuenta una (el mínimo de la edición es 3).
     const el = await verificarElegibilidad(inscripcion.id);
     expect(el?.asistencias).toBe(1);
-    expect(el?.elegible).toBe(false);
+    expect(el?.cumpleMinimo).toBe(false);
   });
 
   // ── Estadísticas ────────────────────────────────────────────────────────────
