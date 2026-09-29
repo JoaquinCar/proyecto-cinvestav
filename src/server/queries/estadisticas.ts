@@ -26,11 +26,12 @@ export type MetricasEdicion = {
   /** Todas las actividades de la edición, de cualquier tipo. */
   totalSesiones: number;
   /**
-   * Solo las que cuentan para la constancia (hoy, las de pasaporte). Es el
-   * número contra el que se lee `Edicion.minAsistencias`: mezclarlo con los
-   * extras haría parecer que el programa es más largo de lo que exige.
+   * Solo las que cuentan para la constancia. Hoy son las de pasaporte, pero el
+   * nombre no lo fija: sale de `TIPOS_QUE_CUENTAN_PARA_CONSTANCIA`, así que si
+   * mañana cuenta también la lectura, este número la incluye sin tocar nada.
+   * Es el número contra el que se lee `Edicion.minAsistencias`.
    */
-  totalSesionesPasaporte: number;
+  totalSesionesQueCuentan: number;
   /** Desglose por tipo, en el orden del catálogo. Los tipos sin nada salen en 0. */
   porTipo: { tipo: TipoSesion; sesiones: number; asistencias: number }[];
   promedioAsistencia: number;
@@ -111,7 +112,7 @@ export async function obtenerMetricasEdicion(
     asistencias: asistenciasPorTipo.get(valor) ?? 0,
   }));
 
-  const totalSesionesPasaporte = porTipo
+  const totalSesionesQueCuentan = porTipo
     .filter((t) => cuentaParaConstancia(t.tipo))
     .reduce((acc, t) => acc + t.sesiones, 0);
 
@@ -223,7 +224,7 @@ export async function obtenerMetricasEdicion(
   return {
     totalParticipantes,
     totalSesiones,
-    totalSesionesPasaporte,
+    totalSesionesQueCuentan,
     porTipo,
     promedioAsistencia,
     totalConstancias,
