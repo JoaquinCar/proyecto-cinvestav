@@ -156,12 +156,11 @@ function TimelineItem({
             <BotonConstancia
               inscripcionId={inscripcion.id}
               // La constancia le toca a todo inscrito: lo único que la impide
-              // es una exclusión puesta por un ADMIN. El conteo se sigue
-              // mostrando, pero ya solo como dato, no como requisito.
+              // es una exclusión puesta por un ADMIN. El conteo de asistencias
+              // ya no viaja aquí porque dejó de ser un requisito; se muestra
+              // como dato en la ficha y en el listado de constancias.
               elegible={!excluida}
               motivoExclusion={inscripcion.constanciaMotivoExclusion}
-              asistencias={asistenciasQueCuentan}
-              minimo={inscripcion.edicion.minAsistencias}
               constanciaUrl={inscripcion.constanciaUrl}
               constanciaGenerada={inscripcion.constanciaGenerada}
               puedeGenerar={puedeCapturar}
