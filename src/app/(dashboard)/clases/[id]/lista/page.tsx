@@ -6,6 +6,7 @@ import {
   Calendar,
   GraduationCap,
   School,
+  User,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -14,7 +15,7 @@ import { auth } from "@/lib/auth";
 import { obtenerListaDeSesion } from "@/server/queries/listas-sesion";
 import { listarStaffDeClase } from "@/server/queries/staff";
 import { GestorStaffSesion } from "@/components/staff/GestorStaffSesion";
-import { ROL_STAFF_LABEL } from "@/lib/schemas/staff.schema";
+import { etiquetaTipo } from "@/lib/tipos-sesion";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,6 +93,19 @@ export default async function ListaSesionPage({
         <p className="text-sm mt-1.5 text-muted-foreground break-words">
           {sesion.nombre} · {sesion.edicion.nombre}
         </p>
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-secondary/10 border border-secondary/30 text-secondary-foreground">
+            {etiquetaTipo(sesion.tipo)}
+          </span>
+          {/* Un evento especial no lo imparte nadie: `investigador` es null y
+              la línea sencillamente no se pinta. */}
+          {sesion.investigador && (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <User size={13} strokeWidth={1.8} aria-hidden />
+              {sesion.investigador}
+            </span>
+          )}
+        </div>
         {fechas.length > 0 && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-muted-foreground">
             <Calendar size={13} strokeWidth={1.8} aria-hidden />
@@ -213,21 +227,6 @@ export default async function ListaSesionPage({
         )}
       </section>
 
-      {/* Quién imparte, según el campo de texto de la sesión. Se muestra aparte
-          del staff a propósito: hoy son dos datos distintos y no se mezclan. */}
-      {sesion.investigador && (
-        <p className="text-xs text-muted-foreground animate-fade-up animate-fade-up-delay-4">
-          Sesión a cargo de {sesion.investigador}
-          {staff.length > 0 && (
-            <>
-              {" · "}
-              {staff
-                .map((s) => `${[s.nombre, s.apellidos].filter(Boolean).join(" ")} (${ROL_STAFF_LABEL[s.rol]})`)
-                .join(", ")}
-            </>
-          )}
-        </p>
-      )}
     </div>
   );
 }

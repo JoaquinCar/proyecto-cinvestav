@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db";
 import type { RolStaff } from "@/lib/schemas/staff.schema";
+import type { TipoSesion } from "@/lib/tipos-sesion";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA LISTA DE UNA SESIÓN: los niños que asistieron y el staff asignado.
@@ -18,7 +19,10 @@ import type { RolStaff } from "@/lib/schemas/staff.schema";
 //   │  });                                        // false                 │
 //   │                                                                      │
 //   │  · Devuelve `null` si esa sesión no existe → responder 404.          │
-//   │  · `lista.sesion`  — nombre, descripción, investigador y edición.    │
+//   │  · `lista.sesion`  — nombre, descripción, tipo (PASAPORTE/LECTURA/   │
+//   │                      EVENTO), investigador y edición. OJO:           │
+//   │                      `investigador` puede ser `null` — un evento     │
+//   │                      especial no lo imparte nadie.                   │
 //   │  · `lista.fechas`  — las fechas en que se impartió (modelo `Sesion`).│
 //   │  · `lista.ninos`   — SOLO los que asistieron (`presente = true`) a   │
 //   │                      alguna fecha, ordenados por apellidos y sin     │
@@ -79,10 +83,17 @@ export type FechaEnLista = {
 
 export type ListaDeSesion = {
   sesion: {
-    id:           string;
-    nombre:       string;
-    descripcion:  string | null;
-    investigador: string;
+    id:          string;
+    nombre:      string;
+    descripcion: string | null;
+    /** PASAPORTE, LECTURA o EVENTO. Ver `etiquetaTipo` en lib/tipos-sesion. */
+    tipo:        TipoSesion;
+    /**
+     * Quién la imparte. `null` en los eventos especiales (una clausura no la
+     * imparte nadie), así que quien maquete el anexo debe comprobarlo antes de
+     * pintar la línea.
+     */
+    investigador: string | null;
     edicion: { id: string; anio: number; nombre: string };
   };
   fechas:  FechaEnLista[];
@@ -113,6 +124,7 @@ export async function obtenerListaDeSesion(
       id:           true,
       nombre:       true,
       descripcion:  true,
+      tipo:         true,
       investigador: true,
       edicion: { select: { id: true, anio: true, nombre: true } },
       sesiones: {
@@ -223,6 +235,7 @@ export async function obtenerListaDeSesion(
       id:           clase.id,
       nombre:       clase.nombre,
       descripcion:  clase.descripcion,
+      tipo:         clase.tipo,
       investigador: clase.investigador,
       edicion:      clase.edicion,
     },

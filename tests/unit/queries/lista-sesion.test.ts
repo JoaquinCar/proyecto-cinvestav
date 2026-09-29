@@ -23,6 +23,7 @@ const CLASE = {
   id:           "c1",
   nombre:       "Astronomía para todos",
   descripcion:  "Charla con telescopios",
+  tipo:         "PASAPORTE",
   investigador: "Dr. Juan Pérez",
   edicion:      { id: "e1", anio: 2026, nombre: "Edición 2026" },
   sesiones: [
@@ -100,6 +101,7 @@ describe("obtenerListaDeSesion", () => {
 
     expect(lista).not.toBeNull();
     expect(lista!.sesion.nombre).toBe("Astronomía para todos");
+    expect(lista!.sesion.tipo).toBe("PASAPORTE");
     expect(lista!.ninos.map((n) => n.apellidos)).toEqual(["López", "Martín"]);
     expect(lista!.staff.map((s) => s.nombre)).toEqual(["Rocío", "Juan"]);
     expect(lista!.totales).toEqual({ ninos: 2, staff: 2, fechas: 2 });
@@ -156,6 +158,25 @@ describe("obtenerListaDeSesion", () => {
 
     expect(lista!.staff[0].telefono).toBe("9997654321");
     expect(lista!.staff[0].correo).toBe("rocio@cinvestav.mx");
+  });
+
+  it("un evento especial no tiene investigador y la lista lo deja en null", async () => {
+    const { prisma } = await import("@/lib/prisma");
+    vi.mocked(prisma.clase.findUnique).mockResolvedValueOnce({
+      ...CLASE,
+      nombre: "Clausura 2026",
+      tipo: "EVENTO",
+      investigador: null,
+    } as never);
+    vi.mocked(prisma.inscripcion.findMany).mockResolvedValueOnce(INSCRIPCIONES as never);
+
+    const { obtenerListaDeSesion } = await import("@/server/queries/listas-sesion");
+    const lista = await obtenerListaDeSesion("c1");
+
+    expect(lista!.sesion.tipo).toBe("EVENTO");
+    expect(lista!.sesion.investigador).toBeNull();
+    // Que no haya investigador no vacía la lista: el evento igual tiene staff.
+    expect(lista!.staff).toHaveLength(2);
   });
 
   it("una sesión sin asistencias ni staff devuelve listas vacías, no null", async () => {
