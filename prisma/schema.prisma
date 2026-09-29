@@ -253,8 +253,10 @@ enum TipoClase {
 }
 
 // Imágenes de apoyo de una clase (fotos, carteles, capturas pegadas del portapapeles).
-// `url` guarda la URL pública de Supabase Storage cuando el bucket está configurado;
-// si no lo está, guarda un data URI en base64 como respaldo (ver src/server/queries/imagenes-clase.ts).
+// `url` guarda una referencia interna `supabase://…` cuando el bucket está configurado
+// —NO una URL pública: el bucket es privado y el archivo se sirve por el proxy
+// autenticado—; si no lo está, guarda un data URI en base64 como respaldo
+// (ver src/server/queries/imagenes-clase.ts).
 model ImagenClase {
   id          String   @id @default(cuid())
   claseId     String
@@ -262,12 +264,31 @@ model ImagenClase {
   storagePath String?
   titulo      String?
   mimeType    String
-  tamano      Int      @default(0)
-  orden       Int      @default(0)
-  createdAt   DateTime @default(now())
+
+  tamano Int @default(0)
+
+  // Posición de la foto dentro de su sesión, empezando en 0 y sin huecos.
+  //
+  // No es decorativo: la exportación a Word imprime las fotos en este orden, y
+  // el orden lo decide quien arma el reporte. Por eso hay dos garantías:
+  //
+  //   · La unicidad de (claseId, orden) impide empates. Nacieron todas en 0 —el
+  //     default de antes—, así que la migración las renumeró por antigüedad
+  //     antes de poder exigirlo.
+  //   · El reordenado escribe la secuencia completa 0…n-1 dentro de una
+  //     transacción (`reordenarImagenesDeClase`), así que tampoco quedan huecos
+  //     al borrar una foto de en medio.
+  //
+  // El `@default(0)` se queda solo para que una fila insertada a mano no reviente;
+  // el alta real calcula siempre el siguiente libre.
+  orden Int @default(0)
+
+  createdAt DateTime @default(now())
 
   clase Clase @relation(fields: [claseId], references: [id], onDelete: Cascade)
 
+  // Cubre tanto el filtro por sesión como el ORDER BY de la galería.
+  @@unique([claseId, orden])
   @@index([claseId])
 }
 

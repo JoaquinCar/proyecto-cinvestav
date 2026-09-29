@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { mensajeDeError } from "@/lib/api/errores";
 import {
   AlignLeft,
+  Check,
+  ChevronLeft,
+  ChevronRight,
   ImagePlus,
+  ListOrdered,
   Pencil,
   Plus,
   Trash2,
@@ -27,6 +31,7 @@ import {
   esTipoAceptado,
   formatearTamano,
 } from "@/lib/imagenes";
+import { useOrdenImagenes } from "@/components/imagenes/useOrdenImagenes";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -73,6 +78,7 @@ export function ContenidoClase({
   const [subiendo, setSubiendo] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
   const [ampliada, setAmpliada] = useState<ImagenClaseVista | null>(null);
+  const [modoOrden, setModoOrden] = useState(false);
   // Imágenes cuya descarga por el proxy falló (sesión caída, Storage no
   // disponible, objeto borrado del bucket). Con URLs firmadas el fallo se sabía
   // al renderizar; ahora ocurre al pedir el archivo, así que se recoge aquí para
@@ -80,6 +86,30 @@ export function ContenidoClase({
   const [rotas, setRotas] = useState<ReadonlySet<string>>(() => new Set());
 
   const inputArchivo = useRef<HTMLInputElement>(null);
+
+  // Orden de la galería. Es el mismo que usa la biblioteca y el mismo que leerá
+  // la exportación a Word: se puede ajustar desde cualquiera de las dos vistas.
+  const idsIniciales = useMemo(() => imagenes.map((i) => i.id), [imagenes]);
+  const porId = useMemo(
+    () => new Map(imagenes.map((imagen) => [imagen.id, imagen])),
+    [imagenes],
+  );
+  const {
+    ids: ordenIds,
+    mover,
+    guardarPendiente,
+    estado: estadoOrden,
+    anuncio,
+  } = useOrdenImagenes(claseId, idsIniciales);
+
+  const imagenesOrdenadas = ordenIds
+    .map((id) => porId.get(id))
+    .filter((imagen): imagen is ImagenClaseVista => imagen !== undefined);
+
+  function alternarOrden() {
+    if (modoOrden) guardarPendiente();
+    setModoOrden((activo) => !activo);
+  }
 
   const marcarRota = useCallback((id: string) => {
     setRotas((previas) => {
@@ -340,26 +370,78 @@ export function ContenidoClase({
           </div>
 
           {puedeEditarImagenes && (
-            <button
-              type="button"
-              onClick={() => inputArchivo.current?.click()}
-              disabled={subiendo}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors bg-muted border border-border text-primary hover:bg-surface-alt min-h-[36px] disabled:opacity-50"
-            >
-              {subiendo ? (
-                <>
+            <div className="flex flex-wrap items-center gap-2">
+              {estadoOrden === "guardando" && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Loader2 size={12} className="animate-spin" aria-hidden />
-                  Subiendo…
-                </>
-              ) : (
-                <>
-                  <Plus size={13} strokeWidth={2.5} aria-hidden />
-                  Agregar imágenes
-                </>
+                  Guardando orden…
+                </span>
               )}
-            </button>
+              {estadoOrden === "guardado" && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-success">
+                  <Check size={12} strokeWidth={2.4} aria-hidden />
+                  Orden guardado
+                </span>
+              )}
+
+              {imagenes.length > 1 && (
+                <button
+                  type="button"
+                  onClick={alternarOrden}
+                  aria-pressed={modoOrden}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-h-[36px] border ${
+                    modoOrden
+                      ? "bg-primary/10 border-primary/40 text-primary"
+                      : "bg-muted border-border text-primary hover:bg-surface-alt"
+                  }`}
+                >
+                  {modoOrden ? (
+                    <>
+                      <Check size={13} strokeWidth={2.4} aria-hidden />
+                      Listo
+                    </>
+                  ) : (
+                    <>
+                      <ListOrdered size={13} strokeWidth={2} aria-hidden />
+                      Ordenar
+                    </>
+                  )}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => inputArchivo.current?.click()}
+                disabled={subiendo}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors bg-muted border border-border text-primary hover:bg-surface-alt min-h-[36px] disabled:opacity-50"
+              >
+                {subiendo ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" aria-hidden />
+                    Subiendo…
+                  </>
+                ) : (
+                  <>
+                    <Plus size={13} strokeWidth={2.5} aria-hidden />
+                    Agregar imágenes
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Lo único que percibe un lector de pantalla al mover una imagen. */}
+        <p aria-live="polite" className="sr-only">
+          {anuncio}
+        </p>
+
+        {modoOrden && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Este es el orden en que las imágenes saldrán en el reporte. Usa las
+            flechas de cada una para moverla; se guarda solo.
+          </p>
+        )}
 
         {/* Galería */}
         {imagenes.length > 0 ? (
@@ -369,53 +451,92 @@ export function ContenidoClase({
               gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 9rem), 1fr))",
             }}
           >
-            {imagenes.map((imagen) => (
-              <li key={imagen.id} className="relative group">
-                {imagen.url && !rotas.has(imagen.id) ? (
-                  <button
-                    type="button"
-                    onClick={() => setAmpliada(imagen)}
-                    className="block w-full aspect-square overflow-hidden rounded-xl border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 ring-primary"
-                    aria-label={`Ampliar imagen${imagen.titulo ? `: ${imagen.titulo}` : ""}`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- la
-                        imagen llega por el proxy autenticado (o es un data URI);
-                        usar next/image dejaría en /_next/image una copia
-                        accesible sin sesión de una foto privada, que es justo lo
-                        que este proxy evita */}
-                    <img
-                      src={imagen.url}
-                      alt={imagen.titulo ?? `Imagen de ${claseNombre}`}
-                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
-                      loading="lazy"
-                      onError={() => marcarRota(imagen.id)}
-                    />
-                  </button>
-                ) : (
-                  // La imagen no se pudo resolver o el proxy no la sirvió: se
-                  // deja un hueco con explicación en lugar de una imagen rota, y
-                  // el resto de la página sigue viva.
-                  <div
-                    className="flex w-full aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-muted px-2 text-center"
-                    role="img"
-                    aria-label="No se pudo cargar la imagen"
-                  >
-                    <ImageOff size={18} strokeWidth={1.8} className="text-muted-foreground" aria-hidden />
-                    <span className="text-[0.7rem] leading-tight text-muted-foreground">
-                      No se pudo cargar
-                    </span>
-                  </div>
-                )}
+            {imagenesOrdenadas.map((imagen, indice) => (
+              <li key={imagen.id} className="min-w-0">
+                <div className="relative group">
+                  {imagen.url && !rotas.has(imagen.id) ? (
+                    <button
+                      type="button"
+                      onClick={() => setAmpliada(imagen)}
+                      className="block w-full aspect-square overflow-hidden rounded-xl border border-border bg-muted focus-visible:outline-none focus-visible:ring-2 ring-primary"
+                      aria-label={`Ampliar imagen ${indice + 1} de ${imagenesOrdenadas.length}${imagen.titulo ? `: ${imagen.titulo}` : ""}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- la
+                          imagen llega por el proxy autenticado (o es un data URI);
+                          usar next/image dejaría en /_next/image una copia
+                          accesible sin sesión de una foto privada, que es justo lo
+                          que este proxy evita */}
+                      <img
+                        src={imagen.url}
+                        alt={imagen.titulo ?? `Imagen de ${claseNombre}`}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                        loading="lazy"
+                        decoding="async"
+                        onError={() => marcarRota(imagen.id)}
+                      />
+                    </button>
+                  ) : (
+                    // La imagen no se pudo resolver o el proxy no la sirvió: se
+                    // deja un hueco con explicación en lugar de una imagen rota, y
+                    // el resto de la página sigue viva.
+                    <div
+                      className="flex w-full aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-muted px-2 text-center"
+                      role="img"
+                      aria-label="No se pudo cargar la imagen"
+                    >
+                      <ImageOff size={18} strokeWidth={1.8} className="text-muted-foreground" aria-hidden />
+                      <span className="text-[0.7rem] leading-tight text-muted-foreground">
+                        No se pudo cargar
+                      </span>
+                    </div>
+                  )}
 
-                {puedeEditarImagenes && (
-                  <button
-                    type="button"
-                    onClick={() => eliminarImagen(imagen)}
-                    className="absolute top-1.5 right-1.5 w-9 h-9 rounded-lg flex items-center justify-center bg-card/90 border border-border text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 ring-destructive"
-                    aria-label="Eliminar imagen"
-                  >
-                    <Trash2 size={14} strokeWidth={2} aria-hidden />
-                  </button>
+                  {/* La posición se ve siempre: es el número con el que esta
+                      imagen saldrá en el reporte. */}
+                  {imagenesOrdenadas.length > 1 && (
+                    <span
+                      className="absolute bottom-1.5 left-1.5 min-w-[1.25rem] px-1.5 py-0.5 rounded-md text-[0.65rem] font-semibold text-center tabular bg-card/90 border border-border text-muted-foreground"
+                      aria-hidden
+                    >
+                      {indice + 1}
+                    </span>
+                  )}
+
+                  {puedeEditarImagenes && !modoOrden && (
+                    <button
+                      type="button"
+                      onClick={() => eliminarImagen(imagen)}
+                      className="absolute top-1.5 right-1.5 w-9 h-9 rounded-lg flex items-center justify-center bg-card/90 border border-border text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 ring-destructive"
+                      aria-label="Eliminar imagen"
+                    >
+                      <Trash2 size={14} strokeWidth={2} aria-hidden />
+                    </button>
+                  )}
+                </div>
+
+                {/* Izquierda y derecha, no arriba y abajo: en una cuadrícula la
+                    imagen anterior está a la izquierda. */}
+                {puedeEditarImagenes && modoOrden && (
+                  <div className="mt-1.5 flex items-stretch gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => mover(imagen.id, "subir")}
+                      disabled={indice === 0}
+                      aria-label={`Mover la imagen ${indice + 1} a la posición ${indice} de ${imagenesOrdenadas.length}`}
+                      className="flex-1 min-h-[44px] flex items-center justify-center rounded-lg transition-colors bg-muted border border-border text-primary hover:bg-surface-alt disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 ring-primary"
+                    >
+                      <ChevronLeft size={16} strokeWidth={2.2} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mover(imagen.id, "bajar")}
+                      disabled={indice === imagenesOrdenadas.length - 1}
+                      aria-label={`Mover la imagen ${indice + 1} a la posición ${indice + 2} de ${imagenesOrdenadas.length}`}
+                      className="flex-1 min-h-[44px] flex items-center justify-center rounded-lg transition-colors bg-muted border border-border text-primary hover:bg-surface-alt disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 ring-primary"
+                    >
+                      <ChevronRight size={16} strokeWidth={2.2} aria-hidden />
+                    </button>
+                  </div>
                 )}
               </li>
             ))}
