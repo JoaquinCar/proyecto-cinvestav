@@ -33,7 +33,12 @@ if (process.env.PRUEBAS_DB === "1" && !esLocal) {
   );
 }
 
-const ANIO = 2094;
+// Año ficticio propio: los archivos de tests/integration/db corren en paralelo
+// contra la MISMA base y `Edicion.anio` es único. Repetir el año de otro archivo
+// hace que ambos se pisen la edición y fallen sin relación con lo que prueban.
+// Ocupados: 2091-2092 (aislamiento), 2093 (clase-con-fecha), 2094 (acompañante),
+// 2095 (tipos de sesión).
+const ANIO = 2096;
 
 /** PNG de 1x1 px: lo mínimo que acepta `crearImagenClase`. */
 const PNG_1X1 =
