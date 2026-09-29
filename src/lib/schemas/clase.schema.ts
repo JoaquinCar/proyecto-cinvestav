@@ -32,6 +32,33 @@ export const fechaCalendarioSchema = z
   )
   .transform(aFechaCalendario);
 
+// ── Los textos del informe ────────────────────────────────────────────────────
+//
+// Las tres cajas de texto libre de una sesión son las tres que el formato Word
+// del informe imprime. Los topes salen de medir los 12 informes reales de 2026,
+// no de un número redondo: el desarrollo más largo (el de los gusanos marinos)
+// ronda los 1.400 caracteres, así que el tope anterior de 1.000 habría obligado
+// a recortar el texto que el cliente ya escribe hoy a mano.
+
+/** «Desarrollo de actividad» en el informe. */
+export const LARGO_MAXIMO_DESCRIPCION = 4000;
+/** El recuadro «Objetivo:» del encabezado. */
+export const LARGO_MAXIMO_OBJETIVO = 1500;
+/** El recuadro «Comentarios» del cierre. */
+export const LARGO_MAXIMO_COMENTARIOS = 2000;
+
+/** Texto largo opcional que puede vaciarse mandando `null` o "". */
+const textoDeInforme = (maximo: number, etiqueta: string) =>
+  z
+    .string()
+    .max(maximo, `${etiqueta} no puede exceder ${maximo} caracteres`)
+    .trim()
+    // Un `<textarea>` que se vacía manda "", y eso significa «borrar lo que
+    // había», no «no tocar el campo».
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .optional();
+
 // ── Tipo de actividad ─────────────────────────────────────────────────────────
 
 /**
@@ -84,7 +111,10 @@ const camposComunesClase = {
 
   descripcion: z
     .string()
-    .max(1000, "La descripción no puede exceder 1000 caracteres")
+    .max(
+      LARGO_MAXIMO_DESCRIPCION,
+      `La descripción no puede exceder ${LARGO_MAXIMO_DESCRIPCION} caracteres`,
+    )
     .trim()
     .optional(),
 
@@ -196,12 +226,14 @@ export const editarClaseSchema = z.object({
    */
   investigador: investigadorOpcionalSchema.optional(),
 
-  descripcion: z
-    .string()
-    .max(1000, "La descripción no puede exceder 1000 caracteres")
-    .trim()
-    .nullable()
-    .optional(),
+  /** El «Desarrollo de actividad» del informe. */
+  descripcion: textoDeInforme(LARGO_MAXIMO_DESCRIPCION, "La descripción"),
+
+  /** El recuadro «Objetivo:» del informe. */
+  objetivo: textoDeInforme(LARGO_MAXIMO_OBJETIVO, "El objetivo"),
+
+  /** El recuadro «Comentarios» del cierre del informe. */
+  comentarios: textoDeInforme(LARGO_MAXIMO_COMENTARIOS, "Los comentarios"),
 });
 
 // ── Schema para crear una sesión ──────────────────────────────────────────────

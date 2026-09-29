@@ -204,6 +204,16 @@ export default async function ClaseDetallePage({
             </a>
           {isBecarioOrAdmin && (
             <>
+              {/* El formato Word que el coordinador llenaba a mano cada sesión.
+                  READONLY no lo ve: lleva anexada la lista nominal de los niños
+                  que asistieron y sale de la aplicación en un archivo. */}
+              <a
+                href={`/api/word/informe-sesion/${clase.id}`}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 bg-muted border border-border text-primary"
+              >
+                <FileDown size={15} />
+                Informe Word
+              </a>
               {/* Pasar lista es sobre la clase: si tiene una sola fecha, se
                   entra directo; con varias, desde la tarjeta de cada fecha. */}
               {fechaUnica && (
@@ -266,6 +276,8 @@ export default async function ClaseDetallePage({
           claseId={clase.id}
           claseNombre={clase.nombre}
           descripcion={clase.descripcion}
+          objetivo={clase.objetivo}
+          comentarios={clase.comentarios}
           imagenes={imagenes.map((imagen) => ({
             id: imagen.id,
             url: imagen.url,

@@ -221,7 +221,35 @@ model Clase {
   // en la columna: la base solo sabe que puede faltar.
   investigador String?
 
+  // El cuerpo del informe: lo que en el formato Word del cliente se titula
+  // «Desarrollo de actividad».
+  //
+  // NO se creó un campo `desarrollo` aparte, a pesar de que el formato use ese
+  // nombre. En los 12 informes reales de 2026, ese recuadro contiene una
+  // narración de qué trató la sesión y qué se hizo —una o tres párrafos de
+  // prosa—, que es exactamente lo que esta columna guarda y lo que el diálogo
+  // de la aplicación ya pide («Qué se hace en esta sesión, materiales,
+  // objetivos…»). Dos campos de texto libre con significados que se solapan
+  // —«descripción» y «desarrollo»— garantizarían que la mitad del contenido
+  // acabe en el recuadro equivocado y que el informe salga a medias.
   descripcion String?
+
+  // ── Los dos campos que el formato Word lleva y el modelo no tenía ──────────
+  //
+  // Ambos son OPCIONALES y nacen en NULL: un informe tiene que poder salir el
+  // mismo día de la sesión, cuando el objetivo está pero los comentarios
+  // todavía no se han escrito. La exportación quita el recuadro entero cuando
+  // el campo está vacío, en vez de imprimir un marco en blanco.
+
+  // El recuadro «Objetivo:» del encabezado del informe.
+  objetivo String?
+
+  // El recuadro «Comentarios» del cierre: las conclusiones que el coordinador
+  // escribe DESPUÉS de impartir la sesión («la plática logró despertar el
+  // interés…»). Es valoración, no descripción, y por eso no cabe en
+  // `descripcion`.
+  comentarios String?
+
   createdAt   DateTime @default(now())
 
   edicion  Edicion       @relation(fields: [edicionId], references: [id])

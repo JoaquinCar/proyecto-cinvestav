@@ -98,6 +98,10 @@ const claseMock = {
   tipo:         "PASAPORTE" as const,
   investigador: "Dr. Juan Pérez" as string | null,
   descripcion:  "Introducción al universo",
+  // Los dos recuadros del informe en Word. Nacen vacíos, como en las 12
+  // sesiones ya cargadas de 2026.
+  objetivo:     null as string | null,
+  comentarios:  null as string | null,
   createdAt:    new Date("2025-01-01T00:00:00.000Z"),
   _count:       { sesiones: 3 },
 };

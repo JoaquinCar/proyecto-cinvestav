@@ -83,6 +83,10 @@ export async function obtenerClasePorId(id: string) {
       tipo:         true,
       investigador: true,
       descripcion:  true,
+      // Los dos recuadros del informe en Word. Viajan con la clase porque la
+      // página de la sesión es donde se capturan.
+      objetivo:     true,
+      comentarios:  true,
       createdAt:    true,
       _count: {
         select: {
@@ -164,6 +168,10 @@ export async function editarClase(
     ...(data.tipo         !== undefined && { tipo:         data.tipo }),
     ...(data.investigador !== undefined && { investigador: data.investigador }),
     ...(data.descripcion  !== undefined && { descripcion:  data.descripcion }),
+    // Los dos recuadros que el informe en Word imprime y antes no existían.
+    // `null` los vacía; ausentes, no se tocan.
+    ...(data.objetivo     !== undefined && { objetivo:     data.objetivo }),
+    ...(data.comentarios  !== undefined && { comentarios:  data.comentarios }),
   };
 
   if (data.fecha === undefined) {
