@@ -23,7 +23,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** La sesión ya no está: la pestaña abierta se quedó vieja. */
 const SESION_NO_ENCONTRADA =
-  "Esta sesión ya no existe: alguien pudo eliminarla. Vuelve a la página de la clase para ver las sesiones actuales.";
+  "Esta fecha ya no existe: alguien pudo eliminarla. Vuelve a la página de la sesión para ver las fechas actuales.";
 
 // ── PUT /api/sesiones/[id] — actualizar temas/notas (BECARIO+) ───────────────
 

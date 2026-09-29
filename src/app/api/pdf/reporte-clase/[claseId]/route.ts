@@ -18,7 +18,7 @@ export async function GET(_req: Request, context: RouteContext) {
       return NextResponse.json(
         {
           error:
-            "Esta clase ya no existe, así que no hay reporte que generar. Vuelve a la lista de clases para ver las que siguen activas.",
+            "Esta sesión ya no existe, así que no hay reporte que generar. Vuelve a la lista de sesiones para ver las que siguen activas.",
         },
         { status: 404 },
       );
@@ -36,7 +36,7 @@ export async function GET(_req: Request, context: RouteContext) {
     return fallaInesperada(
       "GET /api/pdf/reporte-clase/[claseId]",
       error,
-      "No se pudo generar el reporte en PDF de esta clase. Vuelve a intentarlo en unos minutos.",
+      "No se pudo generar el reporte en PDF de esta sesión. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

@@ -15,7 +15,7 @@ const items = [
   { href: "/",              label: "Inicio",        icon: LayoutDashboard },
   { href: "/ediciones",     label: "Ediciones",     icon: Layers },
   { href: "/participantes", label: "Participantes", icon: Users },
-  { href: "/clases",        label: "Clases",        icon: BookOpen },
+  { href: "/clases",        label: "Sesiones",        icon: BookOpen },
   { href: "/asistencia",    label: "Asistencia",    icon: ClipboardCheck },
 ];
 

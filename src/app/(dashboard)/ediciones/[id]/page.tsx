@@ -45,14 +45,14 @@ export default async function EdicionDetallePage({
 
   const stats = [
     { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
-    { label: "Clases",        value: clases,         icon: BookOpen,       colorClass: "text-success",   bgClass: "bg-success/10"  },
-    { label: "Clases con datos", value: `${sesionesConDatos} de ${sesionesTotal}`, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
+    { label: "Sesiones",     value: clases,         icon: BookOpen,       colorClass: "text-success",   bgClass: "bg-success/10"  },
+    { label: "Sesiones con datos", value: `${sesionesConDatos} de ${sesionesTotal}`, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
     { label: "Constancia desde", value: `${edicion.minAsistencias} asist.`, icon: Award, colorClass: "text-chart-3", bgClass: "bg-chart-3/10" },
   ];
 
   const quickLinks = [
     { href: `/ediciones/${edicion.id}/participantes`, label: "Ver participantes", icon: Users,     detail: `${inscripciones} inscritos` },
-    { href: `/ediciones/${edicion.id}/clases`,        label: "Ver clases",        icon: BookOpen,  detail: `${clases} clases` },
+    { href: `/ediciones/${edicion.id}/clases`,        label: "Ver sesiones",      icon: BookOpen,  detail: `${clases} sesiones` },
     { href: `/ediciones/${edicion.id}/reportes`,      label: "Ver reportes",      icon: BarChart3, detail: "Asistencia y estadísticas" },
   ];
 

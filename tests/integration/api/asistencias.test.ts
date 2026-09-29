@@ -109,7 +109,7 @@ describe("GET /api/sesiones/[id]/asistencia", () => {
 
     expect(res.status).toBe(404);
     const json = await res.json();
-    expect(json.error).toMatch(/esta sesión ya no existe/i);
+    expect(json.error).toMatch(/esta fecha ya no existe/i);
   });
 
   it("responde 200 con lista de asistencias y resumen (rol ADMIN)", async () => {

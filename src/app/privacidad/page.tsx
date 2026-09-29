@@ -45,7 +45,7 @@ export default function PrivacidadPage() {
               Datos de las y los participantes (menores de edad): nombre, edad,
               escuela, grado escolar y género; y datos de contacto del padre, madre o
               tutor: correo electrónico y teléfono. Se registran asistencias a las
-              clases del programa.
+              sesiones del programa.
             </p>
           </section>
 

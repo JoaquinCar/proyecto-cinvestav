@@ -16,7 +16,7 @@ import {
 
 /** La clase cuyas imágenes se piden ya no está. */
 const CLASE_NO_ENCONTRADA =
-  "Esta clase ya no existe: alguien pudo eliminarla. Vuelve a la lista de clases para ver las que siguen activas.";
+  "Esta sesión ya no existe: alguien pudo eliminarla. Vuelve a la lista de sesiones para ver las que siguen activas.";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -57,7 +57,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return fallaInesperada(
       "GET /api/clases/[id]/imagenes",
       error,
-      "No se pudieron cargar las imágenes de la clase. Vuelve a intentarlo en unos momentos.",
+      "No se pudieron cargar las imágenes de la sesión. Vuelve a intentarlo en unos momentos.",
     );
   }
 }
@@ -107,7 +107,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fallaInesperada(
       "POST /api/clases/[id]/imagenes",
       error,
-      "No se pudo guardar la imagen y no quedó agregada a la clase. Vuelve a intentarlo en unos minutos.",
+      "No se pudo guardar la imagen y no quedó agregada a la sesión. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

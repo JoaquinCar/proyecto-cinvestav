@@ -83,7 +83,7 @@ export async function assertEdicionDeClaseAbierta(
   });
 
   if (!clase) {
-    throw new EdicionCerradaError("La clase no existe");
+    throw new EdicionCerradaError("La sesión no existe");
   }
 
   if (clase.edicion.cerrada) {

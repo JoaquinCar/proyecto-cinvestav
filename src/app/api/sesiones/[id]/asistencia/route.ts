@@ -28,7 +28,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json(
         {
           error:
-            "Esta sesión ya no existe: alguien pudo eliminarla. Vuelve a la página de la clase para ver las sesiones actuales.",
+            "Esta fecha ya no existe: alguien pudo eliminarla. Vuelve a la página de la sesión para ver las fechas actuales.",
         },
         { status: 404 },
       );

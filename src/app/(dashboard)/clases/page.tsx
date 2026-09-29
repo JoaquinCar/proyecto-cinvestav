@@ -10,7 +10,7 @@ import { ClaseCard } from "@/components/clases/ClaseCard";
 import { SelectorEdicion } from "@/components/clases/SelectorEdicion";
 
 export const metadata: Metadata = {
-  title: "Clases · Pasaporte Científico",
+  title: "Sesiones · Pasaporte Científico",
 };
 
 // ── Página ────────────────────────────────────────────────────────────────────
@@ -38,15 +38,15 @@ export default async function ClasesPage({
       <div className="space-y-8 pb-16">
         <div className="animate-fade-up">
           <h1 className="font-display text-3xl font-semibold text-foreground">
-            Clases
+            Sesiones
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Catálogo de clases del programa
+            Catálogo de sesiones del programa
           </p>
         </div>
         <EmptyState
           message="Todavía no hay ediciones"
-          detail="Cada clase pertenece a una edición. Crea primero la edición del programa."
+          detail="Cada sesión pertenece a una edición. Crea primero la edición del programa."
           action={
             isAdmin ? (
               <Link
@@ -74,14 +74,14 @@ export default async function ClasesPage({
 
   const estadisticas = [
     {
-      label: "Total de clases",
+      label: "Total de sesiones",
       value: clases.length,
       icon: BookOpen,
       colorClass: "text-primary",
       bgClass: "bg-primary/10",
     },
     {
-      label: "Clases con fecha",
+      label: "Sesiones con fecha",
       value: clasesConFecha,
       icon: Calendar,
       colorClass: "text-success",
@@ -100,10 +100,10 @@ export default async function ClasesPage({
     <Link
       href={`/clases/nueva?edicion=${edicionSeleccionada.id}`}
       className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px] w-full sm:w-auto"
-      aria-label="Crear nueva clase"
+      aria-label="Crear nueva sesión"
     >
       <Plus size={16} strokeWidth={2.5} aria-hidden />
-      Nueva Clase
+      Nueva Sesión
     </Link>
   ) : null;
 
@@ -114,10 +114,10 @@ export default async function ClasesPage({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="font-display text-2xl sm:text-3xl font-semibold text-foreground">
-              Clases
+              Sesiones
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {clases.length} {clases.length === 1 ? "clase" : "clases"} en{" "}
+              {clases.length} {clases.length === 1 ? "sesión" : "sesiones"} en{" "}
               {edicionSeleccionada.nombre} · {edicionSeleccionada.anio}
             </p>
           </div>
@@ -169,11 +169,11 @@ export default async function ClasesPage({
       {clases.length === 0 ? (
         <div className="animate-fade-up animate-fade-up-delay-2">
           <EmptyState
-            message="No hay clases registradas en esta edición"
+            message="No hay sesiones registradas en esta edición"
             detail={
               isAdmin
-                ? "Crea la primera clase para esta edición del programa."
-                : "El administrador aún no ha registrado clases para esta edición."
+                ? "Crea la primera sesión para esta edición del programa."
+                : "El administrador aún no ha registrado sesiones para esta edición."
             }
             action={
               isAdmin ? (
@@ -182,7 +182,7 @@ export default async function ClasesPage({
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all min-h-[44px]"
                 >
                   <Plus size={15} strokeWidth={2.5} aria-hidden />
-                  Crear primera clase
+                  Crear primera sesión
                 </Link>
               ) : undefined
             }

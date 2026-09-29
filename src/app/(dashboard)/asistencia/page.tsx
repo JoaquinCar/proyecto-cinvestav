@@ -46,18 +46,18 @@ export default async function AsistenciaHubPage() {
 
   return (
     <div className="space-y-8">
-      <Header subtitle={`${edicion.nombre} · elige una clase para pasar lista`} />
+      <Header subtitle={`${edicion.nombre} · elige una sesión para pasar lista`} />
 
       {clases.length === 0 ? (
         <EmptyState
-          message="Sin clases registradas"
-          detail="Crea una clase en la edición para poder pasar lista."
+          message="Sin sesiones registradas"
+          detail="Crea una sesión en la edición para poder pasar lista."
           action={
             <Link
               href={`/clases?edicion=${edicion.id}`}
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold btn-primary min-h-[44px]"
             >
-              Ver clases
+              Ver sesiones
             </Link>
           }
         />
@@ -136,7 +136,7 @@ export default async function AsistenciaHubPage() {
 
                 {clase.sesiones.length === 0 ? (
                   <p className="px-4 py-4 text-sm text-muted-foreground italic">
-                    Sin fecha asignada: asígnala desde la clase para poder pasar lista
+                    Sin fecha asignada: asígnala desde la sesión para poder pasar lista
                   </p>
                 ) : (
                   <ul className="divide-y divide-border">
@@ -199,7 +199,7 @@ function Header({ subtitle }: { subtitle?: string }) {
       <div>
         <h1 className="font-display text-3xl font-semibold text-foreground">Asistencia</h1>
         <p className="text-sm text-muted-foreground">
-          {subtitle ?? "Registro de asistencias por clase"}
+          {subtitle ?? "Registro de asistencias por sesión"}
         </p>
       </div>
     </div>

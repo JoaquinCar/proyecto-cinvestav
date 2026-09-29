@@ -19,7 +19,7 @@ import {
 
 /** La clase a la que se quiere colgar la sesión no está. */
 const CLASE_NO_ENCONTRADA =
-  "La clase a la que intentas agregar la sesión ya no existe. Vuelve a la lista de clases y elige una.";
+  "La sesión a la que intentas agregar la fecha ya no existe. Vuelve a la lista de sesiones y elige una.";
 
 // ── POST /api/sesiones — crear sesión (ADMIN o BECARIO) ──────────────────────
 
