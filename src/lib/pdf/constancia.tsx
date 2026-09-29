@@ -188,6 +188,9 @@ function ConstanciaDoc({
       <Page size="LETTER" style={styles.page}>
         {/* Arte de fondo — ausente mientras el cliente no lo entregue */}
         {diseno.fondo && (
+          // El `Image` de @react-pdf pinta dentro de un PDF, no en el DOM: no
+          // tiene `alt` ni lo admite. La regla de accesibilidad web no aplica.
+          // eslint-disable-next-line jsx-a11y/alt-text
           <Image src={diseno.fondo} style={styles.fondo} fixed />
         )}
 
@@ -225,6 +228,8 @@ function ConstanciaDoc({
               {diseno.firmas.map((firma) => (
                 <View key={`${firma.nombre}-${firma.cargo}`} style={styles.firma}>
                   {firma.imagen ? (
+                    // Igual que el fondo: es una imagen de PDF, no del DOM.
+                    // eslint-disable-next-line jsx-a11y/alt-text
                     <Image src={firma.imagen} style={styles.firmaImagen} />
                   ) : (
                     <View style={styles.firmaEspacio} />

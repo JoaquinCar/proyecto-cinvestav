@@ -60,8 +60,8 @@ export function MobileBottomNav() {
               active ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
-            <span className="w-full truncate px-0.5 text-center">{label}</span>
+            <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
+            <span>{label}</span>
           </Link>
         );
       })}
