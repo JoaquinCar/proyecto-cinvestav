@@ -36,8 +36,11 @@ Con Node instalado y desde la carpeta del proyecto:
 
 ```bash
 export $(grep -E '^(DATABASE_URL|DIRECT_URL)=' .env | xargs)
-npm run respaldar
+RESPALDO_CLAVE='...' npm run respaldar
 ```
+
+Sin `RESPALDO_CLAVE` el respaldo sale **sin cifrar**: vale para el USB, pero
+entonces ese archivo no puede subirse a ningún sitio. El script lo avisa.
 
 Imprime a qué base se está conectando, cuántas filas saca de cada tabla, y deja
 el archivo en `respaldos/pasaporte-AAAAMMDD-HHMM.json.gz`. Pesa unos pocos KB.
@@ -46,6 +49,31 @@ el archivo en `respaldos/pasaporte-AAAAMMDD-HHMM.json.gz`. Pesa unos pocos KB.
 mucho menor de lo que esperas, algo salió mal y ese archivo no sirve.
 
 Luego cópialo al USB.
+
+## El respaldo automático
+
+Además del manual, hay un respaldo **diario y automático** (`.github/workflows/respaldo.yml`).
+Corre en GitHub, cifra el volcado y lo guarda en la rama `respaldos` de este
+mismo repositorio. Se conservan los 30 más recientes.
+
+Puede vivir en un repositorio público **porque va cifrado**: sin la clave del
+proyecto es un archivo ilegible.
+
+Para que funcione hacen falta dos secretos en GitHub
+(Settings → Secrets and variables → Actions):
+
+| Secreto | Qué es |
+|---|---|
+| `DATABASE_URL` | La conexión a la base (ya existe, la usa el keepalive) |
+| `RESPALDO_CLAVE` | La clave que cifra los respaldos |
+
+**`RESPALDO_CLAVE` es el punto frágil de todo esto.** Si se pierde, los
+respaldos cifrados no se pueden abrir y no hay forma de recuperarlos. Por eso
+vive en tres sitios: los secretos de GitHub, el USB del proyecto (`CLAVES.md`)
+y el coordinador. Nunca en el repositorio.
+
+El respaldo automático **no sustituye al del USB**: si alguien pierde el acceso
+a la cuenta de GitHub, se pierde con ella. El del USB es el que sobrevive a eso.
 
 ### Cada cuánto
 
@@ -65,8 +93,12 @@ Primero el esquema, luego los datos:
 ```bash
 export $(grep -E '^(DATABASE_URL|DIRECT_URL)=' .env | xargs)
 npx prisma migrate deploy
-CONFIRMAR_RESTAURACION=si npm run restaurar -- respaldos/pasaporte-AAAAMMDD-HHMM.json.gz
+RESPALDO_CLAVE='...' CONFIRMAR_RESTAURACION=si npm run restaurar -- respaldos/pasaporte-AAAAMMDD-HHMM.json.gz.cifrado
 ```
+
+Si el archivo está cifrado y no das la clave, el script se detiene y te dice
+dónde buscarla. Si la clave es equivocada o el archivo está dañado, también
+falla en vez de dejar la base a medias.
 
 El script **borra y reescribe** la base de destino, así que antes de hacer nada
 te dice a dónde va a escribir y te avisa en mayúsculas si es producción. Sin la
@@ -110,5 +142,7 @@ funciona antes de necesitarlo de verdad.
 1. El USB con los respaldos y este documento.
 2. Los accesos a Supabase, Vercel y GitHub.
 3. El archivo `.env` (que no está en el repositorio, a propósito).
-4. La carpeta `scripts/data/` con los datos originales de 2026, que tampoco
+4. El archivo `CLAVES.md` con la clave de los respaldos y los accesos.
+   Hay una plantilla en `docs/CLAVES.ejemplo.md`.
+5. La carpeta `scripts/data/` con los datos originales de 2026, que tampoco
    está en el repositorio y que fue lo que salvó el proyecto una vez.

@@ -15,6 +15,7 @@
 import { PrismaClient } from "@prisma/client";
 import { mkdirSync, writeFileSync, statSync } from "node:fs";
 import { gzipSync } from "node:zlib";
+import { cifrar } from "./cifrado.mjs";
 
 const DESTINO = "respaldos";
 
@@ -61,8 +62,19 @@ if (!datos.participante || !datos.inscripcion) {
 
 mkdirSync(DESTINO, { recursive: true });
 const sello = new Date().toISOString().slice(0, 16).replace(/[-:]/g, "").replace("T", "-");
-const archivo = `${DESTINO}/pasaporte-${sello}.json.gz`;
-writeFileSync(archivo, gzipSync(JSON.stringify({ generado: new Date().toISOString(), datos }), { level: 9 }));
+const clave = process.env.RESPALDO_CLAVE;
+const comprimido = gzipSync(JSON.stringify({ generado: new Date().toISOString(), datos }), { level: 9 });
+const archivo = `${DESTINO}/pasaporte-${sello}.json.gz${clave ? ".cifrado" : ""}`;
+writeFileSync(archivo, clave ? cifrar(comprimido, clave) : comprimido);
+
+if (!clave) {
+  console.log("\n  ⚠️  Sin cifrar: no hay RESPALDO_CLAVE.");
+  console.log("     Vale para el USB, pero este archivo NO puede subirse a ningún sitio.");
+}
 
 console.log(`\n  ✓ ${archivo}  (${(statSync(archivo).size / 1024).toFixed(0)} KB, ${total} filas)`);
-console.log(`\n  Cópialo al USB del proyecto. NO lo subas a GitHub: el repositorio es público.\n`);
+if (clave) {
+  console.log(`\n  Cifrado. Puede viajar en el USB o guardarse fuera: sin la clave no se abre.\n`);
+} else {
+  console.log(`\n  Cópialo al USB del proyecto. NO lo subas a ningún sitio: va sin cifrar.\n`);
+}
