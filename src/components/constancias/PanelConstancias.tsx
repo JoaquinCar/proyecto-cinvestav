@@ -384,7 +384,7 @@ export function PanelConstancias({
                         Emitida
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium bg-secondary/12 text-secondary-foreground">
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium bg-secondary/12 text-secondary-soft-foreground">
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         Por emitir
                       </span>
@@ -411,7 +411,7 @@ export function PanelConstancias({
                         type="button"
                         onClick={() => generar(fila.inscripcionId)}
                         disabled={generando === fila.inscripcionId}
-                        className="inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary/12 border border-secondary/35 text-secondary-foreground transition-opacity hover:opacity-80 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary/12 border border-secondary/35 text-secondary-soft-foreground transition-opacity hover:opacity-80 disabled:opacity-50"
                       >
                         {generando === fila.inscripcionId ? (
                           <Loader2 size={13} className="animate-spin" />

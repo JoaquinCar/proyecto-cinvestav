@@ -103,7 +103,7 @@ export function ClaseCard({ clase, totalParticipantes }: ClaseCardProps) {
           className={
             fechas.length === 0
               ? "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-muted border border-border text-muted-foreground"
-              : "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-secondary/10 border border-secondary/30 text-secondary-foreground"
+              : "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-secondary/10 border border-secondary/30 text-secondary-soft-foreground"
           }
         >
           <Calendar size={11} strokeWidth={2} aria-hidden />

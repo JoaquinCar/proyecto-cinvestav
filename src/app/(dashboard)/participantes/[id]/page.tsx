@@ -236,7 +236,7 @@ export default async function ParticipanteHistorialPage({
         {/* Avatar grande */}
         <div className="flex items-start gap-5">
           <div
-            className="shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-semibold bg-secondary/10 border border-secondary/30 text-secondary-foreground"
+            className="shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-semibold bg-secondary/10 border border-secondary/30 text-secondary-soft-foreground"
             aria-hidden="true"
           >
             {participante.nombre.charAt(0).toUpperCase()}

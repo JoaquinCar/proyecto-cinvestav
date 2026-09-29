@@ -13,7 +13,7 @@ const config: Record<Estado, { label: string; colorClass: string }> = {
   },
   "en-progreso": {
     label: "En progreso",
-    colorClass: "bg-secondary/12 text-secondary-foreground",
+    colorClass: "bg-secondary/12 text-secondary-soft-foreground",
   },
   // La constancia le toca a todo inscrito: este estado es la excepción que
   // puso un ADMIN, y tiene que verse distinta de "todavía no se ha emitido".

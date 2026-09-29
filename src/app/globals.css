@@ -34,6 +34,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-soft-foreground: var(--secondary-soft-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
@@ -72,6 +73,12 @@
   /* Amarillo juego */
   --secondary:           oklch(0.80 0.16 80);
   --secondary-foreground: oklch(0.20 0.02 260);
+  /* Para texto sobre un TINTE de secondary (bg-secondary/10..15), no sobre el
+     ámbar sólido. `--secondary-foreground` es casi negro porque está pensado
+     para el fondo lleno; sobre un tinte al 12% de una tarjeta oscura daba
+     1.33:1 y el texto desaparecía. Este par da 7.6:1 en claro y 9.2:1 en
+     oscuro, y conserva el ámbar. */
+  --secondary-soft-foreground: oklch(0.42 0.10 82);
 
   --muted:               oklch(0.96 0 0);
   --muted-foreground:    oklch(0.50 0.015 184);
@@ -126,6 +133,7 @@
 
   --secondary:           oklch(0.82 0.16 82);
   --secondary-foreground: oklch(0.18 0.02 260);
+  --secondary-soft-foreground: oklch(0.86 0.12 82);
 
   --muted:               oklch(0.25 0 0);
   --muted-foreground:    oklch(0.70 0.012 184);
