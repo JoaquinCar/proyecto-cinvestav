@@ -32,7 +32,10 @@ if (process.env.PRUEBAS_DB === "1" && !esLocal) {
   );
 }
 
-const ANIO = 2094;
+// Año propio y distinto del de las demás pruebas contra base real (2091-2094
+// ya están tomados): vitest corre los archivos en paralelo y `Edicion.anio` es
+// único, así que dos pruebas con el mismo año se pisan.
+const ANIO = 2095;
 const MARCA = "QA-TIPOS-SESION";
 
 let prisma: import("@prisma/client").PrismaClient;
@@ -363,6 +366,73 @@ describe.skipIf(!habilitado)("tipos de sesión contra la base real", () => {
     expect(enPasaporte).toBe(1);
   });
 
+  // ── Punta a punta: el camino real de la API ─────────────────────────────────
+
+  it("punta a punta: charla y evento el mismo día, lista en ambos, solo cuenta el pasaporte", async () => {
+    // Recorre lo mismo que una petición real: el cuerpo pasa por el schema Zod
+    // de la ruta y de ahí a la consulta. Las pruebas de arriba llaman a la
+    // capa de consultas directamente; esta comprueba que el schema tampoco
+    // estorba —que no exige investigador en el evento y que rellena el tipo.
+    const { crearClaseSchema } = await import("@/lib/schemas/clase.schema");
+    const { crearClaseConSesion } = await import("@/server/queries/clases");
+    const { verificarElegibilidad } = await import("@/server/queries/constancias");
+
+    const DIA = `${ANIO}-04-30`;
+
+    // Sin `tipo` y con investigador: una charla, como siempre se ha creado.
+    const charla = crearClaseSchema.parse({
+      edicionId,
+      nombre: "Robótica",
+      fecha: DIA,
+      investigador: "Dra. Ejemplo",
+    });
+    expect(charla.tipo).toBe("PASAPORTE");
+
+    // Con `tipo: EVENTO` y SIN investigador: el schema lo acepta y lo deja null.
+    const evento = crearClaseSchema.parse({
+      edicionId,
+      nombre: "Día del niño",
+      fecha: DIA,
+      tipo: "EVENTO",
+    });
+    expect(evento.investigador).toBeNull();
+
+    const cCharla = await crearClaseConSesion(charla);
+    const cEvento = await crearClaseConSesion(evento);
+
+    // Dos registros independientes el mismo día.
+    const delDia = await prisma.sesion.findMany({
+      where: { fecha: new Date(`${DIA}T00:00:00.000Z`), clase: { edicionId } },
+      select: { id: true, clase: { select: { nombre: true, tipo: true } } },
+    });
+    expect(delDia).toHaveLength(2);
+
+    // Se pasa lista en los dos, como haría un becario desde el teléfono.
+    const inscripcion = await inscribirNino("PuntaAPunta");
+    await prisma.asistencia.createMany({
+      data: [cCharla.sesionId, cEvento.sesionId].map((sesionId) => ({
+        inscripcionId: inscripcion.id,
+        sesionId,
+        presente: true,
+      })),
+    });
+
+    // Las dos asistencias existen y están separadas por tipo…
+    expect(
+      await prisma.asistencia.count({ where: { inscripcionId: inscripcion.id } }),
+    ).toBe(2);
+    expect(
+      await prisma.asistencia.count({
+        where: { inscripcionId: inscripcion.id, sesion: { clase: { tipo: "EVENTO" } } },
+      }),
+    ).toBe(1);
+
+    // …pero para la constancia solo cuenta una (el mínimo de la edición es 3).
+    const el = await verificarElegibilidad(inscripcion.id);
+    expect(el?.asistencias).toBe(1);
+    expect(el?.elegible).toBe(false);
+  });
+
   // ── Estadísticas ────────────────────────────────────────────────────────────
 
   it("las métricas separan las sesiones por tipo", async () => {
@@ -381,7 +451,7 @@ describe.skipIf(!habilitado)("tipos de sesión contra la base real", () => {
     const m = await obtenerMetricasEdicion(edicionId);
 
     expect(m.totalSesiones).toBe(4);
-    expect(m.totalSesionesPasaporte).toBe(2);
+    expect(m.totalSesionesQueCuentan).toBe(2);
     expect(m.porTipo).toEqual([
       { tipo: "PASAPORTE", sesiones: 2, asistencias: 0 },
       { tipo: "LECTURA", sesiones: 1, asistencias: 0 },

@@ -93,7 +93,10 @@ const claseMock = {
   id:           "clase-1",
   edicionId:    "edicion-1",
   nombre:       "Astronomía",
-  investigador: "Dr. Juan Pérez",
+  // Una charla normal del programa. Los otros dos tipos se prueban en
+  // tests/unit/schemas/tipo-de-sesion.test.ts y en la prueba contra base real.
+  tipo:         "PASAPORTE" as const,
+  investigador: "Dr. Juan Pérez" as string | null,
   descripcion:  "Introducción al universo",
   createdAt:    new Date("2025-01-01T00:00:00.000Z"),
   _count:       { sesiones: 3 },

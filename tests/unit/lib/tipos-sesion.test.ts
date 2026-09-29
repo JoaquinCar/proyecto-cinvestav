@@ -68,7 +68,7 @@ describe("qué cuenta para el mínimo de la constancia", () => {
   });
 
   it("los dos filtros y el helper usan la MISMA lista", () => {
-    const esperado = [...TIPOS_QUE_CUENTAN_PARA_CONSTANCIA];
+    const esperado: string[] = [...TIPOS_QUE_CUENTAN_PARA_CONSTANCIA];
     expect(CLASES_QUE_CUENTAN.tipo.in).toEqual(esperado);
     expect(ASISTENCIAS_QUE_CUENTAN.sesion.clase.tipo.in).toEqual(esperado);
     for (const { valor } of TIPOS_SESION) {
