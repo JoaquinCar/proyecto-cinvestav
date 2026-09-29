@@ -19,6 +19,8 @@ export interface Participante {
     id: string;
     edicion: { id: string; anio: number; nombre: string; activa?: boolean };
     constanciaGenerada: boolean;
+    /** Un ADMIN lo dejó fuera de la entrega de constancias de esa edición. */
+    constanciaExcluida?: boolean;
   }>;
 }
 

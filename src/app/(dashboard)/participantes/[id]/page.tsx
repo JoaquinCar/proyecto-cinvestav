@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   Circle,
+  ShieldOff,
   Pencil,
 } from "lucide-react";
 
@@ -41,6 +42,9 @@ type InscripcionTimeline = {
   id: string;
   constanciaGenerada: boolean;
   constanciaUrl?: string | null;
+  /** `true` solo si un ADMIN dejó a este niño fuera de la entrega ese año. */
+  constanciaExcluida: boolean;
+  constanciaMotivoExclusion: string | null;
   /** Con quién vino el niño ESA edición; null cuando vino solo. */
   acompanante: Acompanante | null;
   edicion: {
@@ -74,6 +78,7 @@ function TimelineItem({
     cuentaParaConstancia(a.sesion.clase.tipo),
   ).length;
   const hayExtras = asistencias !== asistenciasQueCuentan;
+  const excluida = inscripcion.constanciaExcluida;
 
   return (
     <div className="relative flex gap-4">
@@ -82,12 +87,16 @@ function TimelineItem({
         <div
           className={[
             "w-9 h-9 rounded-full flex items-center justify-center shrink-0 z-10 border",
-            inscripcion.constanciaGenerada
-              ? "bg-success/15 border-success/50"
-              : "bg-secondary/10 border-secondary/35",
+            excluida
+              ? "bg-destructive/10 border-destructive/40"
+              : inscripcion.constanciaGenerada
+                ? "bg-success/15 border-success/50"
+                : "bg-secondary/10 border-secondary/35",
           ].join(" ")}
         >
-          {inscripcion.constanciaGenerada ? (
+          {excluida ? (
+            <ShieldOff size={16} className="text-destructive" />
+          ) : inscripcion.constanciaGenerada ? (
             <CheckCircle2 size={17} className="text-success" />
           ) : (
             <Circle size={17} className="text-secondary" />
@@ -136,7 +145,9 @@ function TimelineItem({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {inscripcion.constanciaGenerada ? (
+            {excluida ? (
+              <EstadoBadge estado="excluido" />
+            ) : inscripcion.constanciaGenerada ? (
               <EstadoBadge estado="constancia" />
             ) : (
               <EstadoBadge estado="en-progreso" />
@@ -144,11 +155,16 @@ function TimelineItem({
 
             <BotonConstancia
               inscripcionId={inscripcion.id}
-              elegible={asistenciasQueCuentan >= inscripcion.edicion.minAsistencias}
+              // La constancia le toca a todo inscrito: lo único que la impide
+              // es una exclusión puesta por un ADMIN. El conteo se sigue
+              // mostrando, pero ya solo como dato, no como requisito.
+              elegible={!excluida}
+              motivoExclusion={inscripcion.constanciaMotivoExclusion}
               asistencias={asistenciasQueCuentan}
               minimo={inscripcion.edicion.minAsistencias}
               constanciaUrl={inscripcion.constanciaUrl}
               constanciaGenerada={inscripcion.constanciaGenerada}
+              puedeGenerar={puedeCapturar}
             />
           </div>
         </div>

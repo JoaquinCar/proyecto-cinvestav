@@ -124,6 +124,9 @@ export function ListaParticipantesClient({
                     (i) => i.edicion.id === edicionId
                   );
                   const tieneConstancia = inscripcionActual?.constanciaGenerada ?? false;
+                  // Excluido no es lo mismo que "todavía no emitida": es una
+                  // decisión tomada, y en el listado tiene que verse.
+                  const excluido = inscripcionActual?.constanciaExcluida ?? false;
 
                   return (
                     <li key={p.id}>
@@ -158,7 +161,9 @@ export function ListaParticipantesClient({
 
                         {/* Badge estado */}
                         <div className="shrink-0 flex items-center gap-2">
-                          {tieneConstancia ? (
+                          {excluido ? (
+                            <EstadoBadge estado="excluido" />
+                          ) : tieneConstancia ? (
                             <EstadoBadge estado="constancia" />
                           ) : (
                             <EstadoBadge estado="en-progreso" />

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type Estado = "constancia" | "en-progreso" | "inactivo";
+type Estado = "constancia" | "en-progreso" | "excluido" | "inactivo";
 
 interface EstadoBadgeProps {
   estado: Estado;
@@ -14,6 +14,12 @@ const config: Record<Estado, { label: string; colorClass: string }> = {
   "en-progreso": {
     label: "En progreso",
     colorClass: "bg-secondary/12 text-secondary-foreground",
+  },
+  // La constancia le toca a todo inscrito: este estado es la excepción que
+  // puso un ADMIN, y tiene que verse distinta de "todavía no se ha emitido".
+  excluido: {
+    label: "Sin constancia",
+    colorClass: "bg-destructive/12 text-destructive",
   },
   inactivo: {
     label: "Inactivo",
