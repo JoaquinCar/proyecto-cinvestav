@@ -12,6 +12,7 @@
 import { PrismaClient } from "@prisma/client";
 import { readFileSync, existsSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
+import { descifrar, estaCifrado } from "./cifrado.mjs";
 
 // Al borrar hay que ir al revés que al insertar: primero lo que depende.
 const ORDEN = [
@@ -32,7 +33,19 @@ if (!url) abortar("No hay DATABASE_URL.");
 const host = url.replace(/^.*@/, "").replace(/[?].*$/, "");
 const esProduccion = !/localhost|127\.0\.0\.1/.test(host);
 
-const { generado, datos } = JSON.parse(gunzipSync(readFileSync(archivo)).toString("utf8"));
+let crudo = readFileSync(archivo);
+if (estaCifrado(crudo)) {
+  const clave = process.env.RESPALDO_CLAVE;
+  if (!clave) {
+    abortar(
+      "Este respaldo está cifrado y no hay RESPALDO_CLAVE.\n" +
+        "  La clave está en el USB del proyecto (CLAVES.md) y con el coordinador.\n" +
+        "    RESPALDO_CLAVE='...' CONFIRMAR_RESTAURACION=si npm run restaurar -- " + archivo,
+    );
+  }
+  try { crudo = descifrar(crudo, clave); } catch (e) { abortar(e.message); }
+}
+const { generado, datos } = JSON.parse(gunzipSync(crudo).toString("utf8"));
 if (!datos?.participante) abortar("El archivo no parece un respaldo de este proyecto.");
 
 const total = Object.values(datos).reduce((a, f) => a + f.length, 0);

@@ -63,4 +63,10 @@ next-env.d.ts
 # Reportes de pruebas: mencionan datos de la base de trabajo y este repositorio
 # es público. Son notas, no documentación del proyecto.
 /docs/qa/
+
+# La clave que cifra los respaldos. NUNCA al repositorio: es pública.
+# Vive en el USB del proyecto y en manos del coordinador.
+# Ver docs/respaldos.md y el ejemplo en docs/CLAVES.ejemplo.md
+CLAVES.md
+/claves/
 /scripts/_*

@@ -1,0 +1,107 @@
+# Respaldo automático de la base, cifrado.
+#
+# Los respaldos se guardan en la rama huérfana `respaldos`, que solo contiene
+# archivos cifrados: este repositorio es PÚBLICO y un volcado lleva nombre,
+# edad, escuela, teléfono y correo de cada niño. Sin RESPALDO_CLAVE no se
+# pueden abrir.
+#
+# La clave vive en los secretos de GitHub, en el USB del proyecto y con el
+# coordinador. Si se pierde, los respaldos son archivos inservibles.
+# Ver docs/respaldos.md.
+
+name: Respaldo de la base
+
+on:
+  schedule:
+    - cron: "30 8 * * *"   # cada día, media hora después del keepalive
+  workflow_dispatch:
+
+# Solo uno a la vez: dos ejecuciones empujando a la misma rama se pisarían.
+concurrency:
+  group: respaldo-base
+  cancel-in-progress: false
+
+jobs:
+  respaldar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # para empujar a la rama de respaldos
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generar cliente de Prisma
+        run: npx prisma generate
+
+      - name: Respaldar (cifrado)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RESPALDO_CLAVE: ${{ secrets.RESPALDO_CLAVE }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Falta el secreto DATABASE_URL"; exit 1
+          fi
+          if [ -z "$RESPALDO_CLAVE" ]; then
+            echo "::error::Falta el secreto RESPALDO_CLAVE. Sin cifrado no se guarda nada: el repositorio es público."
+            exit 1
+          fi
+          npm run respaldar
+
+      - name: Comprobar que salió cifrado
+        run: |
+          archivo=$(ls respaldos/*.cifrado 2>/dev/null | head -1)
+          if [ -z "$archivo" ]; then
+            echo "::error::No se generó ningún archivo cifrado"; exit 1
+          fi
+          # Un respaldo casi vacío suele significar que algo falló.
+          bytes=$(wc -c < "$archivo")
+          if [ "$bytes" -lt 1024 ]; then
+            echo "::error::El respaldo pesa $bytes bytes: demasiado poco, algo falló"; exit 1
+          fi
+          echo "✓ $archivo ($bytes bytes)"
+
+      - name: Guardar en la rama `respaldos`
+        run: |
+          set -e
+          archivo=$(ls respaldos/*.cifrado | head -1)
+          nombre=$(basename "$archivo")
+          cp "$archivo" /tmp/"$nombre"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Rama huérfana: sin historial del código, solo respaldos.
+          git fetch origin respaldos --depth=1 2>/dev/null && git checkout respaldos \
+            || git checkout --orphan respaldos
+          git rm -rf --cached . >/dev/null 2>&1 || true
+          find . -maxdepth 1 ! -name . ! -name .git ! -name respaldos -exec rm -rf {} + 2>/dev/null || true
+
+          mkdir -p respaldos && cp /tmp/"$nombre" respaldos/
+
+          # Conservar los 30 más recientes; lo viejo se va del árbol.
+          ls -1 respaldos/*.cifrado | sort | head -n -30 | xargs -r rm -f
+
+          cat > LEEME.md <<'FIN'
+          # Respaldos cifrados
+
+          Esta rama solo contiene respaldos de la base, **cifrados**. Sin la
+          clave del proyecto no se pueden abrir.
+
+          La clave está en el USB del proyecto (`CLAVES.md`) y con el
+          coordinador. Para restaurar uno, ver `docs/respaldos.md` en la rama
+          principal.
+
+          Se guardan los 30 más recientes. Se genera uno al día.
+          FIN
+
+          git add -A
+          git diff --cached --quiet && { echo "Sin cambios"; exit 0; }
+          git commit -q -m "respaldo: $nombre"
+          git push -q origin respaldos
+          echo "✓ guardado en la rama respaldos"
