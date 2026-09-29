@@ -107,7 +107,7 @@ export function BotonConstancia({
         type="button"
         onClick={handleGenerar}
         disabled={loading}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50 min-h-[44px] sm:min-h-0 bg-secondary/12 border border-secondary/35 text-secondary-foreground"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50 min-h-[44px] sm:min-h-0 bg-secondary/12 border border-secondary/35 text-secondary-soft-foreground"
       >
         {loading ? (
           <Loader2 size={13} className="animate-spin" />

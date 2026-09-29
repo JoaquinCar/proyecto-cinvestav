@@ -63,7 +63,7 @@ function BadgeAnterior({ anios }: { anios: number[] }) {
       ? `Ya participó en ${anios[0]}`
       : `Participó en ${anios.join(", ")}`;
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-secondary/12 border border-secondary/35 text-secondary-foreground">
+    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-secondary/12 border border-secondary/35 text-secondary-soft-foreground">
       <Clock size={10} />
       {label}
     </span>

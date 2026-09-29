@@ -124,7 +124,7 @@ export default async function AsistenciaPage({
               <span
                 className={
                   clase.edicion.activa
-                    ? "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-secondary/10 border border-secondary/30 text-secondary-foreground"
+                    ? "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-secondary/10 border border-secondary/30 text-secondary-soft-foreground"
                     : "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-muted border border-border text-muted-foreground"
                 }
               >

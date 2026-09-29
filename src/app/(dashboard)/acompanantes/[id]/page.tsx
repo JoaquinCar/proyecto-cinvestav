@@ -103,7 +103,7 @@ export default async function AcompananteFichaPage({
       <div className="animate-fade-up">
         <div className="flex items-start gap-5">
           <div
-            className="shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center bg-secondary/10 border border-secondary/30 text-secondary-foreground"
+            className="shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center bg-secondary/10 border border-secondary/30 text-secondary-soft-foreground"
             aria-hidden="true"
           >
             {esColectivo ? (

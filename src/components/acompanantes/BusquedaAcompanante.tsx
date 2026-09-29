@@ -154,7 +154,7 @@ export function BusquedaAcompanante({
                           {a.telefono ? ` · ${a.telefono}` : ""}
                         </div>
                         {acompanados > 0 && (
-                          <span className="inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 rounded-full font-medium bg-secondary/12 border border-secondary/35 text-secondary-foreground">
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 rounded-full font-medium bg-secondary/12 border border-secondary/35 text-secondary-soft-foreground">
                             <Users size={10} />
                             Acompaña a <span className="tabular">{acompanados}</span>
                             {acompanados === 1 ? " niño" : " niños"}

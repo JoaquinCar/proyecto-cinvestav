@@ -29,7 +29,7 @@ const ESTILO: Record<
     icono: BookMarked,
   },
   EVENTO: {
-    clases: "bg-secondary/15 border-secondary/40 text-secondary-foreground",
+    clases: "bg-secondary/15 border-secondary/40 text-secondary-soft-foreground",
     icono: PartyPopper,
   },
 };
