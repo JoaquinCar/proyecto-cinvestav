@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Los agentes trabajan en git worktrees bajo .claude/worktrees/, que son
+    // copias completas del proyecto. Sin esto, lint las recorre y devuelve
+    // decenas de miles de avisos ajenos que esconden los reales.
+    ".claude/worktrees/**",
   ]),
 ]);
 
