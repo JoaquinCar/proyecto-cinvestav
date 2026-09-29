@@ -34,7 +34,10 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # `npm install` y no `npm ci`: el package-lock.json del proyecto está
+      # desincronizado con package.json y `npm ci` exige que coincidan. Es lo
+      # mismo que hace ci.yml, por la misma razón.
+      - run: npm install
 
       - name: Generar cliente de Prisma
         run: npx prisma generate
