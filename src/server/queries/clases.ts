@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db";
-import type { TipoSesion } from "@/lib/tipos-sesion";
+import { TIPO_SESION_POR_DEFECTO, type TipoSesion } from "@/lib/tipos-sesion";
 import type {
   CrearClaseInput,
   EditarClaseInput,
@@ -106,7 +106,12 @@ export async function obtenerClasePorId(id: string) {
  * clase tampoco se guarda.
  */
 export async function crearClaseConSesion(
-  data: CrearClaseInput,
+  // `tipo` se marca opcional aquí aunque `crearClaseSchema` siempre lo rellene:
+  // así quien llama a esta función sin pasar por la API —las pruebas contra la
+  // base, un script de carga— no tiene que repetir el valor por defecto. El
+  // defecto sigue siendo uno solo, `TIPO_SESION_POR_DEFECTO`, el mismo que usa
+  // el schema y el mismo que tiene la columna.
+  data: Omit<CrearClaseInput, "tipo"> & { tipo?: TipoSesion },
   registradaPorId?: string,
 ) {
   return prisma.$transaction(async (tx) => {
@@ -114,8 +119,7 @@ export async function crearClaseConSesion(
       data: {
         edicionId:    data.edicionId,
         nombre:       data.nombre,
-        // El schema ya puso PASAPORTE cuando nadie dijo el tipo.
-        tipo:         data.tipo,
+        tipo:         data.tipo ?? TIPO_SESION_POR_DEFECTO,
         // `null` es legítimo: un evento especial no lo imparte nadie.
         investigador: data.investigador ?? null,
         descripcion:  data.descripcion ?? null,
