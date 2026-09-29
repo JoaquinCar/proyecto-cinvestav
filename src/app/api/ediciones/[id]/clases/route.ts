@@ -40,6 +40,11 @@ export async function GET(request: Request, context: RouteContext) {
       tipo = parsed.data;
     }
 
+    const existe = await existeEdicion(id);
+    if (!existe) {
+      return NextResponse.json({ error: "Edición no encontrada" }, { status: 404 });
+    }
+
     const clases = await listarClasesDeEdicion(id, tipo);
     return NextResponse.json({ clases });
   } catch {
