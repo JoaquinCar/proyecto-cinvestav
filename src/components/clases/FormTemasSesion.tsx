@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { mensajeDeError } from "@/lib/api/errores";
 
 const FALLO_AL_GUARDAR =
-  "No se pudieron guardar los cambios de la clase; sigue como estaba. Vuelve a intentarlo en unos minutos.";
+  "No se pudieron guardar los cambios de la sesión; sigue como estaba. Vuelve a intentarlo en unos minutos.";
 
 const LARGO_MAXIMO_TEMAS = 500;
 const LARGO_MAXIMO_NOTAS = 1000;
@@ -82,7 +82,7 @@ export function FormTemasSesion({
         throw new Error(json?.error ?? FALLO_AL_GUARDAR);
       }
 
-      toast.success("Clase actualizada");
+      toast.success("Sesión actualizada");
       setAbierto(false);
       router.refresh();
     } catch (error) {
@@ -99,7 +99,7 @@ export function FormTemasSesion({
           <button
             type="button"
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground"
-            aria-label={`Editar la clase del ${fechaSesion}`}
+            aria-label={`Editar la sesión del ${fechaSesion}`}
           >
             <Pencil size={11} strokeWidth={2} aria-hidden />
             Editar
@@ -120,7 +120,7 @@ export function FormTemasSesion({
             </div>
             <div>
               <DialogTitle className="font-display text-lg font-semibold text-foreground">
-                Editar clase
+                Editar sesión
               </DialogTitle>
               <p className="text-xs mt-0.5 text-muted-foreground">{fechaSesion}</p>
             </div>

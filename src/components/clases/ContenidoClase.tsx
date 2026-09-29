@@ -119,7 +119,7 @@ export function ContenidoClase({
         const json = await res.json().catch(() => ({}));
         throw new Error(
           json?.error ??
-            "No se pudo guardar la descripción; la clase sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
+            "No se pudo guardar la descripción; la sesión sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
         );
       }
 
@@ -132,7 +132,7 @@ export function ContenidoClase({
       toast.error(
         mensajeDeError(
           error,
-          "No se pudo guardar la descripción; la clase sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
+          "No se pudo guardar la descripción; la sesión sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
         ),
       );
     } finally {
@@ -174,7 +174,7 @@ export function ContenidoClase({
               const json = await res.json().catch(() => ({}));
               throw new Error(
                 json?.error ??
-                  "No se pudo subir la imagen y no quedó agregada a la clase. Vuelve a intentarlo en unos minutos.",
+                  "No se pudo subir la imagen y no quedó agregada a la sesión. Vuelve a intentarlo en unos minutos.",
               );
             }
 
@@ -183,7 +183,7 @@ export function ContenidoClase({
             toast.error(
               mensajeDeError(
                 error,
-                "No se pudo subir la imagen y no quedó agregada a la clase. Vuelve a intentarlo en unos minutos.",
+                "No se pudo subir la imagen y no quedó agregada a la sesión. Vuelve a intentarlo en unos minutos.",
               ),
             );
           }
@@ -240,7 +240,7 @@ export function ContenidoClase({
   }, [puedeEditarImagenes, subirImagenes]);
 
   async function eliminarImagen(imagen: ImagenClaseVista) {
-    if (!window.confirm("¿Eliminar esta imagen de la clase?")) return;
+    if (!window.confirm("¿Eliminar esta imagen de la sesión?")) return;
 
     try {
       const res = await fetch(`/api/clases/${claseId}/imagenes/${imagen.id}`, {
@@ -251,7 +251,7 @@ export function ContenidoClase({
         const json = await res.json().catch(() => ({}));
         throw new Error(
           json?.error ??
-            "No se pudo eliminar la imagen; sigue en la clase. Vuelve a intentarlo en unos minutos.",
+            "No se pudo eliminar la imagen; sigue en la sesión. Vuelve a intentarlo en unos minutos.",
         );
       }
 
@@ -262,7 +262,7 @@ export function ContenidoClase({
       toast.error(
         mensajeDeError(
           error,
-          "No se pudo eliminar la imagen; sigue en la clase. Vuelve a intentarlo en unos minutos.",
+          "No se pudo eliminar la imagen; sigue en la sesión. Vuelve a intentarlo en unos minutos.",
         ),
       );
     }
@@ -315,7 +315,7 @@ export function ContenidoClase({
         ) : (
           <p className="mt-3 text-xs italic text-muted-foreground">
             {puedeEditarDescripcion
-              ? "Esta clase todavía no tiene descripción."
+              ? "Esta sesión todavía no tiene descripción."
               : "Sin descripción registrada."}
           </p>
         )}
@@ -423,7 +423,7 @@ export function ContenidoClase({
         ) : (
           <p className="mt-3 text-xs italic text-muted-foreground">
             {puedeEditarImagenes
-              ? "Todavía no hay imágenes en esta clase."
+              ? "Todavía no hay imágenes en esta sesión."
               : "Sin imágenes registradas."}
           </p>
         )}
@@ -521,7 +521,7 @@ export function ContenidoClase({
               htmlFor="descripcion-clase"
               className="text-sm font-medium text-foreground"
             >
-              Descripción de la clase
+              Descripción de la sesión
             </Label>
             <Textarea
               id="descripcion-clase"
@@ -529,7 +529,7 @@ export function ContenidoClase({
               onChange={(e) => setTexto(e.target.value)}
               rows={7}
               maxLength={LARGO_MAXIMO_DESCRIPCION}
-              placeholder="Qué se hace en esta clase, materiales, objetivos…"
+              placeholder="Qué se hace en esta sesión, materiales, objetivos…"
               className="resize-none transition-colors bg-surface-alt border-border focus:border-primary focus:ring-primary"
             />
             <p className="text-xs text-muted-foreground text-right tabular">

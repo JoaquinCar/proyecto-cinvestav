@@ -27,7 +27,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json(
         {
           error:
-            "Esta imagen ya no está en la clase: alguien pudo eliminarla antes. Vuelve a cargar la página para ver las que quedan.",
+            "Esta imagen ya no está en la sesión: alguien pudo eliminarla antes. Vuelve a cargar la página para ver las que quedan.",
         },
         { status: 404 },
       );
@@ -39,7 +39,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return fallaInesperada(
       "DELETE /api/clases/[id]/imagenes/[imagenId]",
       error,
-      "No se pudo eliminar la imagen; sigue en la clase. Vuelve a intentarlo en unos minutos.",
+      "No se pudo eliminar la imagen; sigue en la sesión. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

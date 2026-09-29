@@ -6,7 +6,7 @@ import { aISOFecha } from "@/lib/fechas";
 import { FormNuevaClase } from "./FormNuevaClase";
 
 export const metadata: Metadata = {
-  title: "Nueva clase · Pasaporte Científico",
+  title: "Nueva sesión · Pasaporte Científico",
 };
 
 export default async function NuevaClasePage({

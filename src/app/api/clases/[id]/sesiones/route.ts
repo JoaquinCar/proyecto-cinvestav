@@ -21,7 +21,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json(
         {
           error:
-            "Esta clase ya no existe: alguien pudo eliminarla. Vuelve a la lista de clases para ver las que siguen activas.",
+            "Esta sesión ya no existe: alguien pudo eliminarla. Vuelve a la lista de sesiones para ver las que siguen activas.",
         },
         { status: 404 },
       );
@@ -33,7 +33,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return fallaInesperada(
       "GET /api/clases/[id]/sesiones",
       error,
-      "No se pudieron cargar las sesiones de la clase. Vuelve a intentarlo en unos momentos.",
+      "No se pudieron cargar las fechas de la sesión. Vuelve a intentarlo en unos momentos.",
     );
   }
 }

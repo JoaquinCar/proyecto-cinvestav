@@ -250,8 +250,8 @@ describe("DELETE /api/clases/[id] con sesiones", () => {
     vi.mocked(obtenerClasePorId).mockResolvedValue({ id: "clase-1" } as never);
     vi.mocked(eliminarClase).mockRejectedValue(
       new ClaseConSesionesError(
-        "No se puede eliminar la clase porque tiene 3 sesión(es) programada(s). " +
-          "Elimina primero esas sesiones desde la página de la clase y vuelve a intentarlo.",
+        "No se puede eliminar la sesión porque tiene 3 fecha(s) programada(s). " +
+          "Elimina primero esas fechas desde la página de la sesión y vuelve a intentarlo.",
         3,
       ),
     );
@@ -263,8 +263,8 @@ describe("DELETE /api/clases/[id] con sesiones", () => {
 
     expect(res.status).toBe(409);
     const body = await res.json();
-    expect(body.error).toMatch(/3 sesión/i);
-    expect(body.error).toMatch(/elimina primero esas sesiones/i);
+    expect(body.error).toMatch(/3 fecha/i);
+    expect(body.error).toMatch(/elimina primero esas fechas/i);
     expect(body.sesiones).toBe(3);
     noFiltraInterioridades(body.error);
   });

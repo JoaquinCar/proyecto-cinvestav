@@ -151,6 +151,26 @@ model Inscripcion {
   @@index([acompananteId])
 }
 
+// OJO — el nombre del modelo NO coincide con lo que se lee en pantalla.
+//
+// La interfaz llama «sesión» a ESTE registro: la charla que imparte un
+// investigador, con su nombre, su descripción y sus imágenes. El cliente pidió
+// ese vocabulario porque además de las charlas normales habrá sesiones de
+// lectura y eventos especiales (día del niño, clausura), y «sesión» es la
+// palabra paraguas que los cubre a todos; «clase» no.
+//
+// El modelo `Sesion` de más abajo es la FECHA en que se imparte esa charla —en
+// la práctica una sola por `Clase`— y en pantalla se llama «fecha».
+//
+//   base de datos          interfaz
+//   ─────────────          ────────
+//   Clase                  sesión
+//   Sesion                 fecha (de la sesión)
+//   ImagenClase            imagen de la sesión
+//
+// Los nombres internos (modelos, `claseId`, `sesionId`, relaciones, rutas
+// /clases y /api/clases) se dejaron como estaban a propósito: renombrarlos
+// habría multiplicado el diff y roto los merges pendientes, sin ganar nada.
 model Clase {
   id           String   @id @default(cuid())
   edicionId    String

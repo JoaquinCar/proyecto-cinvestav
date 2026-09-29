@@ -20,7 +20,7 @@ const formSchema = z.object({
    */
   fecha: z
     .string()
-    .min(1, "Indica el día en que se imparte la clase")
+    .min(1, "Indica el día en que se imparte la sesión")
     .optional(),
 
   nombre: z
@@ -100,7 +100,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
       if (!res.ok) {
         setServerError(
           json?.error ??
-            "No se pudieron guardar los cambios; la clase sigue como estaba. Vuelve a intentarlo en unos minutos.",
+            "No se pudieron guardar los cambios; la sesión sigue como estaba. Vuelve a intentarlo en unos minutos.",
         );
         return;
       }
@@ -108,7 +108,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
       router.push(`/clases/${clase.id}`);
       router.refresh();
     } catch {
-      setServerError(`${MENSAJE_SIN_CONEXION} Los cambios de la clase no se guardaron.`);
+      setServerError(`${MENSAJE_SIN_CONEXION} Los cambios de la sesión no se guardaron.`);
     } finally {
       setLoading(false);
     }
@@ -121,10 +121,10 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
         <Link
           href={`/clases/${clase.id}`}
           className="inline-flex items-center gap-1.5 text-sm mb-5 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Volver a la clase"
+          aria-label="Volver a la sesión"
         >
           <ArrowLeft size={15} strokeWidth={2} aria-hidden />
-          Volver a la clase
+          Volver a la sesión
         </Link>
 
         <div className="flex items-center gap-3">
@@ -136,7 +136,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
               Editar <em className="text-primary not-italic font-semibold">{clase.nombre}</em>
             </h1>
             <p className="text-sm mt-0.5 text-muted-foreground">
-              Datos generales de la clase
+              Datos generales de la sesión
             </p>
           </div>
         </div>
@@ -153,7 +153,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
           onSubmit={handleSubmit(onSubmit)}
           className="space-y-6"
           noValidate
-          aria-label="Formulario de edición de clase"
+          aria-label="Formulario de edición de sesión"
         >
           {/* Nombre */}
           <div className="space-y-2">
@@ -162,7 +162,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
               className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
             >
               <BookOpen size={13} strokeWidth={2} aria-hidden />
-              Nombre de la clase
+              Nombre de la sesión
             </Label>
             <Input
               id="nombre"
@@ -239,8 +239,8 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
                 aria-hidden
               />
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Esta clase tiene {clase.totalFechas} fechas. Cambia cada una desde su
-                tarjeta en la <span className="text-foreground font-medium">página de la clase</span>.
+                Esta sesión tiene {clase.totalFechas} fechas. Cambia cada una desde su
+                tarjeta en la <span className="text-foreground font-medium">página de la sesión</span>.
               </p>
             </div>
           )}
@@ -255,7 +255,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
             />
             <p className="text-xs leading-relaxed text-muted-foreground">
               La descripción y las imágenes se agregan y editan desde la página de la
-              clase, en la sección <span className="text-foreground font-medium">Contenido</span>.
+              sesión, en la sección <span className="text-foreground font-medium">Contenido</span>.
             </p>
           </div>
 

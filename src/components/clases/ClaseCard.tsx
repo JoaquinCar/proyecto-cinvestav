@@ -33,7 +33,7 @@ export function ClaseCard({ clase, totalParticipantes }: ClaseCardProps) {
     <Link
       href={`/clases/${clase.id}`}
       className="group block bg-card border border-border rounded-2xl p-5 transition-all duration-200 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 ring-primary"
-      aria-label={`Ver clase ${clase.nombre} — ${clase.investigador}`}
+      aria-label={`Ver sesión ${clase.nombre} — ${clase.investigador}`}
     >
       {/* Top row */}
       <div className="flex items-start justify-between gap-3 mb-3">

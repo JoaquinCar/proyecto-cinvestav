@@ -31,7 +31,7 @@ export const MENSAJE_CUERPO_ILEGIBLE =
 const ETIQUETAS_CAMPO: Record<string, string> = {
   anio:             "año",
   apellidos:        "apellidos",
-  claseId:          "clase",
+  claseId:          "sesión",
   contacto:         "contacto",
   data:             "archivo de la imagen",
   descripcion:      "descripción",

@@ -92,7 +92,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json(
         {
           error:
-            "No se pudo mostrar esta imagen porque el almacenamiento de archivos no respondió. El resto de la clase sigue disponible; vuelve a intentarlo en unos minutos.",
+            "No se pudo mostrar esta imagen porque el almacenamiento de archivos no respondió. El resto de la sesión sigue disponible; vuelve a intentarlo en unos minutos.",
         },
         { status: 502 },
       );

@@ -40,7 +40,7 @@ export const fechaCalendarioSchema = z
  * sesiones y no se le podía pasar lista hasta "agregarle" una a mano.
  */
 export const crearClaseSchema = z.object({
-  edicionId: z.string({ error: "Falta indicar la edición" }).min(1, "Selecciona la edición a la que pertenece la clase"),
+  edicionId: z.string({ error: "Falta indicar la edición" }).min(1, "Selecciona la edición a la que pertenece la sesión"),
 
   nombre: z
     .string({ error: "El nombre es requerido" })
@@ -106,7 +106,7 @@ export const editarClaseSchema = z.object({
 // ── Schema para crear una sesión ──────────────────────────────────────────────
 
 export const crearSesionSchema = z.object({
-  claseId: z.string({ error: "Falta indicar la clase" }).min(1, "Selecciona la clase a la que pertenece la sesión"),
+  claseId: z.string({ error: "Falta indicar la sesión" }).min(1, "Selecciona la sesión a la que pertenece la fecha"),
 
   fecha: fechaCalendarioSchema,
 

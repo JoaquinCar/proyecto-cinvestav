@@ -96,7 +96,7 @@ export function EdicionCard({ edicion }: EdicionCardProps) {
               className="inline-block w-1 h-1 rounded-full bg-border"
               aria-hidden
             />
-            <span>{clases} {clases === 1 ? "clase" : "clases"}</span>
+            <span>{clases} {clases === 1 ? "sesión" : "sesiones"}</span>
           </div>
         )}
       </div>

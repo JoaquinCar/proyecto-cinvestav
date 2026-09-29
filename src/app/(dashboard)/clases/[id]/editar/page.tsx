@@ -19,7 +19,7 @@ export async function generateMetadata({
   return {
     title: clase
       ? `Editar ${clase.nombre} · Pasaporte Científico`
-      : "Editar clase · Pasaporte Científico",
+      : "Editar sesión · Pasaporte Científico",
   };
 }
 

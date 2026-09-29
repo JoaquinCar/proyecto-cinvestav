@@ -165,8 +165,8 @@ export async function editarClase(
 
     if (sesiones.length > 1) {
       throw new VariasSesionesError(
-        `Esta clase tiene ${sesiones.length} sesiones: cambia la fecha de cada una ` +
-        `desde su tarjeta en la página de la clase.`,
+        `Esta sesión tiene ${sesiones.length} fechas: cambia la fecha de cada una ` +
+        `desde su tarjeta en la página de la sesión.`,
       );
     }
 
@@ -194,7 +194,7 @@ export async function eliminarClase(id: string) {
 
   if (asistencias > 0) {
     throw new ClaseConAsistenciasError(
-      `No se puede eliminar la clase porque tiene ${asistencias} asistencia(s) registrada(s). ` +
+      `No se puede eliminar la sesión porque tiene ${asistencias} asistencia(s) registrada(s). ` +
         "Ese es el respaldo de las constancias de los niños y no se borra desde aquí.",
     );
   }
@@ -207,8 +207,8 @@ export async function eliminarClase(id: string) {
 
   if (sesiones > 0) {
     throw new ClaseConSesionesError(
-      `No se puede eliminar la clase porque tiene ${sesiones} sesión(es) programada(s). ` +
-        "Elimina primero esas sesiones desde la página de la clase y vuelve a intentarlo.",
+      `No se puede eliminar la sesión porque tiene ${sesiones} fecha(s) programada(s). ` +
+        "Elimina primero esas fechas desde la página de la sesión y vuelve a intentarlo.",
       sesiones,
     );
   }

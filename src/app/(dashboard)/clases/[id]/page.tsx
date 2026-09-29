@@ -40,7 +40,7 @@ export async function generateMetadata({
   const { id } = await params;
   const clase = await obtenerClasePorId(id);
   return {
-    title: clase ? `${clase.nombre} · Pasaporte Científico` : "Clase · Pasaporte Científico",
+    title: clase ? `${clase.nombre} · Pasaporte Científico` : "Sesión · Pasaporte Científico",
   };
 }
 
@@ -112,7 +112,7 @@ export default async function ClaseDetallePage({
             href={edicion ? `/clases?edicion=${edicion.id}` : "/clases"}
             className="hover:underline transition-colors text-primary"
           >
-            Clases
+            Sesiones
           </Link>
           <span aria-hidden>/</span>
           <span className="truncate max-w-[12rem] text-secondary-foreground font-medium">
@@ -247,13 +247,13 @@ export default async function ClaseDetallePage({
       <div className="animate-fade-up animate-fade-up-delay-2">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {sesiones.length > 1 ? "Fechas de la clase" : "Fecha de la clase"}
+            {sesiones.length > 1 ? "Fechas de la sesión" : "Fecha de la sesión"}
           </h2>
         </div>
 
         {sesiones.length === 0 ? (
           <EmptyState
-            message="Esta clase todavía no tiene fecha"
+            message="Esta sesión todavía no tiene fecha"
             detail={
               isAdmin
                 ? "Sin fecha no se le puede pasar lista. Asígnasela desde Editar."

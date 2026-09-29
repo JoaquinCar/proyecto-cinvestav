@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "La edición en la que intentas crear la clase ya no existe. Vuelve a la lista de ediciones y elige una.",
+            "La edición en la que intentas crear la sesión ya no existe. Vuelve a la lista de ediciones y elige una.",
         },
         { status: 404 },
       );
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     return fallaInesperada(
       "POST /api/clases",
       error,
-      "No se pudo crear la clase y no quedó guardada. Vuelve a intentarlo en unos minutos.",
+      "No se pudo crear la sesión y no quedó guardada. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

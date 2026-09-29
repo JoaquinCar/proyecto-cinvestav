@@ -59,7 +59,7 @@ export default async function AsistenciaPage({
           href={`/ediciones/${clase.edicion.id}/clases`}
           className="hover:underline transition-colors text-primary"
         >
-          Clases
+          Sesiones
         </Link>
         <span aria-hidden>/</span>
         <Link
@@ -78,7 +78,7 @@ export default async function AsistenciaPage({
           <Link
             href={`/clases/${clase.id}`}
             className="mt-0.5 w-9 h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px]"
-            aria-label="Volver a la clase"
+            aria-label="Volver a la sesión"
           >
             <ArrowLeft size={16} strokeWidth={2} aria-hidden />
           </Link>

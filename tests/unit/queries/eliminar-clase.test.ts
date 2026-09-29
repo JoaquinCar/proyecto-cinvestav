@@ -42,8 +42,8 @@ describe("eliminarClase", () => {
 
     expect(error).toBeInstanceOf(ClaseConSesionesError);
     expect(error.sesiones).toBe(3);
-    expect(error.message).toContain("3 sesión(es) programada(s)");
-    expect(error.message).toMatch(/elimina primero esas sesiones/i);
+    expect(error.message).toContain("3 fecha(s) programada(s)");
+    expect(error.message).toMatch(/elimina primero esas fechas/i);
     expect(prisma.clase.delete).not.toHaveBeenCalled();
   });
 

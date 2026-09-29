@@ -17,7 +17,7 @@ import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 const formSchema = z.object({
   edicionId: z
     .string({ error: "La edición es requerida" })
-    .min(1, "Selecciona la edición a la que pertenece la clase"),
+    .min(1, "Selecciona la edición a la que pertenece la sesión"),
 
   nombre: z
     .string({ error: "El nombre es requerido" })
@@ -33,7 +33,7 @@ const formSchema = z.object({
 
   fecha: z
     .string({ error: "La fecha es requerida" })
-    .min(1, "Indica el día en que se imparte la clase"),
+    .min(1, "Indica el día en que se imparte la sesión"),
 
   descripcion: z
     .string()
@@ -115,7 +115,7 @@ export function FormNuevaClase({
       if (!res.ok) {
         setServerError(
           json?.error ??
-            "No se pudo crear la clase y no quedó guardada. Vuelve a intentarlo en unos minutos.",
+            "No se pudo crear la sesión y no quedó guardada. Vuelve a intentarlo en unos minutos.",
         );
         return;
       }
@@ -123,7 +123,7 @@ export function FormNuevaClase({
       router.push(`/clases/${json.id}`);
       router.refresh();
     } catch {
-      setServerError(`${MENSAJE_SIN_CONEXION} La clase no quedó guardada.`);
+      setServerError(`${MENSAJE_SIN_CONEXION} La sesión no quedó guardada.`);
     } finally {
       setLoading(false);
     }
@@ -138,10 +138,10 @@ export function FormNuevaClase({
         <Link
           href={volverHref}
           className="inline-flex items-center gap-1.5 text-sm mb-5 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Volver a Clases"
+          aria-label="Volver a Sesiones"
         >
           <ArrowLeft size={15} strokeWidth={2} aria-hidden />
-          Volver a Clases
+          Volver a Sesiones
         </Link>
 
         <div className="flex items-center gap-3">
@@ -150,10 +150,10 @@ export function FormNuevaClase({
           </div>
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-semibold text-foreground">
-              Nueva <em className="text-primary not-italic font-semibold">Clase</em>
+              Nueva <em className="text-primary not-italic font-semibold">Sesión</em>
             </h1>
             <p className="text-sm mt-0.5 text-muted-foreground">
-              Una clase es una charla impartida en una fecha
+              Una sesión es una charla impartida en una fecha
             </p>
           </div>
         </div>
@@ -170,7 +170,7 @@ export function FormNuevaClase({
           onSubmit={handleSubmit(onSubmit)}
           className="space-y-6"
           noValidate
-          aria-label="Formulario de nueva clase"
+          aria-label="Formulario de nueva sesión"
         >
           {/* Edición */}
           <div className="space-y-2">
@@ -206,7 +206,7 @@ export function FormNuevaClase({
               </p>
             ) : (
               <p id="edicionId-hint" className="text-xs text-muted-foreground">
-                Toda clase pertenece a una edición. Por defecto se usa la edición activa.
+                Toda sesión pertenece a una edición. Por defecto se usa la edición activa.
               </p>
             )}
           </div>
@@ -218,7 +218,7 @@ export function FormNuevaClase({
               className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground"
             >
               <BookOpen size={13} strokeWidth={2} aria-hidden />
-              Nombre de la clase
+              Nombre de la sesión
             </Label>
             <Input
               id="nombre"
@@ -260,7 +260,7 @@ export function FormNuevaClase({
               </p>
             ) : (
               <p id="investigador-hint" className="text-xs text-muted-foreground">
-                Nombre completo del investigador CINVESTAV que imparte la clase
+                Nombre completo del investigador CINVESTAV que imparte la sesión
               </p>
             )}
           </div>
@@ -289,7 +289,7 @@ export function FormNuevaClase({
               </p>
             ) : (
               <p id="fecha-hint" className="text-xs text-muted-foreground">
-                Con la fecha, la clase queda lista para pasar lista. Debe caer dentro
+                Con la fecha, la sesión queda lista para pasar lista. Debe caer dentro
                 de la edición; después puedes corregirla desde Editar.
               </p>
             )}
@@ -307,7 +307,7 @@ export function FormNuevaClase({
             </Label>
             <Textarea
               id="descripcion"
-              placeholder="Breve descripción de los temas que se abordarán en esta clase…"
+              placeholder="Breve descripción de los temas que se abordarán en esta sesión…"
               rows={4}
               {...register("descripcion")}
               className={`rounded-lg bg-muted border-border resize-none transition-colors focus:ring-primary ${errors.descripcion ? "border-destructive focus:ring-destructive" : ""}`}
@@ -319,7 +319,7 @@ export function FormNuevaClase({
               </p>
             ) : (
               <p id="descripcion-hint" className="text-xs text-muted-foreground">
-                Puedes agregarla después —junto con imágenes— desde la página de la clase
+                Puedes agregarla después —junto con imágenes— desde la página de la sesión
               </p>
             )}
           </div>
@@ -366,7 +366,7 @@ export function FormNuevaClase({
                   Guardando…
                 </>
               ) : (
-                "Crear Clase"
+                "Crear Sesión"
               )}
             </button>
           </div>

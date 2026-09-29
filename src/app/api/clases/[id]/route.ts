@@ -25,7 +25,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** La clase se buscó por id y no está: el enlace o la pestaña están viejos. */
 const CLASE_NO_ENCONTRADA =
-  "Esta clase ya no existe: alguien pudo eliminarla. Vuelve a la lista de clases para ver las que siguen activas.";
+  "Esta sesión ya no existe: alguien pudo eliminarla. Vuelve a la lista de sesiones para ver las que siguen activas.";
 
 // ── PUT /api/clases/[id] — editar clase (solo ADMIN) ──────────────────────────
 
@@ -61,7 +61,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
       const rango = await obtenerRangoEdicionDeClase(id);
       if (!rango) {
-        return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+        return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 });
       }
       if (!estaEnRango(parsed.data.fecha, rango.fechaInicio, rango.fechaFin)) {
         return NextResponse.json(
@@ -85,7 +85,7 @@ export async function PUT(request: Request, context: RouteContext) {
     return fallaInesperada(
       "PUT /api/clases/[id]",
       error,
-      "No se pudieron guardar los cambios de la clase. Vuelve a intentarlo en unos minutos.",
+      "No se pudieron guardar los cambios de la sesión. Vuelve a intentarlo en unos minutos.",
     );
   }
 }
@@ -128,7 +128,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return fallaInesperada(
       "DELETE /api/clases/[id]",
       error,
-      "No se pudo eliminar la clase; sigue como estaba. Vuelve a intentarlo en unos minutos.",
+      "No se pudo eliminar la sesión; sigue como estaba. Vuelve a intentarlo en unos minutos.",
     );
   }
 }

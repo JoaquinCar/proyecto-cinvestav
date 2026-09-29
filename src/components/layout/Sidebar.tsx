@@ -19,7 +19,7 @@ const navItems = [
   { href: "/",             label: "Dashboard",     icon: LayoutDashboard, match: (p: string) => p === "/" },
   { href: "/ediciones",    label: "Ediciones",     icon: Layers,          match: (p: string) => p === "/ediciones" || p.startsWith("/ediciones/") && !p.includes("/clases") && !p.includes("/participantes") },
   { href: "/participantes",label: "Participantes", icon: Users,           match: (p: string) => p.startsWith("/participantes") || p.includes("/participantes") },
-  { href: "/clases",       label: "Clases",        icon: BookOpen,        match: (p: string) => p.startsWith("/clases") || p.includes("/clases") },
+  { href: "/clases",       label: "Sesiones",        icon: BookOpen,        match: (p: string) => p.startsWith("/clases") || p.includes("/clases") },
   { href: "/asistencia",   label: "Asistencia",    icon: ClipboardCheck,  match: (p: string) => p.startsWith("/asistencia") || p.includes("/asistencia") },
   { href: "/estadisticas", label: "Estadísticas",  icon: BarChart3,       match: (p: string) => p.startsWith("/estadisticas") },
 ];
