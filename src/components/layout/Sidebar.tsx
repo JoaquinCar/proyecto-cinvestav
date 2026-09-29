@@ -13,6 +13,7 @@ import {
   Layers,
   FileSpreadsheet,
   PartyPopper,
+  Award,
   LogOut,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ const navItems = [
   // acotado a `tipo = EVENTO`; ver src/components/clases/PanelSesiones.tsx.
   { href: "/eventos",      label: "Eventos",       icon: PartyPopper,     match: (p: string) => p.startsWith("/eventos") },
   { href: "/asistencia",   label: "Asistencia",    icon: ClipboardCheck,  match: (p: string) => p.startsWith("/asistencia") || p.includes("/asistencia") },
+  { href: "/constancias",  label: "Constancias",   icon: Award,           match: (p: string) => p.startsWith("/constancias") },
   { href: "/estadisticas", label: "Estadísticas",  icon: BarChart3,       match: (p: string) => p.startsWith("/estadisticas") },
 ];
 

@@ -24,10 +24,17 @@ export const crearEdicionSchema = z
       .string({ error: "La fecha de fin es requerida" })
       .datetime({ message: "fechaFin debe ser una fecha ISO 8601 válida" }),
 
-    // Número de asistencias necesarias para recibir constancia. Debe ser al
-    // menos 1 (si fuera 0 todo inscrito tendría constancia) y como mucho 60:
-    // el programa nunca ha pasado de ~20 sesiones, así que un valor mayor
-    // significa que alguien tecleó de más y dejaría a todos sin constancia.
+    // Asistencias que la edición considera una participación completa.
+    //
+    // YA NO decide la constancia: desde el cambio de política la recibe todo
+    // inscrito salvo que un ADMIN lo excluya a mano (ver
+    // src/server/queries/constancias.ts). Sigue aquí como indicador — es lo que
+    // mira el coordinador antes de decidir una exclusión, y lo que da sentido a
+    // las ediciones ya cerradas.
+    //
+    // Los límites se quedan como estaban: al menos 1, y como mucho 60 porque el
+    // programa nunca ha pasado de ~20 sesiones y un valor mayor solo puede ser
+    // un dedazo.
     minAsistencias: z
       .number()
       .int("minAsistencias debe ser un entero")

@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   PartyPopper,
   Layers,
+  Award,
 } from "lucide-react";
 
 // La barra scrollea en horizontal en vez de sacrificar entradas. A 390px caben
@@ -23,6 +24,7 @@ const items = [
   { href: "/clases",        label: "Sesiones",      icon: BookOpen },
   { href: "/eventos",       label: "Eventos",       icon: PartyPopper },
   { href: "/asistencia",    label: "Asistencia",    icon: ClipboardCheck },
+  { href: "/constancias",   label: "Constancias",   icon: Award },
   { href: "/ediciones",     label: "Ediciones",     icon: Layers },
 ];
 

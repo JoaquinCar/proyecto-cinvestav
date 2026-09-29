@@ -9,6 +9,7 @@ vi.mock("@/server/queries/constancias", () => ({
   AlmacenamientoNoConfiguradoError: class AlmacenamientoNoConfiguradoError extends Error {},
   AlmacenamientoNoDisponibleError: class AlmacenamientoNoDisponibleError extends Error {},
   InscripcionNoEncontradaError: class InscripcionNoEncontradaError extends Error {},
+  ConstanciaExcluidaError: class ConstanciaExcluidaError extends Error {},
 }));
 
 const sessionAdmin = {
@@ -21,15 +22,39 @@ const sessionReadonly = {
   user: { id: "u3", email: "r@cinvestav.mx", role: "READONLY", name: "Readonly", image: null },
 };
 
+const sinExclusion = {
+  excluida: false,
+  motivo: null,
+  fecha: null,
+  por: null,
+};
+
 const elegibleMock = {
   elegible: true,
+  exclusion: sinExclusion,
+  cumpleMinimo: true,
   asistencias: 7,
   minimo: 5,
   constanciaUrl: null,
   constanciaGenerada: false,
   modo: "global" as const,
 };
-const noElegibleMock = { ...elegibleMock, elegible: false, asistencias: 2 };
+
+// Desde el cambio de política, lo ÚNICO que deja a alguien sin constancia es
+// una exclusión puesta a mano por un ADMIN. Quedarse corto de asistencias ya
+// no lo hace.
+const excluidoMock = {
+  ...elegibleMock,
+  elegible: false,
+  cumpleMinimo: false,
+  asistencias: 2,
+  exclusion: {
+    excluida: true,
+    motivo: "Se dio de baja del programa en la segunda sesión",
+    fecha: new Date("2026-07-01T18:00:00.000Z"),
+    por: { id: "u-admin", name: "Coordinación", email: "admin@cinvestav.mx" },
+  },
+};
 
 function req(method: string, id = "insc-1"): Request {
   return new Request(`http://localhost/api/pdf/constancia/${id}`, {
@@ -137,13 +162,36 @@ describe("POST /api/pdf/constancia/[inscripcionId]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("422 si participante no cumple asistencias", async () => {
+  it("201 aunque el participante vaya corto de asistencias: el mínimo ya no decide", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
-    const { verificarElegibilidad } = await import(
+    const { verificarElegibilidad, generarYGuardarConstancia } = await import(
       "@/server/queries/constancias"
     );
-    vi.mocked(verificarElegibilidad).mockResolvedValueOnce(noElegibleMock);
+    vi.mocked(verificarElegibilidad).mockResolvedValueOnce({
+      ...elegibleMock,
+      asistencias: 2,
+      cumpleMinimo: false,
+    });
+    vi.mocked(generarYGuardarConstancia).mockResolvedValueOnce({
+      url: "https://sb.co/constancias/ed-1/insc-1.pdf",
+    });
+    const { POST } = await import(
+      "@/app/api/pdf/constancia/[inscripcionId]/route"
+    );
+    const res = await POST(req("POST"), {
+      params: Promise.resolve({ inscripcionId: "insc-1" }),
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("422 si un ADMIN excluyó a ese participante, y dice el motivo", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+    const { verificarElegibilidad, generarYGuardarConstancia } = await import(
+      "@/server/queries/constancias"
+    );
+    vi.mocked(verificarElegibilidad).mockResolvedValueOnce(excluidoMock);
     const { POST } = await import(
       "@/app/api/pdf/constancia/[inscripcionId]/route"
     );
@@ -152,7 +200,9 @@ describe("POST /api/pdf/constancia/[inscripcionId]", () => {
     });
     expect(res.status).toBe(422);
     const json = await res.json();
-    expect(json.error).toMatch(/2 de las 5 asistencias/i);
+    expect(json.error).toMatch(/excluid/i);
+    expect(json.error).toMatch(/se dio de baja del programa/i);
+    expect(generarYGuardarConstancia).not.toHaveBeenCalled();
   });
 
   it("201 genera constancia para ADMIN elegible", async () => {

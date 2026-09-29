@@ -111,6 +111,10 @@ export async function buscarParticipantes(q?: string, edicionId?: string) {
         select: {
           id: true,
           constanciaGenerada: true,
+          // Con la constancia por defecto, "sin constancia todavía" y "no la
+          // va a recibir" son estados distintos y el listado tiene que poder
+          // distinguirlos.
+          constanciaExcluida: true,
           edicion: { select: { id: true, anio: true, nombre: true, activa: true } },
         },
         orderBy: { createdAt: "desc" },
@@ -228,6 +232,12 @@ export async function obtenerHistorialParticipante(id: string) {
     include: {
       inscripciones: {
         include: {
+          // Quién dejó a este niño fuera de la entrega de constancias de esa
+          // edición. Se muestra en la ficha: una exclusión sin autor visible
+          // no se puede justificar ni discutir.
+          constanciaExcluidaPor: {
+            select: { id: true, name: true, email: true },
+          },
           // Con quién llegó el niño ESE año. Va por inscripción, no por
           // participante, porque puede cambiar de una edición a otra.
           acompanante: {

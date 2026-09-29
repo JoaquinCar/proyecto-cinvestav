@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { DrawerRegistro } from "@/components/participantes/DrawerRegistro";
 import { ListaParticipantesClient } from "@/components/participantes/ListaParticipantesClient";
-import { Users, GraduationCap, Award } from "lucide-react";
+import { Users, ShieldOff, Award } from "lucide-react";
 
 // ── Metadata dinámica ─────────────────────────────────────────────────────────
 
@@ -52,6 +52,14 @@ export default async function ParticipantesEdicionPage({
     )
   ).length;
 
+  // Con la constancia por defecto, "sin constancia" dejó de ser una categoría
+  // útil: lo son "todavía no se ha emitido" y "no la va a recibir".
+  const totalExcluidos = participantes.filter((p) =>
+    p.inscripciones?.some(
+      (i) => i.edicion.id === id && i.constanciaExcluida
+    )
+  ).length;
+
   const statItems = [
     {
       label: "Inscritos",
@@ -61,18 +69,18 @@ export default async function ParticipantesEdicionPage({
       bgClass: "bg-primary/10",
     },
     {
-      label: "Con constancia",
+      label: "Constancia emitida",
       value: totalConstancias,
       icon: Award,
       colorClass: "text-success",
       bgClass: "bg-success/10",
     },
     {
-      label: "Sin constancia",
-      value: participantes.length - totalConstancias,
-      icon: GraduationCap,
-      colorClass: "text-secondary",
-      bgClass: "bg-secondary/10",
+      label: "Excluidos",
+      value: totalExcluidos,
+      icon: ShieldOff,
+      colorClass: "text-destructive",
+      bgClass: "bg-destructive/10",
     },
   ];
 

@@ -23,6 +23,10 @@ model User {
 
   accounts            Account[]
   sesionesRegistradas Sesion[]
+  // Inscripciones a las que este usuario les quitó el derecho a constancia.
+  // Es el lado inverso de `Inscripcion.constanciaExcluidaPor`: existe porque
+  // Prisma lo exige, pero además responde "¿qué excluyó fulano?" de un tirón.
+  constanciasExcluidas Inscripcion[]
 }
 
 enum Role {
@@ -137,6 +141,27 @@ model Inscripcion {
   acompananteId      String?
   constanciaUrl      String?
   constanciaGenerada Boolean  @default(false)
+
+  // ── Quién NO recibe constancia ──────────────────────────────────────────
+  //
+  // La política es "constancia para todos los inscritos"; el mínimo de
+  // asistencias de la edición dejó de decidirlo (ver src/server/queries/
+  // constancias.ts). Lo único que deja a un niño sin constancia es que un
+  // ADMIN lo marque aquí, uno por uno o en bloque.
+  //
+  // Por qué vive en la inscripción y NO en el participante: la exclusión es
+  // de UNA edición. Un niño excluido en 2026 porque se dio de baja a media
+  // edición vuelve en 2027 con derecho pleno, sin que nadie tenga que
+  // acordarse de reincorporarlo. Una exclusión permanente no existe en el
+  // dominio: el programa es anual y cada año se vuelve a inscribir.
+  //
+  // El `false` por defecto es lo que hace que las inscripciones ya cargadas
+  // queden correctas sin tocar ni una fila: todas con derecho.
+  constanciaExcluida        Boolean   @default(false)
+  constanciaMotivoExclusion String?
+  constanciaExcluidaAt      DateTime?
+  constanciaExcluidaPorId   String?
+
   createdAt          DateTime @default(now())
 
   participante Participante @relation(fields: [participanteId], references: [id])
@@ -146,9 +171,16 @@ model Inscripcion {
   // cada inscripción (PUT/DELETE .../acompanante) y después se borra.
   acompanante  Acompanante? @relation(fields: [acompananteId], references: [id], onDelete: Restrict)
   asistencias  Asistencia[]
+  // Restrict, no SetNull: dejar a un niño sin constancia es una decisión que
+  // alguien tendrá que justificar, y con SetNull bastaría con borrar al
+  // usuario para que la exclusión quedara sin autor. Si hay que dar de baja a
+  // quien excluyó, primero se revisan sus exclusiones.
+  constanciaExcluidaPor User? @relation(fields: [constanciaExcluidaPorId], references: [id], onDelete: Restrict)
 
   @@unique([participanteId, edicionId])
   @@index([acompananteId])
+  @@index([edicionId, constanciaExcluida])
+  @@index([constanciaExcluidaPorId])
 }
 
 // OJO — el nombre del modelo NO coincide con lo que se lee en pantalla.

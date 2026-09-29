@@ -6,8 +6,14 @@ import {
   AlmacenamientoNoConfiguradoError,
   AlmacenamientoNoDisponibleError,
   InscripcionNoEncontradaError,
+  ConstanciaExcluidaError,
 } from "@/server/queries/constancias";
 import { fallaInesperada } from "@/server/respuestas";
+
+// ── Qué impide hoy generar una constancia ────────────────────────────────────
+// Solo una cosa: que un ADMIN haya excluido a ese participante. El mínimo de
+// asistencias de la edición ya no bloquea nada — la constancia le toca a todo
+// inscrito (ver src/server/queries/constancias.ts).
 
 type RouteContext = { params: Promise<{ inscripcionId: string }> };
 
@@ -59,13 +65,13 @@ export async function POST(_req: Request, context: RouteContext) {
       );
     }
     if (!elegibilidad.elegible) {
-      const faltante =
-        elegibilidad.modo === "porcentaje"
-          ? `lleva ${elegibilidad.asistencias} asistencias y la edición pide al menos ${elegibilidad.minimo}% de las sesiones`
-          : `lleva ${elegibilidad.asistencias} de las ${elegibilidad.minimo} asistencias que pide esta edición`;
+      const motivo = elegibilidad.exclusion.motivo;
       return NextResponse.json(
         {
-          error: `Todavía no se puede generar la constancia: el participante ${faltante}. Registra las asistencias que falten y vuelve a intentarlo.`,
+          error:
+            "No se generó la constancia porque este participante está excluido de la entrega de esta edición" +
+            (motivo ? `: «${motivo}»` : "") +
+            ". Para entregársela, reincorpóralo primero desde el apartado de constancias.",
         },
         { status: 422 },
       );
@@ -86,6 +92,11 @@ export async function POST(_req: Request, context: RouteContext) {
 
     if (error instanceof InscripcionNoEncontradaError) {
       return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
+    // Alguien lo excluyó entre la comprobación y la generación.
+    if (error instanceof ConstanciaExcluidaError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
     }
 
     return fallaInesperada(
