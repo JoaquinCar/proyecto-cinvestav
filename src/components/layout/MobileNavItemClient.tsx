@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -9,26 +10,38 @@ import {
   BookOpen,
   ClipboardCheck,
   PartyPopper,
+  Layers,
 } from "lucide-react";
 
-// Cinco entradas es el máximo que cabe a 390px con la etiqueta legible. Al
-// entrar "Eventos" salió "Ediciones": es la que menos se toca desde el teléfono
-// —se usa al abrir el año, no en campo— y sigue estando en la barra lateral y a
-// un toque desde Inicio. Lo que se usa con el pulgar en el patio es participantes,
-// sesiones, eventos y asistencia, y eso es lo que queda.
+// La barra scrollea en horizontal en vez de sacrificar entradas. A 390px caben
+// cinco de 72px y asoma parte de la sexta: ese recorte es lo que delata que hay
+// más a la derecha, así que las entradas llevan ancho fijo y NO `flex-1`, que
+// las encogería para que cupieran todas y eliminaría la pista.
 const items = [
   { href: "/",              label: "Inicio",        icon: LayoutDashboard },
   { href: "/participantes", label: "Participantes", icon: Users },
   { href: "/clases",        label: "Sesiones",      icon: BookOpen },
   { href: "/eventos",       label: "Eventos",       icon: PartyPopper },
   { href: "/asistencia",    label: "Asistencia",    icon: ClipboardCheck },
+  { href: "/ediciones",     label: "Ediciones",     icon: Layers },
 ];
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const activoRef = useRef<HTMLAnchorElement>(null);
+
+  // Si la entrada activa quedó fuera de cuadro, la barra no mostraría ningún
+  // resaltado y parecería que ninguna sección está abierta. Se trae a la vista
+  // al cargar; `block: "nearest"` evita que la página entera salte.
+  useEffect(() => {
+    activoRef.current?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [pathname]);
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-card border-t border-border flex items-stretch h-[4.5rem]">
+    <nav
+      className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-card border-t border-border flex items-stretch h-[4.5rem] overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      aria-label="Navegación principal"
+    >
       {items.map(({ href, label, icon: Icon }) => {
         const active =
           href === "/"
@@ -38,8 +51,10 @@ export function MobileBottomNav() {
           <Link
             key={href}
             href={href}
+            ref={active ? activoRef : undefined}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors min-h-[44px]",
+              "flex w-[4.5rem] shrink-0 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors min-h-[44px]",
               active ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
