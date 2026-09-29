@@ -21,17 +21,27 @@ const sessionReadonly = {
 const metricasMock = {
   totalParticipantes: 30,
   totalSesiones: 12,
+  // De las 12, diez son charlas del pasaporte: las que cuentan para la
+  // constancia. Las otras dos son una lectura y la clausura.
+  totalSesionesQueCuentan: 10,
+  porTipo: [
+    { tipo: "PASAPORTE" as const, sesiones: 10, asistencias: 300 },
+    { tipo: "LECTURA" as const, sesiones: 1, asistencias: 12 },
+    { tipo: "EVENTO" as const, sesiones: 1, asistencias: 28 },
+  ],
   promedioAsistencia: 75,
   totalConstancias: 20,
   porEscuela: [{ escuela: "Primaria Centro", cantidad: 10 }],
   porGrado: [{ grado: "3°", cantidad: 15 }],
   porNivel: [{ escuela: "Primaria", cantidad: 20 }],
   porCiudad: [{ escuela: "Mérida", cantidad: 28 }],
-  clasesResumen: [{ nombre: "Astronomía", sesiones: 4, asistenciaPromedio: 80 }],
+  clasesResumen: [
+    { nombre: "Astronomía", tipo: "PASAPORTE" as const, sesiones: 4, asistenciaPromedio: 80 },
+  ],
   tendencia: [{ fecha: "2026-01-24", etiqueta: "24 ene", presentes: 31 }],
   porEdad: [{ edad: 10, cantidad: 12 }],
   porGenero: [{ genero: "FEMENINO" as const, cantidad: 16 }],
-  rankingClases: [{ nombre: "Astronomía", asistentes: 40 }],
+  rankingClases: [{ nombre: "Astronomía", tipo: "PASAPORTE" as const, asistentes: 40 }],
 };
 
 function req(method: string, path: string): Request {

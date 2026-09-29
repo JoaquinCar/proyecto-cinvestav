@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import {
-  BookOpen,
   User,
   Calendar,
   FileText,
@@ -21,6 +20,13 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { FormTemasSesion } from "@/components/clases/FormTemasSesion";
 import { ContenidoClase } from "@/components/clases/ContenidoClase";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
+import { descripcionTipo } from "@/lib/tipos-sesion";
+import {
+  BadgeTipoSesion,
+  IconoTipoSesion,
+  AvisoNoCuenta,
+  clasesTipoSesion,
+} from "@/components/clases/BadgeTipoSesion";
 
 // Ya no hay `export const dynamic = "force-dynamic"`. Existía porque las
 // imágenes viajaban con URLs firmadas de caducidad corta y un HTML cacheado
@@ -40,7 +46,9 @@ export async function generateMetadata({
   const { id } = await params;
   const clase = await obtenerClasePorId(id);
   return {
-    title: clase ? `${clase.nombre} · Pasaporte Científico` : "Sesión · Pasaporte Científico",
+    title: clase
+      ? `${clase.nombre} · ${descripcionTipo(clase.tipo).etiqueta}`
+      : "Sesión · Pasaporte Científico",
   };
 }
 
@@ -108,11 +116,21 @@ export default async function ClaseDetallePage({
             {edicion?.nombre ?? "Ediciones"}
           </Link>
           <span aria-hidden>/</span>
+          {/* Se vuelve al listado del que se vino: un evento pertenece a
+              Eventos, no al catálogo general de sesiones. */}
           <Link
-            href={edicion ? `/clases?edicion=${edicion.id}` : "/clases"}
+            href={
+              clase.tipo === "EVENTO"
+                ? edicion
+                  ? `/eventos?edicion=${edicion.id}`
+                  : "/eventos"
+                : edicion
+                  ? `/clases?edicion=${edicion.id}`
+                  : "/clases"
+            }
             className="hover:underline transition-colors text-primary"
           >
-            Sesiones
+            {clase.tipo === "EVENTO" ? "Eventos" : "Sesiones"}
           </Link>
           <span aria-hidden>/</span>
           <span className="truncate max-w-[12rem] text-secondary-foreground font-medium">
@@ -123,22 +141,25 @@ export default async function ClaseDetallePage({
         {/* Title area */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-secondary/10">
-              <BookOpen
-                size={22}
-                strokeWidth={1.8}
-                className="text-secondary-foreground"
-                aria-hidden
-              />
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${clasesTipoSesion(clase.tipo)}`}
+            >
+              <IconoTipoSesion tipo={clase.tipo} size={22} />
             </div>
             <div className="min-w-0">
               <h1 className="font-display text-2xl sm:text-3xl font-semibold leading-snug text-foreground">
                 {clase.nombre}
               </h1>
-              <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
-                <User size={13} strokeWidth={1.8} aria-hidden />
-                <span>{clase.investigador}</span>
+              <div className="mt-1.5">
+                <BadgeTipoSesion tipo={clase.tipo} largo />
               </div>
+              {/* Un evento sin investigador no pinta una línea vacía. */}
+              {clase.investigador && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
+                  <User size={13} strokeWidth={1.8} aria-hidden />
+                  <span>{clase.investigador}</span>
+                </div>
+              )}
               {fechaUnica && (
                 <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
                   <Calendar size={13} strokeWidth={1.8} aria-hidden />
@@ -199,6 +220,11 @@ export default async function ClaseDetallePage({
           </div>
         </div>
 
+      </div>
+
+      {/* Lo que hay que saber antes de pasar lista aquí. */}
+      <div className="animate-fade-up animate-fade-up-delay-1 max-w-2xl">
+        <AvisoNoCuenta tipo={clase.tipo} />
       </div>
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />

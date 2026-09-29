@@ -8,6 +8,7 @@ import { BotonConstancia } from "@/components/constancias/BotonConstancia";
 import { BotonBajaInscripcion } from "@/components/participantes/BotonBajaInscripcion";
 import { GestorAcompanante } from "@/components/acompanantes/GestorAcompanante";
 import type { Acompanante } from "@/lib/api/acompanantes";
+import { cuentaParaConstancia, type TipoSesion } from "@/lib/tipos-sesion";
 import {
   GraduationCap,
   School,
@@ -50,7 +51,8 @@ type InscripcionTimeline = {
     minAsistencias: number;
     porcentajeMinimo: number | null;
   };
-  asistencias: { id: string }[];
+  /** Todas las asistencias presentes del niño ESA edición, del tipo que sean. */
+  asistencias: { id: string; sesion: { clase: { tipo: TipoSesion } } }[];
 };
 
 function TimelineItem({
@@ -66,6 +68,12 @@ function TimelineItem({
   puedeCapturar: boolean;
 }) {
   const asistencias = inscripcion.asistencias.length;
+  // Solo unas cuentan para la constancia (hoy, las de pasaporte). La regla
+  // vive en src/lib/tipos-sesion.ts; aquí solo se aplica.
+  const asistenciasQueCuentan = inscripcion.asistencias.filter((a) =>
+    cuentaParaConstancia(a.sesion.clase.tipo),
+  ).length;
+  const hayExtras = asistencias !== asistenciasQueCuentan;
 
   return (
     <div className="relative flex gap-4">
@@ -113,7 +121,15 @@ function TimelineItem({
               {asistencias > 0 && (
                 <>
                   <span className="mx-1.5">·</span>
-                  <span className="tabular">{asistencias}</span> asistencia{asistencias !== 1 ? "s" : ""}
+                  <span className="tabular">{asistenciasQueCuentan}</span> asistencia
+                  {asistenciasQueCuentan !== 1 ? "s" : ""} de pasaporte
+                  {hayExtras && (
+                    <>
+                      <span className="mx-1.5">·</span>
+                      <span className="tabular">{asistencias - asistenciasQueCuentan}</span>{" "}
+                      en lectura o eventos
+                    </>
+                  )}
                 </>
               )}
             </p>
@@ -128,10 +144,8 @@ function TimelineItem({
 
             <BotonConstancia
               inscripcionId={inscripcion.id}
-              elegible={
-                inscripcion.asistencias.length >= inscripcion.edicion.minAsistencias
-              }
-              asistencias={inscripcion.asistencias.length}
+              elegible={asistenciasQueCuentan >= inscripcion.edicion.minAsistencias}
+              asistencias={asistenciasQueCuentan}
               minimo={inscripcion.edicion.minAsistencias}
               constanciaUrl={inscripcion.constanciaUrl}
               constanciaGenerada={inscripcion.constanciaGenerada}

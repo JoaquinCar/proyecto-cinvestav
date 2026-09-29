@@ -1,8 +1,14 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { etiquetaTipo, type TipoSesion } from "@/lib/tipos-sesion";
 
 export type DatosReporteClase = {
-  clase: { nombre: string; investigador: string };
+  clase: {
+    nombre: string;
+    tipo: TipoSesion;
+    /** Null en los eventos especiales: no los imparte ningún investigador. */
+    investigador: string | null;
+  };
   edicion: { nombre: string; anio: number };
   sesiones: { fecha: string; temas: string | null; asistentes: number; total: number }[];
   participantes: { nombre: string; apellidos: string; escuela: string; asistenciasEnClase: number }[];
@@ -33,7 +39,9 @@ function ReporteDoc({ d }: { d: DatosReporteClase }) {
       <Page size="LETTER" style={s.page}>
         <Text style={s.h1}>{d.clase.nombre}</Text>
         <Text style={s.sub}>
-          Investigador: {d.clase.investigador} · {d.edicion.nombre} {d.edicion.anio}
+          {etiquetaTipo(d.clase.tipo)}
+          {d.clase.investigador ? ` · Investigador: ${d.clase.investigador}` : ""} ·{" "}
+          {d.edicion.nombre} {d.edicion.anio}
         </Text>
 
         <View style={s.summaryRow}>

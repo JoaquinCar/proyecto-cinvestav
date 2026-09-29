@@ -172,16 +172,52 @@ model Inscripcion {
 // /clases y /api/clases) se dejaron como estaban a propósito: renombrarlos
 // habría multiplicado el diff y roto los merges pendientes, sin ganar nada.
 model Clase {
-  id           String   @id @default(cuid())
-  edicionId    String
-  nombre       String
-  investigador String
-  descripcion  String?
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  edicionId String
+  nombre    String
+
+  // Qué clase de actividad es. En pantalla se lee como «tipo de sesión».
+  // PASAPORTE es el DEFAULT a propósito: las 12 sesiones que ya existían son
+  // charlas del programa, y el valor por defecto las deja correctas sin que
+  // nadie tenga que reescribirlas. Ver el enum `TipoClase`.
+  tipo TipoClase @default(PASAPORTE)
+
+  // Opcional desde que existen los eventos especiales: una clausura o un día
+  // del niño no lo imparte ningún investigador, y obligar a inventar uno
+  // metería basura en el reporte de la edición. Sigue siendo obligatorio para
+  // los otros dos tipos, pero eso se exige en Zod (ver `crearClaseSchema`), no
+  // en la columna: la base solo sabe que puede faltar.
+  investigador String?
+
+  descripcion String?
+  createdAt   DateTime @default(now())
 
   edicion  Edicion       @relation(fields: [edicionId], references: [id])
   sesiones Sesion[]
   imagenes ImagenClase[]
+
+  // Las pantallas listan «las sesiones de pasaporte de esta edición» o «los
+  // eventos de esta edición»: siempre edición + tipo.
+  @@index([edicionId, tipo])
+}
+
+// Los tres tipos de actividad del programa. El cliente los distingue así:
+//
+//   PASAPORTE — la charla normal, lo que el programa ES. Solo estas cuentan
+//               para el mínimo de asistencias de la constancia.
+//   LECTURA   — sesión de lectura. Es un extra OPCIONAL: se ofrece, pero no
+//               forma parte del pasaporte.
+//   EVENTO    — evento especial (día del niño, clausura). Independiente: un
+//               mismo día puede haber una sesión de pasaporte y además el
+//               evento, y son dos registros distintos.
+//
+// OJO: cuál de estos cuenta para la constancia NO se decide aquí. Vive en
+// `TIPOS_QUE_CUENTAN_PARA_CONSTANCIA`, en src/lib/tipos-sesion.ts, que es el
+// único sitio donde se cambia.
+enum TipoClase {
+  PASAPORTE
+  LECTURA
+  EVENTO
 }
 
 // Imágenes de apoyo de una clase (fotos, carteles, capturas pegadas del portapapeles).

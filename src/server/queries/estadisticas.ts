@@ -1,5 +1,10 @@
 import { prisma } from "@/server/db";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
+import {
+  TIPOS_SESION,
+  cuentaParaConstancia,
+  type TipoSesion,
+} from "@/lib/tipos-sesion";
 import type { Nivel } from "@/lib/importacion/texto";
 
 // Orden lógico de los grados homologados para las gráficas.
@@ -18,19 +23,34 @@ function ordenGrado(g: string): number {
 
 export type MetricasEdicion = {
   totalParticipantes: number;
+  /** Todas las actividades de la edición, de cualquier tipo. */
   totalSesiones: number;
+  /**
+   * Solo las que cuentan para la constancia. Hoy son las de pasaporte, pero el
+   * nombre no lo fija: sale de `TIPOS_QUE_CUENTAN_PARA_CONSTANCIA`, así que si
+   * mañana cuenta también la lectura, este número la incluye sin tocar nada.
+   * Es el número contra el que se lee `Edicion.minAsistencias`.
+   */
+  totalSesionesQueCuentan: number;
+  /** Desglose por tipo, en el orden del catálogo. Los tipos sin nada salen en 0. */
+  porTipo: { tipo: TipoSesion; sesiones: number; asistencias: number }[];
   promedioAsistencia: number;
   totalConstancias: number;
   porEscuela: { escuela: string; cantidad: number }[];
   porGrado: { grado: string; cantidad: number }[];
   porNivel: { escuela: string; cantidad: number }[];
   porCiudad: { escuela: string; cantidad: number }[];
-  clasesResumen: { nombre: string; sesiones: number; asistenciaPromedio: number }[];
+  clasesResumen: {
+    nombre: string;
+    tipo: TipoSesion;
+    sesiones: number;
+    asistenciaPromedio: number;
+  }[];
   // ── nuevos agregados ──
   tendencia: { fecha: string; etiqueta: string; presentes: number }[];
   porEdad: { edad: number; cantidad: number }[];
   porGenero: { genero: "FEMENINO" | "MASCULINO" | "Sin especificar"; cantidad: number }[];
-  rankingClases: { nombre: string; asistentes: number }[];
+  rankingClases: { nombre: string; tipo: TipoSesion; asistentes: number }[];
 };
 
 export async function obtenerMetricasEdicion(
@@ -60,6 +80,7 @@ export async function obtenerMetricasEdicion(
         where: { edicionId },
         select: {
           nombre: true,
+          tipo: true,
           sesiones: {
             select: {
               id: true,
@@ -72,6 +93,29 @@ export async function obtenerMetricasEdicion(
     ]);
 
   const totalSesiones = clases.reduce((acc, c) => acc + c.sesiones.length, 0);
+
+  // ── Desglose por tipo de actividad ──────────────────────────────────────────
+  // Se cuenta sobre `clases`, que ya viene de la base con su tipo. Los tres
+  // tipos aparecen siempre, aunque estén en cero: una edición sin eventos tiene
+  // que poder decirlo, no omitir la fila.
+  const sesionesPorTipo = new Map<TipoSesion, number>();
+  const asistenciasPorTipo = new Map<TipoSesion, number>();
+  for (const c of clases) {
+    const sesiones = c.sesiones.length;
+    const asistencias = c.sesiones.reduce((acc, s) => acc + s.asistencias.length, 0);
+    sesionesPorTipo.set(c.tipo, (sesionesPorTipo.get(c.tipo) ?? 0) + sesiones);
+    asistenciasPorTipo.set(c.tipo, (asistenciasPorTipo.get(c.tipo) ?? 0) + asistencias);
+  }
+  const porTipo = TIPOS_SESION.map(({ valor }) => ({
+    tipo: valor as TipoSesion,
+    sesiones: sesionesPorTipo.get(valor) ?? 0,
+    asistencias: asistenciasPorTipo.get(valor) ?? 0,
+  }));
+
+  const totalSesionesQueCuentan = porTipo
+    .filter((t) => cuentaParaConstancia(t.tipo))
+    .reduce((acc, t) => acc + t.sesiones, 0);
+
   const totalAsistencias = inscripciones.reduce(
     (acc, i) => acc + i.asistencias.length,
     0,
@@ -122,7 +166,7 @@ export async function obtenerMetricasEdicion(
             (totalAs / (c.sesiones.length * totalParticipantes)) * 100,
           )
         : 0;
-    return { nombre: c.nombre, sesiones: c.sesiones.length, asistenciaPromedio };
+    return { nombre: c.nombre, tipo: c.tipo, sesiones: c.sesiones.length, asistenciaPromedio };
   });
 
   // ── Tendencia: presentes por fecha (programa a lo largo del tiempo) ──────────
@@ -172,6 +216,7 @@ export async function obtenerMetricasEdicion(
   const rankingClases = clases
     .map((c) => ({
       nombre: c.nombre,
+      tipo: c.tipo,
       asistentes: c.sesiones.reduce((acc, s) => acc + s.asistencias.length, 0),
     }))
     .sort((a, b) => b.asistentes - a.asistentes);
@@ -179,6 +224,8 @@ export async function obtenerMetricasEdicion(
   return {
     totalParticipantes,
     totalSesiones,
+    totalSesionesQueCuentan,
+    porTipo,
     promedioAsistencia,
     totalConstancias,
     porEscuela,

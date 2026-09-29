@@ -218,9 +218,18 @@ describe("editarClaseSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rechaza investigador vacío en edición parcial", () => {
+  it("lee el investigador vacío como 'sin investigador', no como error", () => {
+    // Cambió al aparecer los eventos especiales: una clausura no la imparte
+    // nadie, así que el campo vacío es un valor legítimo y el schema ya no
+    // puede rechazarlo por sí solo —no sabe de qué tipo es la sesión—. Quien
+    // decide es PUT /api/clases/[id], que resuelve el tipo final contra lo
+    // guardado y devuelve 422 si es una charla la que se quedaría sin nombre.
+    // Ver tests/integration/api/clases.test.ts.
     const result = editarClaseSchema.safeParse({ investigador: "" });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.investigador).toBeNull();
+    }
   });
 });
 

@@ -15,6 +15,7 @@ import {
   EdicionCerradaError,
 } from "@/server/queries/edicion-cerrada";
 import { estaEnRango, mensajeFueraDeRango } from "@/lib/fechas";
+import { exigeInvestigador } from "@/lib/tipos-sesion";
 import {
   fallaInesperada,
   leerCuerpoJson,
@@ -53,6 +54,29 @@ export async function PUT(request: Request, context: RouteContext) {
 
     if (!parsed.success) {
       return respuestaCamposInvalidos(parsed.error);
+    }
+
+    // Tipo e investigador se validan juntos y contra lo YA guardado, porque la
+    // petición puede traer solo uno de los dos: cambiar una charla a evento sin
+    // mandar investigador es legítimo, y borrarle el investigador a una charla
+    // que sigue siendo charla no lo es. `editarClaseSchema` no puede decidirlo
+    // solo —no conoce el tipo actual—, así que se decide aquí.
+    const tipoFinal = parsed.data.tipo ?? existente.tipo;
+    const investigadorFinal =
+      parsed.data.investigador !== undefined
+        ? parsed.data.investigador
+        : existente.investigador;
+
+    if (exigeInvestigador(tipoFinal) && !investigadorFinal) {
+      return NextResponse.json(
+        {
+          error:
+            "Una sesión de pasaporte o de lectura necesita el nombre del investigador que la imparte. " +
+            "Escríbelo, o cambia el tipo a evento especial si no lo imparte nadie.",
+          detalles: { fieldErrors: { investigador: ["El nombre del investigador no puede estar vacío"] } },
+        },
+        { status: 422 },
+      );
     }
 
     // Cambiar la fecha mueve la sesión de la clase: mismas guardas que crearla.

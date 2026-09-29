@@ -12,7 +12,7 @@ const sessionAdmin    = { user: { id: "u1", email: "a@c.mx", role: "ADMIN",    n
 const sessionReadonly = { user: { id: "u3", email: "r@c.mx", role: "READONLY", name: "R", image: null } };
 
 const datosMock = {
-  clase: { nombre: "Astronomía", investigador: "Dr. Pérez" },
+  clase: { nombre: "Astronomía", tipo: "PASAPORTE" as const, investigador: "Dr. Pérez" },
   edicion: { nombre: "Pasaporte", anio: 2026 },
   sesiones: [{ fecha: "3 mar 2026", temas: "Sistema solar", asistentes: 5, total: 8 }],
   participantes: [{ nombre: "Ana", apellidos: "García", escuela: "Primaria", asistenciasEnClase: 1 }],

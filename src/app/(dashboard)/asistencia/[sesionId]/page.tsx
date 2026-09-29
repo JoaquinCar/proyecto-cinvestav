@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
-import { ArrowLeft, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, Calendar, User } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerSesionConClase } from "@/server/queries/clases";
 import { ListaAsistencia } from "@/components/asistencia/ListaAsistencia";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
+import {
+  BadgeTipoSesion,
+  IconoTipoSesion,
+  AvisoNoCuenta,
+  clasesTipoSesion,
+} from "@/components/clases/BadgeTipoSesion";
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 
@@ -56,10 +62,14 @@ export default async function AsistenciaPage({
         </Link>
         <span aria-hidden>/</span>
         <Link
-          href={`/ediciones/${clase.edicion.id}/clases`}
+          href={
+            clase.tipo === "EVENTO"
+              ? `/eventos?edicion=${clase.edicion.id}`
+              : `/clases?edicion=${clase.edicion.id}`
+          }
           className="hover:underline transition-colors text-primary"
         >
-          Sesiones
+          {clase.tipo === "EVENTO" ? "Eventos" : "Sesiones"}
         </Link>
         <span aria-hidden>/</span>
         <Link
@@ -85,13 +95,10 @@ export default async function AsistenciaPage({
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-secondary/10">
-                <BookOpen
-                  size={16}
-                  strokeWidth={1.8}
-                  className="text-secondary-foreground"
-                  aria-hidden
-                />
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${clasesTipoSesion(clase.tipo)}`}
+              >
+                <IconoTipoSesion tipo={clase.tipo} size={16} />
               </div>
               <h1 className="font-display text-2xl sm:text-3xl font-semibold leading-snug text-foreground">
                 {clase.nombre}
@@ -105,7 +112,15 @@ export default async function AsistenciaPage({
               </time>
             </div>
 
-            <div className="mt-1.5">
+            {clase.investigador && (
+              <div className="flex items-center gap-1.5 text-sm mt-1 text-muted-foreground">
+                <User size={13} strokeWidth={1.8} aria-hidden />
+                <span>{clase.investigador}</span>
+              </div>
+            )}
+
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <BadgeTipoSesion tipo={clase.tipo} largo />
               <span
                 className={
                   clase.edicion.activa
@@ -115,6 +130,12 @@ export default async function AsistenciaPage({
               >
                 {clase.edicion.nombre} · {clase.edicion.anio}
               </span>
+            </div>
+
+            {/* Es el momento en que hay que decirlo: quien está marcando
+                casillas cree que cada una acerca al niño a su constancia. */}
+            <div className="mt-3 max-w-prose">
+              <AvisoNoCuenta tipo={clase.tipo} />
             </div>
           </div>
         </div>

@@ -24,6 +24,7 @@ import { GraficaEdad } from "@/components/dashboard/GraficaEdad";
 import { GraficaGenero } from "@/components/dashboard/GraficaGenero";
 import { GraficaNinasNinos } from "@/components/dashboard/GraficaNinasNinos";
 import { PanelGrafica } from "@/components/dashboard/PanelGrafica";
+import { DesgloseTipos } from "@/components/estadisticas/DesgloseTipos";
 
 export const metadata: Metadata = { title: "Dashboard · Pasaporte Científico" };
 
@@ -185,6 +186,14 @@ export default async function DashboardPage({
           distintas, no un error de captura.
         </p>
       </div>
+
+      {/* ════════ QUÉ SE HIZO, POR TIPO ════════ */}
+      <DesgloseTipos
+        edicionId={edicion.id}
+        porTipo={metricas.porTipo}
+        totalSesionesQueCuentan={metricas.totalSesionesQueCuentan}
+        minAsistencias={edicion.minAsistencias}
+      />
 
       {/* ════════ SECCIÓN A · ASISTENCIA POR CLASE ════════ */}
       <div className="animate-fade-up">

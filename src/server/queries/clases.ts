@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db";
+import { TIPO_SESION_POR_DEFECTO, type TipoSesion } from "@/lib/tipos-sesion";
 import type {
   CrearClaseInput,
   EditarClaseInput,
@@ -13,14 +14,21 @@ export type SesionDetalle   = Awaited<ReturnType<typeof listarSesionesDeClase>>[
 
 // ── Listar clases de una edición con conteos ──────────────────────────────────
 
-export async function listarClasesDeEdicion(edicionId: string) {
+/**
+ * Clases de una edición, opcionalmente de un solo tipo.
+ *
+ * El filtro por tipo es lo que permite que /eventos sea la misma pantalla que
+ * /clases sin duplicar modelo ni consultas: es este listado acotado a EVENTO.
+ */
+export async function listarClasesDeEdicion(edicionId: string, tipo?: TipoSesion) {
   return prisma.clase.findMany({
-    where:   { edicionId },
+    where:   { edicionId, ...(tipo && { tipo }) },
     orderBy: { createdAt: "asc" },
     select: {
       id:           true,
       edicionId:    true,
       nombre:       true,
+      tipo:         true,
       investigador: true,
       descripcion:  true,
       createdAt:    true,
@@ -48,6 +56,7 @@ export async function listarClasesConSesiones(edicionId: string) {
     select: {
       id: true,
       nombre: true,
+      tipo: true,
       investigador: true,
       sesiones: {
         orderBy: { fecha: "asc" },
@@ -71,6 +80,7 @@ export async function obtenerClasePorId(id: string) {
       id:           true,
       edicionId:    true,
       nombre:       true,
+      tipo:         true,
       investigador: true,
       descripcion:  true,
       createdAt:    true,
@@ -96,7 +106,12 @@ export async function obtenerClasePorId(id: string) {
  * clase tampoco se guarda.
  */
 export async function crearClaseConSesion(
-  data: CrearClaseInput,
+  // `tipo` se marca opcional aquí aunque `crearClaseSchema` siempre lo rellene:
+  // así quien llama a esta función sin pasar por la API —las pruebas contra la
+  // base, un script de carga— no tiene que repetir el valor por defecto. El
+  // defecto sigue siendo uno solo, `TIPO_SESION_POR_DEFECTO`, el mismo que usa
+  // el schema y el mismo que tiene la columna.
+  data: Omit<CrearClaseInput, "tipo"> & { tipo?: TipoSesion },
   registradaPorId?: string,
 ) {
   return prisma.$transaction(async (tx) => {
@@ -104,7 +119,9 @@ export async function crearClaseConSesion(
       data: {
         edicionId:    data.edicionId,
         nombre:       data.nombre,
-        investigador: data.investigador,
+        tipo:         data.tipo ?? TIPO_SESION_POR_DEFECTO,
+        // `null` es legítimo: un evento especial no lo imparte nadie.
+        investigador: data.investigador ?? null,
         descripcion:  data.descripcion ?? null,
       },
     });
@@ -144,6 +161,7 @@ export async function editarClase(
 ) {
   const campos = {
     ...(data.nombre       !== undefined && { nombre:       data.nombre }),
+    ...(data.tipo         !== undefined && { tipo:         data.tipo }),
     ...(data.investigador !== undefined && { investigador: data.investigador }),
     ...(data.descripcion  !== undefined && { descripcion:  data.descripcion }),
   };
@@ -277,6 +295,7 @@ export async function obtenerSesionConClase(id: string) {
         select: {
           id:           true,
           nombre:       true,
+          tipo:         true,
           investigador: true,
           edicionId:    true,
           edicion: {
