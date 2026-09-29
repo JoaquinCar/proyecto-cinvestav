@@ -150,6 +150,7 @@ export default async function BibliotecaPage({
                 key={grupo.claseId}
                 claseId={grupo.claseId}
                 nombre={grupo.nombre}
+                tipo={grupo.tipo}
                 investigador={grupo.investigador}
                 fechaTexto={
                   grupo.fecha ? formatearFecha(grupo.fecha, "media") : null

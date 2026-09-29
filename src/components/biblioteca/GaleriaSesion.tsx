@@ -24,7 +24,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useOrdenImagenes } from "@/components/imagenes/useOrdenImagenes";
+import { BadgeTipoSesion } from "@/components/clases/BadgeTipoSesion";
 import { formatearTamano } from "@/lib/imagenes";
+import type { TipoSesion } from "@/lib/tipos-sesion";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -40,7 +42,10 @@ export interface GaleriaSesionProps {
   /** Id de la `Clase` — en pantalla, la sesión. */
   claseId: string;
   nombre: string;
-  investigador: string;
+  /** Pasaporte, lectura o evento: se distingue con la misma insignia de siempre. */
+  tipo: TipoSesion;
+  /** `null` en los eventos especiales: una clausura no la imparte nadie. */
+  investigador: string | null;
   /** Fecha ya formateada en el servidor; `null` si la sesión no tiene. */
   fechaTexto: string | null;
   fechaISO: string | null;
@@ -66,6 +71,7 @@ const VISIBLES_POR_SESION = 12;
 export function GaleriaSesion({
   claseId,
   nombre,
+  tipo,
   investigador,
   fechaTexto,
   fechaISO,
@@ -124,19 +130,27 @@ export function GaleriaSesion({
       {/* ── Encabezado de la sesión ── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 id={`sesion-${claseId}`} className="min-w-0">
-            <Link
-              href={`/clases/${claseId}`}
-              className="font-display text-base sm:text-lg font-semibold leading-snug text-foreground hover:text-primary transition-colors"
-            >
-              {nombre}
-            </Link>
-          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id={`sesion-${claseId}`} className="min-w-0">
+              <Link
+                href={`/clases/${claseId}`}
+                className="font-display text-base sm:text-lg font-semibold leading-snug text-foreground hover:text-primary transition-colors"
+              >
+                {nombre}
+              </Link>
+            </h2>
+            {/* La misma insignia que en el listado y en el detalle: un evento
+                especial se reconoce por el color antes que por el texto. */}
+            <BadgeTipoSesion tipo={tipo} />
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <User size={12} strokeWidth={1.8} aria-hidden />
-              {investigador}
-            </span>
+            {/* Los eventos no tienen investigador y no se inventa uno. */}
+            {investigador && (
+              <span className="inline-flex items-center gap-1.5">
+                <User size={12} strokeWidth={1.8} aria-hidden />
+                {investigador}
+              </span>
+            )}
             {fechaTexto && fechaISO && (
               <span className="inline-flex items-center gap-1.5">
                 <Calendar size={12} strokeWidth={1.8} aria-hidden />

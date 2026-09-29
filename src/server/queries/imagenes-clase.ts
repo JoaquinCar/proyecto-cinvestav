@@ -4,6 +4,7 @@ import {
   TAMANO_MAXIMO_IMAGEN,
   type SubirImagenClaseInput,
 } from "@/lib/schemas/clase.schema";
+import type { TipoSesion } from "@/lib/tipos-sesion";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -216,7 +217,10 @@ export interface GrupoBiblioteca {
   /** Id de la `Clase` — en pantalla, la sesión. */
   claseId: string;
   nombre: string;
-  investigador: string;
+  /** Pasaporte, lectura o evento: la biblioteca los agrupa a los tres. */
+  tipo: TipoSesion;
+  /** `null` en los eventos especiales: una clausura no la imparte nadie. */
+  investigador: string | null;
   /** Día en que se impartió; `null` si todavía no se le asignó fecha. */
   fecha: Date | null;
   imagenes: ImagenClaseConUrl[];
@@ -245,6 +249,11 @@ export async function listarImagenesDeEdicionPorSesion(
     select: {
       id: true,
       nombre: true,
+      // Sin filtrar por tipo: la biblioteca es TODA la memoria gráfica de la
+      // edición. De un evento especial —la clausura, el día del niño— es de
+      // donde salen las mejores fotos del reporte, y esconderlas aquí obligaría
+      // a ir a buscarlas a otra pantalla.
+      tipo: true,
       investigador: true,
       // Una clase es una charla impartida en una fecha; el modelo admite
       // varias, y la biblioteca usa la primera para ordenar cronológicamente.
@@ -256,6 +265,7 @@ export async function listarImagenesDeEdicionPorSesion(
   const grupos: GrupoBiblioteca[] = clases.map((clase) => ({
     claseId: clase.id,
     nombre: clase.nombre,
+    tipo: clase.tipo,
     investigador: clase.investigador,
     fecha: clase.sesiones[0]?.fecha ?? null,
     imagenes: resolverImagenesParaVista(clase.imagenes),

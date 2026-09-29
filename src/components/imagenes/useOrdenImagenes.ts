@@ -68,9 +68,21 @@ export function useOrdenImagenes(
   const [firmaAdoptada, setFirmaAdoptada] = useState(firmaInicial);
   if (firmaInicial !== firmaAdoptada) {
     setFirmaAdoptada(firmaInicial);
-    confirmados.current = idsIniciales;
     setIds(idsIniciales);
   }
+
+  // El "último orden confirmado" se apunta después de pintar, no durante el
+  // render: tocar una ref mientras se renderiza rompe la regla de React de que
+  // el render sea puro. Entre el repintado y este efecto puede colarse un
+  // guardado que revierta a la lista anterior, y da igual: esa lista también la
+  // había confirmado el servidor.
+  // La lista sale de la propia firma, y no de `idsIniciales`, para que la
+  // dependencia del efecto sea un string: con el array —nuevo en cada render
+  // del padre— el efecto correría siempre y pisaría el orden que `guardar`
+  // acaba de confirmar con el que traía la página, que ya es el viejo.
+  useEffect(() => {
+    confirmados.current = firmaAdoptada === "" ? [] : firmaAdoptada.split(",");
+  }, [firmaAdoptada]);
 
   const guardar = useCallback(
     async (objetivo: readonly string[]) => {

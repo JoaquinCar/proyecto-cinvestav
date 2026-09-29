@@ -34,6 +34,7 @@ const CLASES_CON_IMAGENES = [
   {
     id: "clase-b",
     nombre: "Robótica",
+    tipo: "PASAPORTE",
     investigador: "Dra. Ana",
     sesiones: [{ fecha: new Date("2026-03-14T00:00:00.000Z") }],
     imagenes: [filaImagen("img-b1", "clase-b", 0), filaImagen("img-b2", "clase-b", 1)],
@@ -41,14 +42,26 @@ const CLASES_CON_IMAGENES = [
   {
     id: "clase-a",
     nombre: "Astronomía",
+    tipo: "PASAPORTE",
     investigador: "Dr. Juan",
     sesiones: [{ fecha: new Date("2026-03-07T00:00:00.000Z") }],
     imagenes: [filaImagen("img-a1", "clase-a", 0)],
   },
   {
-    id: "clase-sin-fecha",
+    // Evento especial: sin investigador (nadie "imparte" una clausura) y con
+    // fotos, que suelen ser las mejores del reporte.
+    id: "clase-evento",
     nombre: "Clausura",
-    investigador: "Comité",
+    tipo: "EVENTO",
+    investigador: null,
+    sesiones: [{ fecha: new Date("2026-05-30T00:00:00.000Z") }],
+    imagenes: [filaImagen("img-e1", "clase-evento", 0)],
+  },
+  {
+    id: "clase-sin-fecha",
+    nombre: "Lectura pendiente",
+    tipo: "LECTURA",
+    investigador: "Dra. Ana",
     sesiones: [],
     imagenes: [],
   },
@@ -71,11 +84,30 @@ describe("listarImagenesDeEdicionPorSesion", () => {
     );
     const grupos = await listarImagenesDeEdicionPorSesion("edicion-1");
 
-    expect(grupos).toHaveLength(3);
+    expect(grupos).toHaveLength(4);
     expect(grupos.map((g) => g.claseId)).toContain("clase-a");
     const astronomia = grupos.find((g) => g.claseId === "clase-a")!;
     expect(astronomia.nombre).toBe("Astronomía");
     expect(astronomia.imagenes.map((i) => i.id)).toEqual(["img-a1"]);
+  });
+
+  it("agrupa también los eventos especiales, no solo las sesiones de pasaporte", async () => {
+    prismaMock.clase.findMany.mockResolvedValueOnce(CLASES_CON_IMAGENES);
+
+    const { listarImagenesDeEdicionPorSesion } = await import(
+      "@/server/queries/imagenes-clase"
+    );
+    const grupos = await listarImagenesDeEdicionPorSesion("edicion-1");
+
+    const clausura = grupos.find((g) => g.claseId === "clase-evento")!;
+    expect(clausura.tipo).toBe("EVENTO");
+    expect(clausura.imagenes).toHaveLength(1);
+    // Una clausura no la imparte nadie: no se inventa un investigador.
+    expect(clausura.investigador).toBeNull();
+
+    // La consulta no filtra por tipo: la biblioteca es toda la edición.
+    const argumentos = prismaMock.clase.findMany.mock.calls[0][0];
+    expect(argumentos.where).not.toHaveProperty("tipo");
   });
 
   it("consulta la base UNA sola vez: no una petición por sesión ni por foto", async () => {
@@ -101,6 +133,7 @@ describe("listarImagenesDeEdicionPorSesion", () => {
     expect(grupos.map((g) => g.claseId)).toEqual([
       "clase-a",
       "clase-b",
+      "clase-evento",
       "clase-sin-fecha",
     ]);
   });
