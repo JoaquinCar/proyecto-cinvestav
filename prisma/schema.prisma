@@ -21,8 +21,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts             Account[]
-  sesionesRegistradas  Sesion[]
+  accounts            Account[]
+  sesionesRegistradas Sesion[]
   // Inscripciones a las que este usuario les quitó el derecho a constancia.
   // Es el lado inverso de `Inscripcion.constanciaExcluidaPor`: existe porque
   // Prisma lo exige, pero además responde "¿qué excluyó fulano?" de un tirón.
@@ -48,7 +48,7 @@ model Edicion {
   porcentajeMinimo Float?
   asistenciaGlobal Boolean @default(true)
 
-  activa Boolean @default(false)
+  activa    Boolean  @default(false)
 
   // Congelado de la edición. `activa` dice cuál es la edición en curso (solo una);
   // `cerrada` dice que una edición ya terminó y no admite más escrituras
@@ -131,7 +131,7 @@ enum Parentesco {
 }
 
 model Inscripcion {
-  id                 String  @id @default(cuid())
+  id                 String   @id @default(cuid())
   participanteId     String
   edicionId          String
   // Quién acompañó al niño ESTA edición. Vive en la inscripción y no en el
@@ -140,7 +140,7 @@ model Inscripcion {
   // registradas. Opcional: muchos niños llegan solos.
   acompananteId      String?
   constanciaUrl      String?
-  constanciaGenerada Boolean @default(false)
+  constanciaGenerada Boolean  @default(false)
 
   // ── Quién NO recibe constancia ──────────────────────────────────────────
   //
@@ -162,20 +162,20 @@ model Inscripcion {
   constanciaExcluidaAt      DateTime?
   constanciaExcluidaPorId   String?
 
-  createdAt DateTime @default(now())
+  createdAt          DateTime @default(now())
 
-  participante          Participante @relation(fields: [participanteId], references: [id])
-  edicion               Edicion      @relation(fields: [edicionId], references: [id])
+  participante Participante @relation(fields: [participanteId], references: [id])
+  edicion      Edicion      @relation(fields: [edicionId], references: [id])
   // Restrict, no SetNull: borrar a un acompañante que todavía acompaña a
   // alguien desligaría en silencio a varios niños a la vez. Primero se quita de
   // cada inscripción (PUT/DELETE .../acompanante) y después se borra.
-  acompanante           Acompanante? @relation(fields: [acompananteId], references: [id], onDelete: Restrict)
-  asistencias           Asistencia[]
+  acompanante  Acompanante? @relation(fields: [acompananteId], references: [id], onDelete: Restrict)
+  asistencias  Asistencia[]
   // Restrict, no SetNull: dejar a un niño sin constancia es una decisión que
   // alguien tendrá que justificar, y con SetNull bastaría con borrar al
   // usuario para que la exclusión quedara sin autor. Si hay que dar de baja a
   // quien excluyó, primero se revisan sus exclusiones.
-  constanciaExcluidaPor User?        @relation(fields: [constanciaExcluidaPorId], references: [id], onDelete: Restrict)
+  constanciaExcluidaPor User? @relation(fields: [constanciaExcluidaPorId], references: [id], onDelete: Restrict)
 
   @@unique([participanteId, edicionId])
   @@index([acompananteId])
@@ -204,7 +204,7 @@ model Inscripcion {
 // /clases y /api/clases) se dejaron como estaban a propósito: renombrarlos
 // habría multiplicado el diff y roto los merges pendientes, sin ganar nada.
 model Clase {
-  id        String @id @default(cuid())
+  id        String   @id @default(cuid())
   edicionId String
   nombre    String
 
@@ -260,7 +260,7 @@ enum TipoClase {
 // autenticado—; si no lo está, guarda un data URI en base64 como respaldo
 // (ver src/server/queries/imagenes-clase.ts).
 model ImagenClase {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   claseId     String
   url         String
   storagePath String?
@@ -386,7 +386,8 @@ model Staff {
 }
 
 // Qué hace esa persona en el programa. Análogo a `Parentesco`: describe a la
-// persona, no una relación laboral ni un permiso del sistema.
+// persona, no una relación laboral ni un permiso del sistema. NO se confunde
+// con `Role` (ADMIN / BECARIO / READONLY), que es lo que una CUENTA puede hacer.
 enum RolStaff {
   INVESTIGADOR
   BECARIO
@@ -398,9 +399,9 @@ enum RolStaff {
 
 // Enlace staff ↔ sesión (`Clase`, que en pantalla se llama «sesión»).
 //
-// Tabla de enlace explícita y no una m-n implícita de Prisma: la implícita
-// crea una tabla `_ClaseToStaff` que nadie puede documentar ni consultar desde
-// SQL con nombres reconocibles, y aquí hace falta poder decir desde cuándo está
+// Tabla de enlace explícita y no una m-n implícita de Prisma: la implícita crea
+// una tabla `_ClaseToStaff` que nadie puede documentar ni consultar desde SQL
+// con nombres reconocibles, y aquí hace falta poder decir desde cuándo está
 // asignada una persona.
 //
 // El `@@unique` es el corazón del asunto: asignar dos veces a la misma persona
