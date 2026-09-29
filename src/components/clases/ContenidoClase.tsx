@@ -32,6 +32,11 @@ import {
   formatearTamano,
 } from "@/lib/imagenes";
 import { useOrdenImagenes } from "@/components/imagenes/useOrdenImagenes";
+import {
+  LARGO_MAXIMO_COMENTARIOS,
+  LARGO_MAXIMO_DESCRIPCION,
+  LARGO_MAXIMO_OBJETIVO,
+} from "@/lib/schemas/clase.schema";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -50,15 +55,58 @@ export interface ImagenClaseVista {
 interface ContenidoClaseProps {
   claseId: string;
   claseNombre: string;
+  /** El «Desarrollo de actividad» del informe. */
   descripcion: string | null;
+  /** El recuadro «Objetivo:» del informe. */
+  objetivo: string | null;
+  /** El recuadro «Comentarios» del cierre del informe. */
+  comentarios: string | null;
   imagenes: ImagenClaseVista[];
-  /** ADMIN: puede escribir la descripción de la clase. */
+  /** ADMIN: puede escribir los textos del informe. */
   puedeEditarDescripcion: boolean;
   /** ADMIN y BECARIO: pueden subir y borrar imágenes. */
   puedeEditarImagenes: boolean;
 }
 
-const LARGO_MAXIMO_DESCRIPCION = 1000;
+// ─────────────────────────────────────────────────────────────────────────────
+// Los tres textos son los tres recuadros del informe en Word que el
+// coordinador llenaba a mano. Se editan JUNTOS, en un solo diálogo y con un
+// solo guardado, porque se escriben de una sentada al terminar la sesión y
+// porque tres botones de «editar» separados invitarían a llenar uno y olvidar
+// los otros dos. Los topes son los de `clase.schema.ts`, que es donde se
+// validan de verdad: aquí solo se avisa antes de mandar.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CAMPOS_INFORME = [
+  {
+    clave: "descripcion",
+    etiqueta: "Desarrollo de la actividad",
+    ayuda: "Qué se trató en la sesión y qué se hizo. Es el cuerpo del informe.",
+    marcador: "Qué se hace en esta sesión, materiales, actividades…",
+    maximo: LARGO_MAXIMO_DESCRIPCION,
+    filas: 8,
+  },
+  {
+    clave: "objetivo",
+    etiqueta: "Objetivo",
+    ayuda: "Qué se busca que los niños descubran o aprendan.",
+    marcador: "Descubrir que…",
+    maximo: LARGO_MAXIMO_OBJETIVO,
+    filas: 4,
+  },
+  {
+    clave: "comentarios",
+    etiqueta: "Comentarios",
+    ayuda: "Cómo salió, ya impartida. Se escribe después de la sesión.",
+    marcador: "1. La plática logró…",
+    maximo: LARGO_MAXIMO_COMENTARIOS,
+    filas: 5,
+  },
+] as const;
+
+type ClaveInforme = (typeof CAMPOS_INFORME)[number]["clave"];
+
+type TextosInforme = Record<ClaveInforme, string>;
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
@@ -66,14 +114,25 @@ export function ContenidoClase({
   claseId,
   claseNombre,
   descripcion,
+  objetivo,
+  comentarios,
   imagenes,
   puedeEditarDescripcion,
   puedeEditarImagenes,
 }: ContenidoClaseProps) {
   const router = useRouter();
 
+  const guardados: TextosInforme = useMemo(
+    () => ({
+      descripcion: descripcion ?? "",
+      objetivo: objetivo ?? "",
+      comentarios: comentarios ?? "",
+    }),
+    [descripcion, objetivo, comentarios],
+  );
+
   const [dialogoAbierto, setDialogoAbierto] = useState(false);
-  const [texto, setTexto] = useState(descripcion ?? "");
+  const [borrador, setBorrador] = useState<TextosInforme>(guardados);
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
@@ -120,20 +179,25 @@ export function ContenidoClase({
     });
   }, []);
 
-  const tieneDescripcion = Boolean(descripcion && descripcion.trim().length > 0);
+  const tieneAlgunTexto = CAMPOS_INFORME.some(
+    ({ clave }) => guardados[clave].trim().length > 0,
+  );
 
-  // ── Descripción ─────────────────────────────────────────────────────────────
+  // ── Textos del informe ──────────────────────────────────────────────────────
 
   function abrirDialogo() {
-    setTexto(descripcion ?? "");
+    setBorrador(guardados);
     setDialogoAbierto(true);
   }
 
-  async function guardarDescripcion() {
-    const valor = texto.trim();
-
-    if (valor.length > LARGO_MAXIMO_DESCRIPCION) {
-      toast.error(`La descripción no puede exceder ${LARGO_MAXIMO_DESCRIPCION} caracteres`);
+  async function guardarTextos() {
+    const excedido = CAMPOS_INFORME.find(
+      ({ clave, maximo }) => borrador[clave].trim().length > maximo,
+    );
+    if (excedido) {
+      toast.error(
+        `${excedido.etiqueta} no puede exceder ${excedido.maximo} caracteres`,
+      );
       return;
     }
 
@@ -142,27 +206,34 @@ export function ContenidoClase({
       const res = await fetch(`/api/clases/${claseId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ descripcion: valor.length > 0 ? valor : null }),
+        // Se mandan los tres siempre, y `null` cuando quedan vacíos: así
+        // borrar un texto es posible y no queda a medias.
+        body: JSON.stringify(
+          Object.fromEntries(
+            CAMPOS_INFORME.map(({ clave }) => {
+              const valor = borrador[clave].trim();
+              return [clave, valor.length > 0 ? valor : null];
+            }),
+          ),
+        ),
       });
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(
           json?.error ??
-            "No se pudo guardar la descripción; la sesión sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
+            "No se pudieron guardar los textos; la sesión sigue con lo anterior. Vuelve a intentarlo en unos minutos.",
         );
       }
 
-      toast.success(
-        tieneDescripcion ? "Descripción actualizada" : "Descripción agregada",
-      );
+      toast.success(tieneAlgunTexto ? "Textos actualizados" : "Textos guardados");
       setDialogoAbierto(false);
       router.refresh();
     } catch (error) {
       toast.error(
         mensajeDeError(
           error,
-          "No se pudo guardar la descripción; la sesión sigue con el texto anterior. Vuelve a intentarlo en unos minutos.",
+          "No se pudieron guardar los textos; la sesión sigue con lo anterior. Vuelve a intentarlo en unos minutos.",
         ),
       );
     } finally {
@@ -309,12 +380,12 @@ export function ContenidoClase({
         Contenido
       </h2>
 
-      {/* ── Descripción ── */}
+      {/* ── Textos del informe ── */}
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
             <AlignLeft size={15} strokeWidth={1.8} className="text-primary" aria-hidden />
-            Descripción
+            Textos del informe
           </div>
 
           {puedeEditarDescripcion && (
@@ -323,32 +394,41 @@ export function ContenidoClase({
               onClick={abrirDialogo}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors bg-muted border border-border text-primary hover:bg-surface-alt min-h-[36px]"
             >
-              {tieneDescripcion ? (
+              {tieneAlgunTexto ? (
                 <>
                   <Pencil size={12} strokeWidth={2} aria-hidden />
-                  Editar descripción
+                  Editar textos
                 </>
               ) : (
                 <>
                   <Plus size={13} strokeWidth={2.5} aria-hidden />
-                  Agregar descripción
+                  Agregar textos
                 </>
               )}
             </button>
           )}
         </div>
 
-        {tieneDescripcion ? (
-          <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
-            {descripcion}
-          </p>
-        ) : (
-          <p className="mt-3 text-xs italic text-muted-foreground">
-            {puedeEditarDescripcion
-              ? "Esta sesión todavía no tiene descripción."
-              : "Sin descripción registrada."}
-          </p>
-        )}
+        <div className="mt-3 space-y-4">
+          {CAMPOS_INFORME.map(({ clave, etiqueta }) => (
+            <div key={clave}>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground/80">
+                {etiqueta}
+              </p>
+              {guardados[clave].trim().length > 0 ? (
+                <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                  {guardados[clave]}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs italic text-muted-foreground">
+                  {puedeEditarDescripcion
+                    ? "Todavía sin escribir. El informe en Word omite este recuadro."
+                    : "Sin registrar."}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── Imágenes ── */}
@@ -626,36 +706,43 @@ export function ContenidoClase({
         )}
       </div>
 
-      {/* ── Diálogo: descripción ── */}
+      {/* ── Diálogo: textos del informe ── */}
       <Dialog open={dialogoAbierto} onOpenChange={setDialogoAbierto}>
-        <DialogContent className="sm:max-w-[32rem] bg-card border border-border text-foreground">
+        <DialogContent className="sm:max-w-[36rem] max-h-[85vh] overflow-y-auto bg-card border border-border text-foreground">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-semibold text-foreground">
-              {tieneDescripcion ? "Editar descripción" : "Agregar descripción"}
+              {tieneAlgunTexto ? "Editar textos del informe" : "Agregar textos del informe"}
             </DialogTitle>
             <p className="text-xs mt-0.5 text-muted-foreground">{claseNombre}</p>
             <div className="h-px bg-border mt-3" />
           </DialogHeader>
 
-          <div className="space-y-2 mt-2">
-            <Label
-              htmlFor="descripcion-clase"
-              className="text-sm font-medium text-foreground"
-            >
-              Descripción de la sesión
-            </Label>
-            <Textarea
-              id="descripcion-clase"
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              rows={7}
-              maxLength={LARGO_MAXIMO_DESCRIPCION}
-              placeholder="Qué se hace en esta sesión, materiales, objetivos…"
-              className="resize-none transition-colors bg-surface-alt border-border focus:border-primary focus:ring-primary"
-            />
-            <p className="text-xs text-muted-foreground text-right tabular">
-              {texto.length} / {LARGO_MAXIMO_DESCRIPCION}
-            </p>
+          <div className="space-y-5 mt-2">
+            {CAMPOS_INFORME.map(({ clave, etiqueta, ayuda, marcador, maximo, filas }) => (
+              <div key={clave} className="space-y-2">
+                <Label
+                  htmlFor={`informe-${clave}`}
+                  className="text-sm font-medium text-foreground"
+                >
+                  {etiqueta}
+                </Label>
+                <p className="text-xs text-muted-foreground">{ayuda}</p>
+                <Textarea
+                  id={`informe-${clave}`}
+                  value={borrador[clave]}
+                  onChange={(e) =>
+                    setBorrador((previo) => ({ ...previo, [clave]: e.target.value }))
+                  }
+                  rows={filas}
+                  maxLength={maximo}
+                  placeholder={marcador}
+                  className="resize-none transition-colors bg-surface-alt border-border focus:border-primary focus:ring-primary"
+                />
+                <p className="text-xs text-muted-foreground text-right tabular">
+                  {borrador[clave].length} / {maximo}
+                </p>
+              </div>
+            ))}
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 pt-1">
@@ -668,7 +755,7 @@ export function ContenidoClase({
             </button>
             <button
               type="button"
-              onClick={guardarDescripcion}
+              onClick={guardarTextos}
               disabled={guardando}
               className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold btn-primary transition-all disabled:opacity-50 min-h-[44px]"
               aria-busy={guardando}

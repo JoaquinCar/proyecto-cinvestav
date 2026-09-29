@@ -5,6 +5,8 @@ import {
   crearSesionSchema,
   actualizarSesionSchema,
   subirImagenClaseSchema,
+  LARGO_MAXIMO_DESCRIPCION,
+  LARGO_MAXIMO_OBJETIVO,
 } from "@/lib/schemas/clase.schema";
 
 // ── Datos de prueba base ──────────────────────────────────────────────────────
@@ -114,10 +116,21 @@ describe("crearClaseSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rechaza descripción que supera 1000 caracteres", () => {
+  // El tope subió de 1000 a 4000 al conectar este campo con el «Desarrollo de
+  // actividad» del informe en Word: el desarrollo más largo de los 12 informes
+  // reales de 2026 ronda los 1.400 caracteres y con el tope viejo no cabía.
+  it("acepta un desarrollo largo, como los de los informes reales", () => {
     const result = crearClaseSchema.safeParse({
       ...claseValida,
-      descripcion: "X".repeat(1001),
+      descripcion: "X".repeat(LARGO_MAXIMO_DESCRIPCION),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it(`rechaza descripción que supera ${LARGO_MAXIMO_DESCRIPCION} caracteres`, () => {
+    const result = crearClaseSchema.safeParse({
+      ...claseValida,
+      descripcion: "X".repeat(LARGO_MAXIMO_DESCRIPCION + 1),
     });
     expect(result.success).toBe(false);
   });
@@ -215,6 +228,39 @@ describe("editarClaseSchema", () => {
 
   it("rechaza nombre vacío en edición parcial", () => {
     const result = editarClaseSchema.safeParse({ nombre: "" });
+    expect(result.success).toBe(false);
+  });
+
+  // ── Los dos recuadros del informe en Word ──────────────────────────────────
+
+  it("acepta objetivo y comentarios, y los recorta", () => {
+    const result = editarClaseSchema.safeParse({
+      objetivo: "  Descubrir los gusanos marinos.  ",
+      comentarios: "1. Salió bien.\n2. Se cumplió el objetivo.",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.objetivo).toBe("Descubrir los gusanos marinos.");
+      expect(result.data.comentarios).toContain("2. Se cumplió el objetivo.");
+    }
+  });
+
+  it("un recuadro vaciado desde el formulario llega como null, no como cadena vacía", () => {
+    // Un `<textarea>` que se borra manda "", y eso significa «quita lo que
+    // había». Sin esto se guardaría una cadena vacía y el informe imprimiría
+    // un recuadro con nada dentro en vez de no imprimirlo.
+    const result = editarClaseSchema.safeParse({ objetivo: "", comentarios: "   " });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.objetivo).toBeNull();
+      expect(result.data.comentarios).toBeNull();
+    }
+  });
+
+  it("rechaza un objetivo más largo que su tope", () => {
+    const result = editarClaseSchema.safeParse({
+      objetivo: "X".repeat(LARGO_MAXIMO_OBJETIVO + 1),
+    });
     expect(result.success).toBe(false);
   });
 
