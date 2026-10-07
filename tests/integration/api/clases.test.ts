@@ -37,9 +37,17 @@ vi.mock("@/server/queries/clases", () => ({
   obtenerRangoEdicionDeSesion: vi.fn(),
   eliminarSesion:        vi.fn(),
   ClaseConAsistenciasError: class ClaseConAsistenciasError extends Error {
-    constructor(message: string) {
+    readonly conteos: Record<string, number>;
+    constructor(message: string, conteos: Record<string, number> = {}) {
       super(message);
       this.name = "ClaseConAsistenciasError";
+      this.conteos = conteos;
+    }
+  },
+  ClaseNoEncontradaError: class ClaseNoEncontradaError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "ClaseNoEncontradaError";
     }
   },
   SesionConAsistenciasError: class SesionConAsistenciasError extends Error {
@@ -587,7 +595,7 @@ describe("DELETE /api/clases/[id]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("retorna 409 cuando la clase tiene asistencias registradas", async () => {
+  it("retorna 409 con los conteos cuando la sesión tiene asistencias", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
 
@@ -596,7 +604,8 @@ describe("DELETE /api/clases/[id]", () => {
     vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock);
     vi.mocked(eliminarClase).mockRejectedValueOnce(
       new ClaseConAsistenciasError(
-        "No se puede eliminar la clase porque tiene 10 asistencia(s) registrada(s)"
+        "No se puede eliminar «Robótica» sin confirmarlo: tiene 10 asistencias registradas de 8 niños",
+        { fechas: 1, asistencias: 10, participantes: 8, resumenes: 0, imagenes: 0 },
       )
     );
 
@@ -607,9 +616,10 @@ describe("DELETE /api/clases/[id]", () => {
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toMatch(/asistencia/i);
+    expect(body.conteos).toMatchObject({ asistencias: 10, participantes: 8 });
   });
 
-  it("retorna 204 cuando la clase se elimina correctamente", async () => {
+  it("retorna 204 cuando la sesión se elimina correctamente", async () => {
     const { auth } = await import("@/lib/auth");
     vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
 
@@ -622,6 +632,60 @@ describe("DELETE /api/clases/[id]", () => {
     const res = await DELETE(req, { params: Promise.resolve({ id: "clase-1" }) });
 
     expect(res.status).toBe(204);
+    // Sin ?forzar, el historial no se toca: la consulta recibe forzar: false.
+    expect(eliminarClase).toHaveBeenCalledWith("clase-1", { forzar: false });
+  });
+
+  it("pasa el forzar del ADMIN a la consulta cuando viene ?forzar=true", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId, eliminarClase } = await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock);
+    vi.mocked(eliminarClase).mockResolvedValueOnce(claseMock);
+
+    const { DELETE } = await import("@/app/api/clases/[id]/route");
+    const req = makeRequest("DELETE", "/api/clases/clase-1?forzar=true");
+    const res = await DELETE(req, { params: Promise.resolve({ id: "clase-1" }) });
+
+    expect(res.status).toBe(204);
+    expect(eliminarClase).toHaveBeenCalledWith("clase-1", { forzar: true });
+  });
+
+  it("un BECARIO no borra sesiones ni forzando", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionBecario as never);
+
+    const { eliminarClase } = await import("@/server/queries/clases");
+
+    const { DELETE } = await import("@/app/api/clases/[id]/route");
+    const req = makeRequest("DELETE", "/api/clases/clase-1?forzar=true");
+    const res = await DELETE(req, { params: Promise.resolve({ id: "clase-1" }) });
+
+    expect(res.status).toBe(403);
+    expect(eliminarClase).not.toHaveBeenCalled();
+  });
+
+  it("retorna 409 cuando la edición de la sesión está cerrada", async () => {
+    const { auth } = await import("@/lib/auth");
+    vi.mocked(auth).mockResolvedValueOnce(sessionAdmin as never);
+
+    const { obtenerClasePorId, eliminarClase } = await import("@/server/queries/clases");
+    vi.mocked(obtenerClasePorId).mockResolvedValueOnce(claseMock);
+
+    const { assertEdicionDeClaseAbierta, EdicionCerradaError } = await import(
+      "@/server/queries/edicion-cerrada"
+    );
+    vi.mocked(assertEdicionDeClaseAbierta).mockRejectedValueOnce(
+      new EdicionCerradaError("La edición 2025 está cerrada y no admite cambios."),
+    );
+
+    const { DELETE } = await import("@/app/api/clases/[id]/route");
+    const req = makeRequest("DELETE", "/api/clases/clase-1");
+    const res = await DELETE(req, { params: Promise.resolve({ id: "clase-1" }) });
+
+    expect(res.status).toBe(409);
+    expect(eliminarClase).not.toHaveBeenCalled();
   });
 });
 

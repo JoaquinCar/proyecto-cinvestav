@@ -7,7 +7,7 @@ import {
   editarClase,
   eliminarClase,
   ClaseConAsistenciasError,
-  ClaseConSesionesError,
+  ClaseNoEncontradaError,
   VariasSesionesError,
 } from "@/server/queries/clases";
 import {
@@ -114,14 +114,24 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 }
 
-// ── DELETE /api/clases/[id] — eliminar si no arrastra nada (solo ADMIN) ───────
+// ── DELETE /api/clases/[id] — eliminar la sesión (solo ADMIN) ────────────────
+//
+// Se lleva consigo la fecha (`Sesion`), las imágenes y las asignaciones de
+// staff: nada de eso significa nada sin la sesión. Las asistencias NO: son el
+// respaldo de las constancias de los niños, así que si las hay la petición se
+// rechaza con 409 y los conteos, y solo se borran cuando el ADMIN lo pide
+// explícitamente con ?forzar=true — el mismo patrón que
+// DELETE /api/inscripciones/[id]. Igual con el resumen importado del Excel,
+// que alimenta las estadísticas de la edición.
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
+    // Allowlist explícita: borrar una sesión es solo de ADMIN. Un BECARIO pasa
+    // lista y corrige temas; no da de baja lo que sostiene las constancias.
     if (session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Prohibido" }, { status: 403 });
     }
@@ -133,18 +143,28 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: CLASE_NO_ENCONTRADA }, { status: 404 });
     }
 
-    await eliminarClase(id);
+    // Una edición cerrada no admite escrituras, y borrar una sesión es la más
+    // definitiva de todas. Se reabre primero (solo ADMIN) si de verdad hace falta.
+    await assertEdicionDeClaseAbierta(id);
+
+    const forzar = new URL(request.url).searchParams.get("forzar") === "true";
+
+    await eliminarClase(id, { forzar });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    if (error instanceof ClaseConAsistenciasError) {
+    if (error instanceof ClaseNoEncontradaError) {
+      return NextResponse.json({ error: CLASE_NO_ENCONTRADA }, { status: 404 });
+    }
+
+    if (error instanceof EdicionCerradaError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
 
-    // Antes esto llegaba hasta el `catch` de abajo y salía como 500: la llave
-    // foránea de Sesion → Clase reventaba sin que nadie supiera por qué.
-    if (error instanceof ClaseConSesionesError) {
+    // 409 con los conteos: la pantalla los usa para pedir confirmación en vez
+    // de dejar al coordinador adivinando qué se perdería.
+    if (error instanceof ClaseConAsistenciasError) {
       return NextResponse.json(
-        { error: error.message, sesiones: error.sesiones },
+        { error: error.message, conteos: error.conteos },
         { status: 409 },
       );
     }

@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerClasePorId, listarSesionesDeClase } from "@/server/queries/clases";
@@ -226,13 +227,25 @@ export default async function ClaseDetallePage({
                 </Link>
               )}
               {isAdmin && (
-                <Link
-                  href={`/clases/${clase.id}/editar`}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil size={14} strokeWidth={2} aria-hidden />
-                  Editar
-                </Link>
+                <>
+                  <Link
+                    href={`/clases/${clase.id}/editar`}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors bg-muted border border-border text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil size={14} strokeWidth={2} aria-hidden />
+                    Editar
+                  </Link>
+                  {/* Una sesión creada por error tenía que poder borrarse y no
+                      había por dónde. Lleva a una pantalla de confirmación: el
+                      borrado no se dispara desde aquí. */}
+                  <Link
+                    href={`/clases/${clase.id}/eliminar`}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors bg-muted border border-destructive/40 text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 size={14} strokeWidth={2} aria-hidden />
+                    Eliminar
+                  </Link>
+                </>
               )}
             </>
           )}
