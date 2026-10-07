@@ -201,3 +201,4 @@ describe("estaEnRango", () => {
     expect(estaEnRango("2026-06-28", inicioMediodia, finMediodia)).toBe(false);
   });
 });
+

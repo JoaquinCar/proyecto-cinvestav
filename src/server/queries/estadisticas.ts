@@ -6,6 +6,14 @@ import {
   type TipoSesion,
 } from "@/lib/tipos-sesion";
 import type { Nivel } from "@/lib/importacion/texto";
+import {
+  asistenciaDeSesion,
+  etiquetaNivel,
+  NIVEL_LABEL,
+  NIVEL_ORDEN,
+  SELECCION_LISTA,
+  type AsistenciaDeSesion,
+} from "./asistencia-de-sesion";
 
 // Orden lógico de los grados homologados para las gráficas.
 function ordenGrado(g: string): number {
@@ -241,42 +249,35 @@ export async function obtenerMetricasEdicion(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Análisis de ASISTENCIA agregada (totales por sesión, provenientes del Excel
-// del organizador). No hay nombres individuales: son conteos por sesión.
+// Análisis de ASISTENCIA por sesión.
+//
+// Dos fuentes conviven: los totales agregados que trae el Excel del organizador
+// (`ResumenSesion`) y la lista individual que se pasa en la aplicación
+// (`Asistencia`). Qué cuenta como capturada y con qué precedencia se combinan
+// está en un solo sitio: `./asistencia-de-sesion`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Toda la unión `Nivel` tiene que estar aquí: un nivel sin etiqueta cae en
-// "Sin especificar" y su barra sale sin nombre en la gráfica.
-const NIVEL_LABEL: Record<Nivel, string> = {
-  PREESCOLAR: "Preescolar",
-  PRIMARIA: "Primaria",
-  SECUNDARIA: "Secundaria",
-  MEDIA_SUPERIOR: "Media superior",
-  UNIVERSIDAD: "Universidad",
-  SIN_ESCUELA: "Sin escuela",
-};
-const NIVEL_ORDEN: Record<string, number> = {
-  Preescolar: 0,
-  Primaria: 1,
-  Secundaria: 2,
-  "Media superior": 3,
-  Universidad: 4,
-  "Sin escuela": 5,
-};
-
-/**
- * `Participante.nivel` es texto libre en la base (se llenó con el importador y
- * puede estar vacío en fichas antiguas). Esto lo traduce a la etiqueta que va
- * en la gráfica y nunca deja a nadie sin agrupar.
- */
-function etiquetaNivel(nivel: string | null | undefined): string {
-  if (!nivel) return "Sin especificar";
-  return NIVEL_LABEL[nivel as Nivel] ?? "Sin especificar";
-}
-
 export type MetricasAsistencia = {
-  sesionesConDatos: number;
+  /**
+   * Sesiones registradas en la edición. Es el valor de «Sesiones registradas»
+   * en el dashboard: un conteo, no una fracción. Una sesión cuenta desde que se
+   * crea — ver `./asistencia-de-sesion` para por qué no hay denominador.
+   */
   totalSesiones: number;
+  /**
+   * De esas, las que tienen asistencia registrada, de cualquiera de las dos
+   * fuentes. Numerador de «Asistencia capturada», la métrica que sí se mueve.
+   */
+  sesionesCapturadas: number;
+  /** De las capturadas, las que traen los totales agregados del Excel. */
+  sesionesConAgregado: number;
+  /** De las capturadas, las que se registraron pasando lista en la aplicación. */
+  sesionesConLista: number;
+  /**
+   * Sesiones registradas que siguen sin asistencia capturada. Es lo que le
+   * falta por hacer al equipo, y decirlo es lo que vuelve accionable la cifra.
+   */
+  sesionesSinCapturar: number;
   totalEventos: number;
   promedioPorSesion: number;
   picoSesion: number;
@@ -308,46 +309,56 @@ export async function obtenerMetricasAsistencia(
       temas: true,
       clase: { select: { nombre: true } },
       resumen: true,
+      asistencias: SELECCION_LISTA,
     },
   });
 
+  // Las sesiones registradas son, simplemente, las que existen: una cuenta
+  // desde que se crea. La fecha no interviene.
   const totalSesiones = sesiones.length;
-  const conResumen = sesiones.filter((s) => s.resumen);
 
-  const porSesion = conResumen.map((s) => {
-    const r = s.resumen!;
-    return {
-      etiqueta: formatearFecha(s.fecha, "corta"),
-      tema: s.temas ?? s.clase.nombre,
-      ninas: r.ninas,
-      ninos: r.ninos,
-      total: r.total,
-    };
-  });
+  // Captura: cada sesión con su asistencia efectiva (el agregado si lo hay, si
+  // no la lista individual) o `null` si nadie la ha registrado todavía.
+  const conDatos = sesiones
+    .map((s) => ({ s, a: asistenciaDeSesion(s) }))
+    .filter(
+      (x): x is { s: (typeof sesiones)[number]; a: AsistenciaDeSesion } => x.a !== null,
+    );
+  const sesionesConAgregado = conDatos.filter((x) => x.a.origen === "AGREGADA").length;
+  const sesionesConLista = conDatos.filter((x) => x.a.origen === "LISTA").length;
+  const sesionesSinCapturar = totalSesiones - conDatos.length;
 
-  const totalNinas = conResumen.reduce((a, s) => a + s.resumen!.ninas, 0);
-  const totalNinos = conResumen.reduce((a, s) => a + s.resumen!.ninos, 0);
-  const totalMamas = conResumen.reduce((a, s) => a + s.resumen!.mamas, 0);
-  const totalPapas = conResumen.reduce((a, s) => a + s.resumen!.papas, 0);
-  const totalEventos = conResumen.reduce((a, s) => a + s.resumen!.total, 0);
-  const picoSesion = conResumen.length
-    ? Math.max(...conResumen.map((s) => s.resumen!.total))
+  const porSesion = conDatos.map(({ s, a }) => ({
+    etiqueta: formatearFecha(s.fecha, "corta"),
+    tema: s.temas ?? s.clase.nombre,
+    ninas: a.ninas,
+    ninos: a.ninos,
+    total: a.total,
+  }));
+
+  const totalNinas = conDatos.reduce((acc, { a }) => acc + a.ninas, 0);
+  const totalNinos = conDatos.reduce((acc, { a }) => acc + a.ninos, 0);
+  const totalMamas = conDatos.reduce((acc, { a }) => acc + a.mamas, 0);
+  const totalPapas = conDatos.reduce((acc, { a }) => acc + a.papas, 0);
+  const totalEventos = conDatos.reduce((acc, { a }) => acc + a.total, 0);
+  const picoSesion = conDatos.length ? Math.max(...conDatos.map(({ a }) => a.total)) : 0;
+  // El promedio se divide entre las sesiones CAPTURADAS, no entre el total
+  // registrado: dividir entre doce lo que se contó en siete inventaría una
+  // caída de asistencia que nadie midió.
+  const promedioPorSesion = conDatos.length
+    ? Math.round(totalEventos / conDatos.length)
     : 0;
-  const promedioPorSesion = conResumen.length
-    ? Math.round(totalEventos / conResumen.length)
-    : 0;
 
-  const tendencia = conResumen.map((s) => ({
+  const tendencia = conDatos.map(({ s, a }) => ({
     fecha: aISOFecha(s.fecha),
     etiqueta: formatearFecha(s.fecha, "corta"),
-    presentes: s.resumen!.total,
+    presentes: a.total,
   }));
 
   // Asistencia por edad (suma de eventos por edad sobre todas las sesiones)
   const edadMap = new Map<number, number>();
-  for (const s of conResumen) {
-    const porEdad = (s.resumen!.porEdad ?? {}) as Record<string, number>;
-    for (const [edad, cant] of Object.entries(porEdad)) {
+  for (const { a } of conDatos) {
+    for (const [edad, cant] of Object.entries(a.porEdad)) {
       const e = Number(edad);
       edadMap.set(e, (edadMap.get(e) ?? 0) + Number(cant));
     }
@@ -363,11 +374,11 @@ export async function obtenerMetricasAsistencia(
     Secundaria: 0,
     "Media superior": 0,
   };
-  for (const s of conResumen) {
-    nivelSum.Preescolar += s.resumen!.preescolar;
-    nivelSum.Primaria += s.resumen!.primaria;
-    nivelSum.Secundaria += s.resumen!.secundaria;
-    nivelSum["Media superior"] += s.resumen!.mediaSuperior;
+  for (const { a } of conDatos) {
+    nivelSum.Preescolar += a.preescolar;
+    nivelSum.Primaria += a.primaria;
+    nivelSum.Secundaria += a.secundaria;
+    nivelSum["Media superior"] += a.mediaSuperior;
   }
   const porNivel = Object.entries(nivelSum)
     .filter(([, c]) => c > 0)
@@ -383,8 +394,11 @@ export async function obtenerMetricasAsistencia(
     .map(([genero, cantidad]) => ({ genero, cantidad }));
 
   return {
-    sesionesConDatos: conResumen.length,
     totalSesiones,
+    sesionesCapturadas: conDatos.length,
+    sesionesConAgregado,
+    sesionesConLista,
+    sesionesSinCapturar,
     totalEventos,
     promedioPorSesion,
     picoSesion,
@@ -419,8 +433,9 @@ export type AnalisisProfundo = {
   numEscuelas: number;
   escuelaTop: { nombre: string; cantidad: number; pct: number } | null;
   numContactos: number;
-  // Asistencia
-  sesionesConDatos: number;
+  // Asistencia — misma definición de «capturada» que el dashboard.
+  /** De las sesiones registradas, cuántas tienen asistencia capturada. */
+  sesionesCapturadas: number;
   sesionesTotal: number;
   promedioAsist: number;
   picoAsist: { tema: string; total: number } | null;
@@ -461,7 +476,13 @@ export async function obtenerAnalisisProfundo(
     prisma.sesion.findMany({
       where: { clase: { edicionId } },
       orderBy: { fecha: "asc" },
-      select: { fecha: true, temas: true, clase: { select: { nombre: true } }, resumen: true },
+      select: {
+        fecha: true,
+        temas: true,
+        clase: { select: { nombre: true } },
+        resumen: true,
+        asistencias: SELECCION_LISTA,
+      },
     }),
   ]);
 
@@ -561,20 +582,28 @@ export async function obtenerAnalisisProfundo(
   }
   const numContactos = registrosPorContacto.length;
 
-  // Asistencia agregada
-  const conResumen = sesiones.filter((s) => s.resumen);
-  const totalEventos = conResumen.reduce((a, s) => a + s.resumen!.total, 0);
-  const promedioAsist = conResumen.length ? Math.round(totalEventos / conResumen.length) : 0;
-  const totalAcompanantes = conResumen.reduce((a, s) => a + s.resumen!.mamas + s.resumen!.papas, 0);
+  // Asistencia de las sesiones CAPTURADAS: el agregado del Excel cuando lo hay,
+  // si no la lista pasada en la aplicación. Antes solo se miraba el agregado,
+  // así que una edición capturada en la app salía con todo en cero.
+  const conDatos = sesiones
+    .map((s) => ({ s, a: asistenciaDeSesion(s) }))
+    .filter(
+      (x): x is { s: (typeof sesiones)[number]; a: AsistenciaDeSesion } => x.a !== null,
+    );
+  const totalEventos = conDatos.reduce((acc, { a }) => acc + a.total, 0);
+  const promedioAsist = conDatos.length
+    ? Math.round(totalEventos / conDatos.length)
+    : 0;
+  const totalAcompanantes = conDatos.reduce((acc, { a }) => acc + a.mamas + a.papas, 0);
   const ratioAcompanantes = totalEventos
     ? Math.round((totalAcompanantes / totalEventos) * 100) / 10
     : 0;
 
-  const sesionesData = conResumen.map((s) => ({
+  const sesionesData = conDatos.map(({ s, a }) => ({
     tema: s.temas ?? s.clase.nombre,
-    total: s.resumen!.total,
-    mamas: s.resumen!.mamas,
-    papas: s.resumen!.papas,
+    total: a.total,
+    mamas: a.mamas,
+    papas: a.papas,
     fecha: new Date(s.fecha),
   }));
   const picoAsist = sesionesData.length
@@ -611,7 +640,7 @@ export async function obtenerAnalisisProfundo(
     numEscuelas: escMap.size,
     escuelaTop,
     numContactos,
-    sesionesConDatos: conResumen.length,
+    sesionesCapturadas: conDatos.length,
     sesionesTotal: sesiones.length,
     promedioAsist,
     picoAsist: picoAsist ? { tema: picoAsist.tema, total: picoAsist.total } : null,

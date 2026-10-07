@@ -47,7 +47,7 @@ const edicion2026 = {
   createdAt: new Date("2026-01-01"),
   _count: { inscripciones: 51, clases: 12 },
   sesionesTotal: 12,
-  sesionesConDatos: 12,
+  sesionesCapturadas: 12,
 };
 
 const edicion2027 = {

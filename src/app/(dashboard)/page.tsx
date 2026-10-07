@@ -96,6 +96,24 @@ export default async function DashboardPage({
     obtenerMetricasAsistencia(edicion.id),
   ]);
 
+  // Lo que QA no podía deducir de la pantalla («no sé qué activa las
+  // sesiones»): el contador antiguo salía de los totales del Excel y nada de lo
+  // que se hacía en la aplicación lo movía. Ahora son dos cifras separadas —
+  // cuántas sesiones hay y cuántas tienen la asistencia capturada— y cada una
+  // dice en pantalla qué la mueve.
+  const fuentesCaptura = [
+    asist.sesionesConLista > 0 ? `${asist.sesionesConLista} con lista pasada` : null,
+    asist.sesionesConAgregado > 0 ? `${asist.sesionesConAgregado} del Excel` : null,
+  ].filter(Boolean);
+  const detalleCaptura =
+    fuentesCaptura.length > 0 ? fuentesCaptura.join(" · ") : "ninguna todavía";
+  const pendienteCaptura =
+    asist.totalSesiones === 0
+      ? "sin sesiones todavía"
+      : asist.sesionesSinCapturar > 0
+        ? `faltan ${asist.sesionesSinCapturar} por capturar`
+        : "todas capturadas";
+
   return (
     <div className="space-y-8">
       {/* Encabezado */}
@@ -168,14 +186,17 @@ export default async function DashboardPage({
           </div>
           <div>
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Sesiones con datos
+              Sesiones registradas
             </p>
             <p className="text-foreground font-semibold text-lg">
-              {asist.sesionesConDatos}
+              {asist.totalSesiones}
               <span className="text-muted-foreground font-normal text-sm">
                 {" "}
-                de {asist.totalSesiones}
+                en la edición
               </span>
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {asist.sesionesCapturadas} con asistencia capturada
             </p>
           </div>
         </div>
@@ -184,6 +205,25 @@ export default async function DashboardPage({
           <strong>asistencia</strong> son eventos sumados por sesión (un mismo niño cuenta
           en cada sesión a la que asiste). Por eso los totales no coinciden — son métricas
           distintas, no un error de captura.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+          Las <strong>sesiones registradas</strong> cuentan desde que se crean: no hay
+          que esperar a nada ni capturar nada para que aparezcan aquí. Lo que sí avanza
+          es la <strong>asistencia capturada</strong> —{" "}
+          <strong className="text-foreground">
+            {asist.sesionesCapturadas} de {asist.totalSesiones}
+          </strong>{" "}
+          ({detalleCaptura}) — y se mueve cuando alguien pasa lista en la aplicación o
+          se importa el Excel del organizador.
+          {asist.sesionesSinCapturar > 0 && (
+            <>
+              {" "}
+              <strong className="text-foreground">
+                Faltan por capturar {asist.sesionesSinCapturar}{" "}
+                {asist.sesionesSinCapturar === 1 ? "sesión" : "sesiones"}.
+              </strong>
+            </>
+          )}
         </p>
       </div>
 
@@ -219,9 +259,9 @@ export default async function DashboardPage({
             bgClass="bg-secondary/10"
           />
           <StatCard
-            label="Sesiones impartidas"
-            value={`${asist.sesionesConDatos}/${asist.totalSesiones}`}
-            hint="con datos / total"
+            label="Asistencia capturada"
+            value={`${asist.sesionesCapturadas}/${asist.totalSesiones}`}
+            hint={pendienteCaptura}
             icon={CalendarCheck}
             colorClass="text-chart-5"
             bgClass="bg-chart-5/10"

@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db";
 import type { CrearEdicionInput, EditarEdicionInput } from "@/lib/schemas/edicion.schema";
+import { SESION_CAPTURADA } from "./asistencia-de-sesion";
 
 // ── Listar todas las ediciones ────────────────────────────────────────────────
 
@@ -58,12 +59,19 @@ export async function obtenerEdicionPorId(id: string) {
 
   if (!edicion) return null;
 
-  const [sesionesTotal, sesionesConDatos] = await Promise.all([
+  // Sesiones registradas (todas las que existen) y, aparte, cuántas tienen la
+  // asistencia capturada. Antes el segundo conteo filtraba solo por `resumen`,
+  // es decir solo por el Excel del organizador, de modo que una edición
+  // capturada entera desde la aplicación salía en «0 de 7» y nada en pantalla
+  // movía ese número. La definición vive en un solo sitio.
+  const [sesionesTotal, sesionesCapturadas] = await Promise.all([
     prisma.sesion.count({ where: { clase: { edicionId: id } } }),
-    prisma.sesion.count({ where: { clase: { edicionId: id }, resumen: { isNot: null } } }),
+    prisma.sesion.count({
+      where: { clase: { edicionId: id }, ...SESION_CAPTURADA },
+    }),
   ]);
 
-  return { ...edicion, sesionesTotal, sesionesConDatos };
+  return { ...edicion, sesionesTotal, sesionesCapturadas };
 }
 
 // ── Crear nueva edición ───────────────────────────────────────────────────────

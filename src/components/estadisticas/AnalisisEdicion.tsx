@@ -122,7 +122,7 @@ export async function AnalisisEdicion({
         <InsightCard
           label="Asistencia promedio"
           value={a.promedioAsist}
-          hint={`por sesión (${a.sesionesConDatos} de ${a.sesionesTotal} con datos)`}
+          hint={`por sesión capturada (${a.sesionesCapturadas} de ${a.sesionesTotal} registradas)`}
           icon={Activity}
           colorClass="text-success"
           bgClass="bg-success/10"
