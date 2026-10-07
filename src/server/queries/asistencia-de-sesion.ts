@@ -1,74 +1,64 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// QUÉ CUENTA COMO «SESIÓN IMPARTIDA» — definición única del sistema.
+// ASISTENCIA CAPTURADA DE UNA SESIÓN — definición única del sistema.
 //
 // Recordatorio de nombres: en pantalla, «sesión» es el modelo `Clase` y
 // «fecha» es el modelo `Sesion`. Aquí se habla del modelo `Sesion`, que es la
 // fila que tiene fecha y asistencia.
 //
 // ── El defecto ──────────────────────────────────────────────────────────────
-// El dashboard contaba como impartidas SOLO las sesiones con `ResumenSesion`,
-// es decir los totales agregados que únicamente entran importando el Excel del
-// organizador (o con scripts/cargar-2026.mjs). Crear la sesión en la
-// aplicación, ponerle fecha y pasar lista no genera ningún `ResumenSesion`, así
-// que una edición capturada entera desde la app salía en «0/7» y nada de lo que
-// se hacía en pantalla movía ese número. QA lo dijo exacto: «no sé qué activa
-// las sesiones».
+// El dashboard mostraba «Sesiones impartidas N/M» contando como impartidas solo
+// las sesiones con `ResumenSesion`, es decir los totales agregados que
+// únicamente entran importando el Excel del organizador (o con
+// scripts/cargar-2026.mjs). Crear la sesión en la aplicación, ponerle fecha y
+// pasar lista no genera ningún `ResumenSesion`, así que una edición capturada
+// entera desde la app salía en «0/7» y nada de lo que se hacía en pantalla
+// movía ese número. QA lo dijo exacto: «no sé qué activa las sesiones».
 //
-// ── La definición ───────────────────────────────────────────────────────────
-// Una sesión está IMPARTIDA cuando SU FECHA YA PASÓ. Nada más: ni resumen, ni
-// lista, ni captura de ningún tipo. Si el día llegó y se fue, la sesión se dio.
+// ── Qué quedó en su lugar ───────────────────────────────────────────────────
+// Dos métricas separadas, porque eran dos preguntas distintas metidas en una:
 //
-// Lo decidió el coordinador del programa, y el flujo real lo sostiene: «sábado
-// se hacen las sesiones y domingo se cargan a la plataforma». Cuando alguien
-// crea una sesión en la aplicación, la fecha que le pone ya está en el pasado,
-// así que nace impartida. Es también lo único que cualquiera puede verificar
-// mirando la pantalla, sin saber qué es un `ResumenSesion`.
+//   «Sesiones registradas»  — cuántas sesiones tiene la edición. Un conteo, sin
+//        fracción: una sesión cuenta desde que se crea, porque el flujo real es
+//        que el domingo se carga lo que se impartió el sábado. No hay fracción
+//        porque `Edicion` NO guarda ningún total de sesiones planeadas: el
+//        denominador sería el propio total y la fracción daría 100% siempre,
+//        que es justo un número que no informa de nada.
 //
-// La captura NO desapareció del tablero: sigue reportándose aparte, como
-// «sesiones con asistencia capturada» y «impartidas sin capturar». Lo que se
-// quitó es que la captura decidiera si una sesión se impartió.
+//   «Asistencia capturada» — N de esas sesiones tienen asistencia registrada.
+//        Esta SÍ es fracción, y es la única que se mueve: le dice al
+//        coordinador qué trabajo le falta.
 //
-// ── La frontera del día ─────────────────────────────────────────────────────
-// `Sesion.fecha` es una FECHA DE CALENDARIO (ver src/lib/fechas.ts), guardada a
-// medianoche UTC si la creó la aplicación y a mediodía UTC si vino del Excel.
-// La comparación se hace contra el día de HOY en America/Merida, normalizado a
-// medianoche UTC: ambas convenciones de guardado caen dentro de la franja
-// [00:00, 24:00) UTC de su día, así que `fecha < hoy` funciona para las dos.
-// Comparar contra `new Date()` en un servidor en UTC adelantaría seis horas la
-// sesión del sábado. Y es ESTRICTO: una sesión de hoy todavía no se impartió.
+// La fecha de la sesión ya no decide nada en estos cálculos.
 //
-// ── Clases con varias fechas ────────────────────────────────────────────────
-// En el modelo, una `Clase` (la «sesión» de la interfaz) puede colgar varias
-// `Sesion` (las «fechas»). Hoy los datos son 1:1 — las 14 clases de la base
-// tienen exactamente una fecha cada una — y el contador cuenta FECHAS, que es
-// lo que siempre ha contado `totalSesiones` y lo que corresponde a «¿cuántas
-// veces nos juntamos?». Si algún día una clase tiene dos fechas, cada una suma
-// por separado en cuanto pasa, que es la lectura honesta: una clase con la
-// primera fecha pasada y la segunda por venir está impartida a medias, y el
-// denominador lo refleja.
+// ── Qué cuenta como capturada ───────────────────────────────────────────────
+// Que tenga asistencia registrada, venga de donde venga: la lista pasada en la
+// aplicación (`Asistencia` con `presente`) o los totales importados
+// (`ResumenSesion`). Antes solo contaba la segunda, y ese era el fallo.
 //
-// ── Precedencia de las fuentes de asistencia ────────────────────────────────
-// Para los números de asistencia (totales, promedio, pico, gráficas) manda el
-// agregado cuando existe: es el conteo que el organizador cerró a mano e
-// incluye acompañantes y público que no está inscrito, mientras que la lista
-// individual solo puede ver a los niños inscritos. Si no hay agregado se usa la
-// lista — antes no se usaba, y por eso una edición capturada en la aplicación
-// mostraba todo el panel de asistencia en cero.
+// ── Precedencia cuando hay ambas fuentes ────────────────────────────────────
+// Manda el agregado. Es el conteo que el organizador cerró a mano e incluye
+// acompañantes y público que no está inscrito, mientras que la lista individual
+// solo puede ver a los niños inscritos en la edición. Gracias a esta
+// precedencia, los números de asistencia de las ediciones ya cerradas salen
+// idénticos a los de antes del arreglo.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Nivel } from "@/lib/importacion/texto";
-import { hoyEnZonaPrograma } from "@/lib/fechas";
 
 /**
- * Filtro de Prisma equivalente a «su fecha ya pasó», para los conteos que no
- * necesitan traerse las filas. Es una función y no una constante porque
- * depende de qué día es hoy.
+ * Filtro de Prisma equivalente a `asistenciaDeSesion(...) !== null`, para los
+ * conteos que no necesitan traerse las filas. Mira las DOS fuentes: filtrar
+ * solo por `resumen` era el defecto original. Si cambia la definición, cambia
+ * aquí y en `asistenciaDeSesion` a la vez.
  */
-export function filtroSesionImpartida(ahora: Date = new Date()): {
-  fecha: { lt: Date };
-} {
-  return { fecha: { lt: hoyEnZonaPrograma(ahora) } };
-}
+export const SESION_CAPTURADA: {
+  OR: ({ resumen: { isNot: null } } | { asistencias: { some: { presente: boolean } } })[];
+} = {
+  OR: [
+    { resumen: { isNot: null } },
+    { asistencias: { some: { presente: true } } },
+  ],
+};
 
 /**
  * `select` de Prisma para traer la lista individual con lo mínimo que hace
@@ -166,7 +156,7 @@ export type SesionConAsistencia = {
 
 /**
  * Asistencia efectiva de una sesión, o `null` si nadie la registró todavía —
- * que es exactamente lo que significa «no impartida».
+ * que es exactamente lo que significa «sin capturar».
  */
 export function asistenciaDeSesion(
   sesion: SesionConAsistencia,

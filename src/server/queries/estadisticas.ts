@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db";
-import { formatearFecha, aISOFecha, yaPaso } from "@/lib/fechas";
+import { formatearFecha, aISOFecha } from "@/lib/fechas";
 import {
   TIPOS_SESION,
   cuentaParaConstancia,
@@ -13,7 +13,7 @@ import {
   NIVEL_ORDEN,
   SELECCION_LISTA,
   type AsistenciaDeSesion,
-} from "./sesiones-impartidas";
+} from "./asistencia-de-sesion";
 
 // Orden lógico de los grados homologados para las gráficas.
 function ordenGrado(g: string): number {
@@ -253,31 +253,31 @@ export async function obtenerMetricasEdicion(
 //
 // Dos fuentes conviven: los totales agregados que trae el Excel del organizador
 // (`ResumenSesion`) y la lista individual que se pasa en la aplicación
-// (`Asistencia`). Qué cuenta como «impartida» y con qué precedencia se combinan
-// está en un solo sitio: `./sesiones-impartidas`.
+// (`Asistencia`). Qué cuenta como capturada y con qué precedencia se combinan
+// está en un solo sitio: `./asistencia-de-sesion`.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type MetricasAsistencia = {
   /**
-   * Sesiones cuya fecha ya pasó. Es el numerador de «Sesiones impartidas» en el
-   * dashboard y no depende de que nadie capture nada.
+   * Sesiones registradas en la edición. Es el valor de «Sesiones registradas»
+   * en el dashboard: un conteo, no una fracción. Una sesión cuenta desde que se
+   * crea — ver `./asistencia-de-sesion` para por qué no hay denominador.
    */
-  sesionesImpartidas: number;
+  totalSesiones: number;
   /**
-   * Sesiones con asistencia registrada, de cualquiera de las dos fuentes. Ya no
-   * decide si algo se impartió; es el avance de captura, que se reporta aparte.
+   * De esas, las que tienen asistencia registrada, de cualquiera de las dos
+   * fuentes. Numerador de «Asistencia capturada», la métrica que sí se mueve.
    */
-  sesionesConDatos: number;
-  /** De esas, las que traen los totales agregados del Excel. */
+  sesionesCapturadas: number;
+  /** De las capturadas, las que traen los totales agregados del Excel. */
   sesionesConAgregado: number;
-  /** De esas, las que se capturaron pasando lista en la aplicación. */
+  /** De las capturadas, las que se registraron pasando lista en la aplicación. */
   sesionesConLista: number;
   /**
-   * Impartidas que siguen sin asistencia capturada. Es lo que le falta por
-   * hacer al equipo, y decirlo es lo que convierte el contador en accionable.
+   * Sesiones registradas que siguen sin asistencia capturada. Es lo que le
+   * falta por hacer al equipo, y decirlo es lo que vuelve accionable la cifra.
    */
   sesionesSinCapturar: number;
-  totalSesiones: number;
   totalEventos: number;
   promedioPorSesion: number;
   picoSesion: number;
@@ -313,24 +313,20 @@ export async function obtenerMetricasAsistencia(
     },
   });
 
+  // Las sesiones registradas son, simplemente, las que existen: una cuenta
+  // desde que se crea. La fecha no interviene.
   const totalSesiones = sesiones.length;
-  const ahora = new Date();
-
-  // Impartida = su fecha ya pasó. No mira la captura (ver ./sesiones-impartidas).
-  const sesionesImpartidas = sesiones.filter((s) => yaPaso(s.fecha, ahora)).length;
 
   // Captura: cada sesión con su asistencia efectiva (el agregado si lo hay, si
-  // no la lista individual) o `null` si nadie la ha registrado todavía. Esto ya
-  // no decide si la sesión se impartió, solo alimenta los números y el avance.
-  const evaluadas = sesiones.map((s) => ({ s, a: asistenciaDeSesion(s) }));
-  const conDatos = evaluadas.filter(
-    (x): x is { s: (typeof sesiones)[number]; a: AsistenciaDeSesion } => x.a !== null,
-  );
+  // no la lista individual) o `null` si nadie la ha registrado todavía.
+  const conDatos = sesiones
+    .map((s) => ({ s, a: asistenciaDeSesion(s) }))
+    .filter(
+      (x): x is { s: (typeof sesiones)[number]; a: AsistenciaDeSesion } => x.a !== null,
+    );
   const sesionesConAgregado = conDatos.filter((x) => x.a.origen === "AGREGADA").length;
   const sesionesConLista = conDatos.filter((x) => x.a.origen === "LISTA").length;
-  const sesionesSinCapturar = evaluadas.filter(
-    (x) => x.a === null && yaPaso(x.s.fecha, ahora),
-  ).length;
+  const sesionesSinCapturar = totalSesiones - conDatos.length;
 
   const porSesion = conDatos.map(({ s, a }) => ({
     etiqueta: formatearFecha(s.fecha, "corta"),
@@ -346,8 +342,8 @@ export async function obtenerMetricasAsistencia(
   const totalPapas = conDatos.reduce((acc, { a }) => acc + a.papas, 0);
   const totalEventos = conDatos.reduce((acc, { a }) => acc + a.total, 0);
   const picoSesion = conDatos.length ? Math.max(...conDatos.map(({ a }) => a.total)) : 0;
-  // El promedio se divide entre las sesiones CAPTURADAS, no entre las
-  // impartidas: dividir entre doce lo que se contó en siete inventaría una
+  // El promedio se divide entre las sesiones CAPTURADAS, no entre el total
+  // registrado: dividir entre doce lo que se contó en siete inventaría una
   // caída de asistencia que nadie midió.
   const promedioPorSesion = conDatos.length
     ? Math.round(totalEventos / conDatos.length)
@@ -398,12 +394,11 @@ export async function obtenerMetricasAsistencia(
     .map(([genero, cantidad]) => ({ genero, cantidad }));
 
   return {
-    sesionesImpartidas,
-    sesionesConDatos: conDatos.length,
+    totalSesiones,
+    sesionesCapturadas: conDatos.length,
     sesionesConAgregado,
     sesionesConLista,
     sesionesSinCapturar,
-    totalSesiones,
     totalEventos,
     promedioPorSesion,
     picoSesion,
@@ -438,10 +433,9 @@ export type AnalisisProfundo = {
   numEscuelas: number;
   escuelaTop: { nombre: string; cantidad: number; pct: number } | null;
   numContactos: number;
-  // Asistencia — misma definición de «impartida» que el dashboard: fecha pasada.
-  sesionesImpartidas: number;
-  /** De las impartidas, cuántas tienen asistencia capturada. */
-  sesionesConDatos: number;
+  // Asistencia — misma definición de «capturada» que el dashboard.
+  /** De las sesiones registradas, cuántas tienen asistencia capturada. */
+  sesionesCapturadas: number;
   sesionesTotal: number;
   promedioAsist: number;
   picoAsist: { tema: string; total: number } | null;
@@ -588,9 +582,6 @@ export async function obtenerAnalisisProfundo(
   }
   const numContactos = registrosPorContacto.length;
 
-  // Impartidas = su fecha ya pasó, igual que en el dashboard.
-  const sesionesImpartidas = sesiones.filter((s) => yaPaso(s.fecha)).length;
-
   // Asistencia de las sesiones CAPTURADAS: el agregado del Excel cuando lo hay,
   // si no la lista pasada en la aplicación. Antes solo se miraba el agregado,
   // así que una edición capturada en la app salía con todo en cero.
@@ -649,8 +640,7 @@ export async function obtenerAnalisisProfundo(
     numEscuelas: escMap.size,
     escuelaTop,
     numContactos,
-    sesionesImpartidas,
-    sesionesConDatos: conDatos.length,
+    sesionesCapturadas: conDatos.length,
     sesionesTotal: sesiones.length,
     promedioAsist,
     picoAsist: picoAsist ? { tema: picoAsist.tema, total: picoAsist.total } : null,

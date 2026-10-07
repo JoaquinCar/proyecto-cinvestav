@@ -113,45 +113,6 @@ export function formatearRangoFechas(inicio: FechaEntrada, fin: FechaEntrada): s
   return `${formatearFecha(inicio, "corta")} – ${formatearFecha(fin, "media")}`;
 }
 
-/** Extrae el día de calendario de un instante, leído en una zona horaria dada. */
-const PARTES_DIA = new Map<string, Intl.DateTimeFormat>();
-
-/**
- * HOY como fecha de calendario, visto desde Mérida y normalizado a medianoche
- * UTC — la misma convención en que se guardan las fechas de calendario.
- *
- * Existe porque el servidor corre en UTC (Vercel) y las fechas de calendario
- * viven en la franja [00:00, 24:00) UTC del día que representan. Comparar
- * `Sesion.fecha` contra `new Date()` mezclaría un día con un instante: a las
- * 19:00 de Mérida ya es el día siguiente en UTC, y la sesión del sábado se
- * contaría como pasada seis horas antes de tiempo.
- */
-export function hoyEnZonaPrograma(ahora: Date = new Date()): Date {
-  let fmt = PARTES_DIA.get(ZONA_PROGRAMA);
-  if (!fmt) {
-    fmt = new Intl.DateTimeFormat("en-CA", {
-      timeZone: ZONA_PROGRAMA,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    PARTES_DIA.set(ZONA_PROGRAMA, fmt);
-  }
-  // "en-CA" rinde exactamente "YYYY-MM-DD".
-  return aFechaCalendario(fmt.format(ahora));
-}
-
-/**
- * ¿El día de calendario de `fecha` es ESTRICTAMENTE anterior a hoy en Mérida?
- *
- * Estricto a propósito: una sesión que ocurre hoy todavía no se ha impartido.
- * El programa es sabatino y se captura el domingo, así que en la práctica nadie
- * se topa con el caso límite, y si lo hace se corrige solo en 24 horas.
- */
-export function yaPaso(fecha: FechaEntrada, ahora: Date = new Date()): boolean {
-  return aFechaCalendario(fecha).getTime() < hoyEnZonaPrograma(ahora).getTime();
-}
-
 /**
  * Formatea un INSTANTE real (no una fecha de calendario) en la zona del programa.
  * Úsalo solo cuando el valor represente un momento concreto, como `new Date()`.

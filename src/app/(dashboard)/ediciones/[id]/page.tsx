@@ -41,14 +41,21 @@ export default async function EdicionDetallePage({
   const inscripciones = edicion._count?.inscripciones ?? 0;
   const clases = edicion._count?.clases ?? 0;
   const sesionesTotal = edicion.sesionesTotal ?? 0;
-  const sesionesImpartidas = edicion.sesionesImpartidas ?? 0;
+  const sesionesCapturadas = edicion.sesionesCapturadas ?? 0;
+  const sinCapturar = sesionesTotal - sesionesCapturadas;
+  const pendienteCaptura =
+    sesionesTotal === 0
+      ? "sin sesiones todavía"
+      : sinCapturar > 0
+        ? `faltan ${sinCapturar} por capturar`
+        : "todas capturadas";
 
   const stats = [
     { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
-    { label: "Sesiones",     value: clases,         icon: BookOpen,       colorClass: "text-success",   bgClass: "bg-success/10"  },
-    // «Impartida» = su fecha ya pasó. El rótulo lo dice en la tarjeta: antes
-    // decía «con datos» y nadie sabía qué datos ni qué los generaba.
-    { label: "Sesiones impartidas", value: `${sesionesImpartidas} de ${sesionesTotal}`, hint: "cuentan las sesiones cuya fecha ya pasó", icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
+    { label: "Sesiones", value: clases, hint: "registradas en la edición", icon: BookOpen, colorClass: "text-success", bgClass: "bg-success/10" },
+    // La fracción que sí se mueve. Antes esta tarjeta decía «Sesiones con
+    // datos» y nadie sabía qué datos ni qué los generaba.
+    { label: "Asistencia capturada", value: `${sesionesCapturadas} de ${sesionesTotal}`, hint: pendienteCaptura, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
     { label: "Constancia desde", value: `${edicion.minAsistencias} asist.`, icon: Award, colorClass: "text-chart-3", bgClass: "bg-chart-3/10" },
   ];
 
