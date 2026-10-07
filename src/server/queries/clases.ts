@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
 import { TIPO_SESION_POR_DEFECTO, type TipoSesion } from "@/lib/tipos-sesion";
 import type {
@@ -208,38 +209,177 @@ export async function editarClase(
   });
 }
 
-// ── Eliminar una clase (solo si no tiene sesiones ni asistencias) ─────────────
+// ── Eliminar una sesión (el modelo `Clase`) ───────────────────────────────────
 
-export async function eliminarClase(id: string) {
-  // Contar asistencias a través de sesiones de esta clase
-  const asistencias = await prisma.asistencia.count({
-    where: {
-      sesion: { claseId: id },
-    },
+/** Lo que arrastra consigo el borrado de una sesión, para poder avisarlo. */
+export type ConteosDeBorrado = {
+  /** Fechas (`Sesion`) de esta sesión. Se van con ella, siempre. */
+  fechas: number;
+  /** Asistencias individuales registradas en esas fechas. */
+  asistencias: number;
+  /** Cuántos niños distintos figuran en esas asistencias. */
+  participantes: number;
+  /** Resúmenes agregados importados del Excel del organizador. */
+  resumenes: number;
+  /** Imágenes de la sesión. Caen en cascada desde `Clase`. */
+  imagenes: number;
+};
+
+/**
+ * Borra la sesión y todo lo que no se sostiene sin ella.
+ *
+ * QUÉ SE VA SIEMPRE, sin preguntar:
+ *   · La fecha (`Sesion`). Una fecha no significa nada sin la sesión que se
+ *     imparte ese día: dejarla sería un huérfano, no un dato.
+ *   · Las imágenes (`ImagenClase`) y las asignaciones de staff (`StaffClase`),
+ *     que ya caen en cascada desde `Clase` por la llave foránea. La FICHA de
+ *     la persona de staff no se toca: vuelve año tras año y está en más
+ *     sesiones.
+ *
+ * QUÉ SE PARA Y PREGUNTA:
+ *   · Las asistencias individuales. Son el respaldo de las constancias de los
+ *     niños y la llave foránea NO las borra en cascada a propósito (ver
+ *     prisma/schema.prisma). Se borran solo con `forzar`, y dentro de la misma
+ *     transacción, igual que en DELETE /api/inscripciones/[id].
+ *   · El resumen agregado (`ResumenSesion`). Técnicamente ya cae en cascada
+ *     desde `Sesion`, así que no quedaría huérfano; pero son los números que
+ *     el Excel del organizador trajo y que alimentan las estadísticas de la
+ *     edición, y perderlos sin decir nada cambiaría el tablero sin que nadie
+ *     entienda por qué. Avisar es barato; recuperarlo es volver a importar.
+ *
+ * POR QUÉ YA NO HAY GUARDIA DE "FECHAS PROGRAMADAS": lo hubo mientras una
+ * `Clase` podía existir sin ninguna `Sesion`. Desde que crearla crea también su
+ * fecha en la misma transacción, toda clase tiene al menos una, de modo que ese
+ * guardia saltaba siempre y ninguna sesión se podía borrar jamás — ni una
+ * recién creada por error y vacía. Eso es lo que reportó QA.
+ *
+ * Todo ocurre dentro de una transacción interactiva: los conteos se hacen
+ * dentro, así que nadie puede pasar lista entre la comprobación y el borrado.
+ */
+export async function eliminarClase(
+  id: string,
+  opciones: { forzar?: boolean } = {},
+) {
+  return prisma.$transaction(async (tx) => {
+    const clase = await tx.clase.findUnique({
+      where:  { id },
+      select: { id: true, nombre: true },
+    });
+
+    if (!clase) {
+      throw new ClaseNoEncontradaError(
+        "Esta sesión ya no existe: alguien pudo eliminarla. Vuelve a la lista de " +
+          "sesiones para ver las que siguen activas.",
+      );
+    }
+
+    const conteos = await contarArrastreDeClase(tx, id);
+    const { asistencias, resumenes } = conteos;
+
+    if (!opciones.forzar && (asistencias > 0 || resumenes > 0)) {
+      throw new ClaseConAsistenciasError(
+        mensajeBorradoConHistorial(clase.nombre, conteos),
+        conteos,
+      );
+    }
+
+    if (asistencias > 0) {
+      // Cascada explícita en la aplicación, no en la llave foránea: borrar el
+      // respaldo de una constancia tiene que ser un acto deliberado.
+      await tx.asistencia.deleteMany({ where: { sesion: { claseId: id } } });
+    }
+
+    // Las fechas se van con la sesión. `ResumenSesion` cae en cascada detrás de
+    // cada `Sesion`; `ImagenClase` y `StaffClase`, detrás de la `Clase`.
+    await tx.sesion.deleteMany({ where: { claseId: id } });
+
+    return tx.clase.delete({ where: { id } });
   });
+}
+
+/**
+ * Qué arrastraría consigo borrar esta sesión.
+ *
+ * Es la MISMA cuenta que hace `eliminarClase`, a propósito: la pantalla de
+ * confirmación enseña estos números antes de pulsar y el servidor decide con
+ * ellos al pulsar. Si fueran dos cuentas distintas, acabarían discrepando.
+ * Dentro del borrado se llama con el cliente de la transacción; desde la
+ * pantalla, con el cliente normal.
+ */
+async function contarArrastreDeClase(
+  db: Prisma.TransactionClient,
+  id: string,
+): Promise<ConteosDeBorrado> {
+  const [fechas, asistencias, inscripciones, resumenes, imagenes] =
+    await Promise.all([
+      db.sesion.count({ where: { claseId: id } }),
+      db.asistencia.count({ where: { sesion: { claseId: id } } }),
+      // Cuántos NIÑOS distintos, no cuántas marcas: "12 asistencias" no dice
+      // a cuánta gente afecta, y es lo primero que pregunta el coordinador.
+      db.asistencia.findMany({
+        where:    { sesion: { claseId: id } },
+        distinct: ["inscripcionId"],
+        select:   { inscripcionId: true },
+      }),
+      db.resumenSesion.count({ where: { sesion: { claseId: id } } }),
+      db.imagenClase.count({ where: { claseId: id } }),
+    ]);
+
+  return {
+    fechas,
+    asistencias,
+    participantes: inscripciones.length,
+    resumenes,
+    imagenes,
+  };
+}
+
+/** Lo mismo, para la pantalla de confirmación: cuenta y no borra nada. */
+export async function contarBorradoDeClase(id: string): Promise<ConteosDeBorrado> {
+  return contarArrastreDeClase(prisma, id);
+}
+
+/**
+ * El aviso que ve el coordinador cuando el borrado se llevaría historial.
+ *
+ * Tiene que decir tres cosas, porque el mensaje viejo —"tiene 1 fecha
+ * programada"— no decía ninguna: QUÉ sesión es, QUÉ se perdería (con números
+ * que signifiquen algo: niños, no filas) y QUÉ hacer ahora.
+ */
+function mensajeBorradoConHistorial(
+  nombre: string,
+  { asistencias, participantes, resumenes }: ConteosDeBorrado,
+): string {
+  const partes: string[] = [];
 
   if (asistencias > 0) {
-    throw new ClaseConAsistenciasError(
-      `No se puede eliminar la sesión porque tiene ${asistencias} asistencia(s) registrada(s). ` +
-        "Ese es el respaldo de las constancias de los niños y no se borra desde aquí.",
+    const ninos = participantes === 1 ? "1 niño" : `${participantes} niños`;
+    partes.push(
+      `${asistencias} ${asistencias === 1 ? "asistencia registrada" : "asistencias registradas"} ` +
+        `de ${ninos}, que es el respaldo de sus constancias`,
     );
   }
 
-  // Sesion → Clase no está en cascada (a propósito: borrar una clase no debe
-  // llevarse por delante el calendario). Sin esta comprobación, el `delete`
-  // reventaba contra la llave foránea y salía como "Error interno del
-  // servidor", sin decir que lo que estorbaba eran las sesiones.
-  const sesiones = await prisma.sesion.count({ where: { claseId: id } });
-
-  if (sesiones > 0) {
-    throw new ClaseConSesionesError(
-      `No se puede eliminar la sesión porque tiene ${sesiones} fecha(s) programada(s). ` +
-        "Elimina primero esas fechas desde la página de la sesión y vuelve a intentarlo.",
-      sesiones,
+  if (resumenes > 0) {
+    partes.push(
+      `${
+        resumenes === 1
+          ? "el resumen de asistencia importado"
+          : `${resumenes} resúmenes de asistencia importados`
+      } del Excel del organizador, que alimenta las estadísticas de la edición`,
     );
   }
 
-  return prisma.clase.delete({ where: { id } });
+  const queSePierde = partes.join(", y ");
+
+  const comoSigue =
+    asistencias > 0
+      ? "Si la sesión se creó por error, confirma el borrado y se eliminará junto con ese historial. " +
+        "Si lo que sobra son unos cuantos niños, cancela y desmárcalos primero en la lista de asistencia."
+      : "Confirma el borrado para eliminarla junto con esos totales; para recuperarlos habría que volver " +
+        "a importar el Excel de la edición.";
+
+  return `No se puede eliminar «${nombre}» sin confirmarlo: tiene ${queSePierde}. ${comoSigue}`;
 }
 
 // ── Listar sesiones de una clase ──────────────────────────────────────────────
@@ -436,21 +576,28 @@ export async function eliminarSesion(id: string) {
 
 // ── Errores personalizados ────────────────────────────────────────────────────
 
+/**
+ * Borrar la sesión se llevaría historial de asistencia por delante.
+ *
+ * `conteos` viaja con el error hasta la pantalla: el diálogo de confirmación
+ * necesita los mismos números que el mensaje para que el ADMIN sepa a qué
+ * está diciendo que sí.
+ */
 export class ClaseConAsistenciasError extends Error {
-  constructor(message: string) {
+  readonly conteos: ConteosDeBorrado;
+
+  constructor(message: string, conteos: ConteosDeBorrado) {
     super(message);
     this.name = "ClaseConAsistenciasError";
+    this.conteos = conteos;
   }
 }
 
-/** La clase todavía tiene sesiones en el calendario, aunque nadie haya pasado lista. */
-export class ClaseConSesionesError extends Error {
-  readonly sesiones: number;
-
-  constructor(message: string, sesiones: number) {
+/** Se pidió borrar una sesión que ya no está (pestaña vieja, doble clic). */
+export class ClaseNoEncontradaError extends Error {
+  constructor(message: string) {
     super(message);
-    this.name = "ClaseConSesionesError";
-    this.sesiones = sesiones;
+    this.name = "ClaseNoEncontradaError";
   }
 }
 

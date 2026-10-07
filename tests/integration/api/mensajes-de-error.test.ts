@@ -34,15 +34,15 @@ vi.mock("@/server/queries/clases", () => ({
   eliminarSesion: vi.fn(),
   obtenerRangoEdicionDeClase: vi.fn(),
   obtenerRangoEdicionDeSesion: vi.fn(),
-  ClaseConAsistenciasError: class ClaseConAsistenciasError extends Error {},
-  ClaseConSesionesError: class ClaseConSesionesError extends Error {
-    readonly sesiones: number;
-    constructor(message: string, sesiones: number) {
+  ClaseConAsistenciasError: class ClaseConAsistenciasError extends Error {
+    readonly conteos: Record<string, number>;
+    constructor(message: string, conteos: Record<string, number>) {
       super(message);
-      this.name = "ClaseConSesionesError";
-      this.sesiones = sesiones;
+      this.name = "ClaseConAsistenciasError";
+      this.conteos = conteos;
     }
   },
+  ClaseNoEncontradaError: class ClaseNoEncontradaError extends Error {},
   SesionConAsistenciasError: class SesionConAsistenciasError extends Error {},
 }));
 
@@ -236,23 +236,30 @@ describe("datos inválidos", () => {
   });
 });
 
-// ── Borrar una clase que todavía tiene sesiones ──────────────────────────────
+// ── Borrar una sesión que tiene lista pasada ─────────────────────────────────
+//
+// El mensaje de antes —"tiene 3 fecha(s) programada(s)"— no le decía nada
+// accionable a nadie, y además saltaba SIEMPRE: toda sesión tiene su fecha, así
+// que ninguna se podía borrar. Lo que ahora frena el borrado es lo único que de
+// verdad importa, el historial de asistencia, y el texto dice qué se perdería y
+// cómo seguir.
 
-describe("DELETE /api/clases/[id] con sesiones", () => {
+describe("DELETE /api/clases/[id] con lista pasada", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     await comoAdmin();
   });
 
-  it("responde 409 con el conteo y qué hacer, no 500", async () => {
-    const { obtenerClasePorId, eliminarClase, ClaseConSesionesError } =
+  it("responde 409 con los conteos y qué hacer, no 500", async () => {
+    const { obtenerClasePorId, eliminarClase, ClaseConAsistenciasError } =
       await import("@/server/queries/clases");
     vi.mocked(obtenerClasePorId).mockResolvedValue({ id: "clase-1" } as never);
     vi.mocked(eliminarClase).mockRejectedValue(
-      new ClaseConSesionesError(
-        "No se puede eliminar la sesión porque tiene 3 fecha(s) programada(s). " +
-          "Elimina primero esas fechas desde la página de la sesión y vuelve a intentarlo.",
-        3,
+      new ClaseConAsistenciasError(
+        "No se puede eliminar «Robótica» sin confirmarlo: tiene 12 asistencias " +
+          "registradas de 9 niños, que es el respaldo de sus constancias. Si la sesión " +
+          "se creó por error, confirma el borrado y se eliminará junto con ese historial.",
+        { fechas: 1, asistencias: 12, participantes: 9, resumenes: 0, imagenes: 0 },
       ),
     );
 
@@ -263,9 +270,10 @@ describe("DELETE /api/clases/[id] con sesiones", () => {
 
     expect(res.status).toBe(409);
     const body = await res.json();
-    expect(body.error).toMatch(/3 fecha/i);
-    expect(body.error).toMatch(/elimina primero esas fechas/i);
-    expect(body.sesiones).toBe(3);
+    expect(body.error).toMatch(/9 niños/i);
+    expect(body.error).toMatch(/constancia/i);
+    expect(body.error).toMatch(/confirma/i);
+    expect(body.conteos).toMatchObject({ asistencias: 12, participantes: 9 });
     noFiltraInterioridades(body.error);
   });
 });
