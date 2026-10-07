@@ -96,6 +96,18 @@ export default async function DashboardPage({
     obtenerMetricasAsistencia(edicion.id),
   ]);
 
+  // De dónde salió cada sesión con asistencia capturada. Esto es lo que QA no
+  // podía deducir de la pantalla («no sé qué activa las sesiones»): el contador
+  // de impartidas venía de los totales del Excel y nada de lo que se hacía en la
+  // aplicación lo movía. Ahora las impartidas las decide la fecha, y la captura
+  // se reporta aparte, con su origen a la vista.
+  const fuentesCaptura = [
+    asist.sesionesConLista > 0 ? `${asist.sesionesConLista} con lista pasada` : null,
+    asist.sesionesConAgregado > 0 ? `${asist.sesionesConAgregado} del Excel` : null,
+  ].filter(Boolean);
+  const detalleCaptura =
+    fuentesCaptura.length > 0 ? fuentesCaptura.join(" · ") : "ninguna todavía";
+
   return (
     <div className="space-y-8">
       {/* Encabezado */}
@@ -168,14 +180,17 @@ export default async function DashboardPage({
           </div>
           <div>
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Sesiones con datos
+              Sesiones impartidas
             </p>
             <p className="text-foreground font-semibold text-lg">
-              {asist.sesionesConDatos}
+              {asist.sesionesImpartidas}
               <span className="text-muted-foreground font-normal text-sm">
                 {" "}
                 de {asist.totalSesiones}
               </span>
+            </p>
+            <p className="text-muted-foreground text-xs">
+              su fecha ya pasó · {asist.sesionesConDatos} con asistencia capturada
             </p>
           </div>
         </div>
@@ -184,6 +199,27 @@ export default async function DashboardPage({
           <strong>asistencia</strong> son eventos sumados por sesión (un mismo niño cuenta
           en cada sesión a la que asiste). Por eso los totales no coinciden — son métricas
           distintas, no un error de captura.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+          Cuentan como <strong>impartidas</strong> las sesiones cuya fecha ya pasó —
+          nada más. No depende de que alguien capture la asistencia: una sesión que ya
+          ocurrió cuenta aunque su lista siga pendiente. La captura se reporta aparte:{" "}
+          <strong className="text-foreground">
+            {asist.sesionesConDatos} de {asist.totalSesiones}
+          </strong>{" "}
+          tienen asistencia capturada ({detalleCaptura}).
+          {asist.sesionesSinCapturar > 0 && (
+            <>
+              {" "}
+              <strong className="text-foreground">
+                Faltan por capturar {asist.sesionesSinCapturar}{" "}
+                {asist.sesionesSinCapturar === 1
+                  ? "sesión ya impartida"
+                  : "sesiones ya impartidas"}
+                .
+              </strong>
+            </>
+          )}
         </p>
       </div>
 
@@ -220,8 +256,8 @@ export default async function DashboardPage({
           />
           <StatCard
             label="Sesiones impartidas"
-            value={`${asist.sesionesConDatos}/${asist.totalSesiones}`}
-            hint="con datos / total"
+            value={`${asist.sesionesImpartidas}/${asist.totalSesiones}`}
+            hint="cuentan las sesiones cuya fecha ya pasó"
             icon={CalendarCheck}
             colorClass="text-chart-5"
             bgClass="bg-chart-5/10"

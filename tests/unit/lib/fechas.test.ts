@@ -6,6 +6,8 @@ import {
   formatearFecha,
   formatearInstante,
   estaEnRango,
+  hoyEnZonaPrograma,
+  yaPaso,
 } from "@/lib/fechas";
 
 // ── Guardia de zona horaria ───────────────────────────────────────────────────
@@ -199,5 +201,39 @@ describe("estaEnRango", () => {
     expect(estaEnRango("2026-01-24", inicioMediodia, finMediodia)).toBe(true);
     expect(estaEnRango("2026-06-27", inicioMediodia, finMediodia)).toBe(true);
     expect(estaEnRango("2026-06-28", inicioMediodia, finMediodia)).toBe(false);
+  });
+});
+
+// ── El día de hoy, visto desde Mérida ────────────────────────────────────────
+// `yaPaso` decide qué sesiones cuentan como impartidas en el dashboard. El
+// servidor corre en UTC (Vercel), así que la frontera del día es el sitio donde
+// un error de seis horas cambia el número que ve el organizador.
+
+describe("hoyEnZonaPrograma / yaPaso", () => {
+  /** Sábado 3 de octubre, 20:00 en Mérida = domingo 4, 02:00 en UTC. */
+  const NOCHE_DEL_SABADO = new Date("2026-10-04T02:00:00.000Z");
+
+  it("hoy es el día de Mérida, no el de UTC", () => {
+    expect(aISOFecha(hoyEnZonaPrograma(NOCHE_DEL_SABADO))).toBe("2026-10-03");
+  });
+
+  it("la sesión de hoy todavía no pasó; la de ayer sí", () => {
+    expect(yaPaso("2026-10-03", NOCHE_DEL_SABADO)).toBe(false);
+    expect(yaPaso("2026-10-02", NOCHE_DEL_SABADO)).toBe(true);
+    expect(yaPaso("2026-10-04", NOCHE_DEL_SABADO)).toBe(false);
+  });
+
+  it("da igual la convención de guardado: medianoche (app) o mediodía (Excel)", () => {
+    expect(yaPaso(new Date("2026-10-02T00:00:00.000Z"), NOCHE_DEL_SABADO)).toBe(true);
+    expect(yaPaso(new Date("2026-10-02T12:00:00.000Z"), NOCHE_DEL_SABADO)).toBe(true);
+    expect(yaPaso(new Date("2026-10-03T00:00:00.000Z"), NOCHE_DEL_SABADO)).toBe(false);
+    expect(yaPaso(new Date("2026-10-03T12:00:00.000Z"), NOCHE_DEL_SABADO)).toBe(false);
+  });
+
+  it("de madrugada en Mérida el día aún no ha cambiado en UTC-6", () => {
+    // Domingo 4, 01:00 en Mérida = domingo 4, 07:00 UTC. Mismo día en ambas.
+    const madrugada = new Date("2026-10-04T07:00:00.000Z");
+    expect(aISOFecha(hoyEnZonaPrograma(madrugada))).toBe("2026-10-04");
+    expect(yaPaso("2026-10-03", madrugada)).toBe(true);
   });
 });

@@ -41,12 +41,14 @@ export default async function EdicionDetallePage({
   const inscripciones = edicion._count?.inscripciones ?? 0;
   const clases = edicion._count?.clases ?? 0;
   const sesionesTotal = edicion.sesionesTotal ?? 0;
-  const sesionesConDatos = edicion.sesionesConDatos ?? 0;
+  const sesionesImpartidas = edicion.sesionesImpartidas ?? 0;
 
   const stats = [
     { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
     { label: "Sesiones",     value: clases,         icon: BookOpen,       colorClass: "text-success",   bgClass: "bg-success/10"  },
-    { label: "Sesiones con datos", value: `${sesionesConDatos} de ${sesionesTotal}`, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
+    // «Impartida» = su fecha ya pasó. El rótulo lo dice en la tarjeta: antes
+    // decía «con datos» y nadie sabía qué datos ni qué los generaba.
+    { label: "Sesiones impartidas", value: `${sesionesImpartidas} de ${sesionesTotal}`, hint: "cuentan las sesiones cuya fecha ya pasó", icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
     { label: "Constancia desde", value: `${edicion.minAsistencias} asist.`, icon: Award, colorClass: "text-chart-3", bgClass: "bg-chart-3/10" },
   ];
 
@@ -173,7 +175,7 @@ export default async function EdicionDetallePage({
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up animate-fade-up-delay-2">
-        {stats.map(({ label, value, icon: Icon, colorClass, bgClass }) => (
+        {stats.map(({ label, value, hint, icon: Icon, colorClass, bgClass }) => (
           <div key={label} className="bg-card border border-border rounded-2xl p-5">
             <div className="flex items-start justify-between mb-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground" style={{ letterSpacing: "0.07em" }}>{label}</p>
@@ -182,6 +184,7 @@ export default async function EdicionDetallePage({
               </div>
             </div>
             <div className="stat-number text-5xl tabular">{value}</div>
+            {hint && <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{hint}</p>}
           </div>
         ))}
       </div>

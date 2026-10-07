@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db";
 import type { CrearEdicionInput, EditarEdicionInput } from "@/lib/schemas/edicion.schema";
+import { filtroSesionImpartida } from "./sesiones-impartidas";
 
 // ── Listar todas las ediciones ────────────────────────────────────────────────
 
@@ -58,12 +59,18 @@ export async function obtenerEdicionPorId(id: string) {
 
   if (!edicion) return null;
 
-  const [sesionesTotal, sesionesConDatos] = await Promise.all([
+  // «Impartida» = su fecha ya pasó. Antes contaba solo las que traían los
+  // totales del Excel, de modo que una edición capturada entera desde la
+  // aplicación salía en «0 de 7» y nada en pantalla movía ese número. La
+  // definición —y la frontera del día en Mérida— vive en un solo sitio.
+  const [sesionesTotal, sesionesImpartidas] = await Promise.all([
     prisma.sesion.count({ where: { clase: { edicionId: id } } }),
-    prisma.sesion.count({ where: { clase: { edicionId: id }, resumen: { isNot: null } } }),
+    prisma.sesion.count({
+      where: { clase: { edicionId: id }, ...filtroSesionImpartida() },
+    }),
   ]);
 
-  return { ...edicion, sesionesTotal, sesionesConDatos };
+  return { ...edicion, sesionesTotal, sesionesImpartidas };
 }
 
 // ── Crear nueva edición ───────────────────────────────────────────────────────
