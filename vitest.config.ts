@@ -26,6 +26,13 @@ export default defineConfig({
       "**/.next/**",
       "**/.claude/worktrees/**",
     ],
+    // Un fichero de pruebas a la vez. Las de tests/integration/db/ comparten UNA
+    // sola base de datos y cada una siembra y borra sus propias ediciones; en
+    // paralelo se pisan entre sí y chocan por el año único de Edicion, dando
+    // fallos que no existen en el código. Pasó en cuanto hubo ocho ficheros.
+    // La suite entera tarda ~7 s en serie frente a ~2 s en paralelo: no vale la
+    // pena perseguir fallos fantasma por ahorrar cinco segundos.
+    fileParallelism: false,
   },
   resolve: {
     alias: {
