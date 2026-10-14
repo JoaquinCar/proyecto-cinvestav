@@ -37,6 +37,11 @@ interface GestorAcompananteProps {
   acompanante: Acompanante | null;
   /** ADMIN y BECARIO capturan; READONLY solo ve. */
   puedeEditar: boolean;
+  /**
+   * El teléfono y el correo del adulto son datos personales: el API se los
+   * oculta a READONLY y aquí se hace lo mismo, o el candado no serviría.
+   */
+  puedeVerContacto: boolean;
   edicionNombre: string;
 }
 
@@ -44,13 +49,29 @@ export function GestorAcompanante({
   inscripcionId,
   acompanante,
   puedeEditar,
+  puedeVerContacto,
   edicionNombre,
 }: GestorAcompananteProps) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
+  const [confirmandoQuitar, setConfirmandoQuitar] = useState(false);
   const [estado, setEstado] = useState<EstadoAcompanante>(ACOMPANANTE_VACIO);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+
+  /** Abre el formulario por el buscador: reutilizar es el caso más común. */
+  function abrirFormulario() {
+    setEstado({
+      modo: "nuevo",
+      datos: {
+        nombre: "", apellidos: "", telefono: "", correo: "",
+        parentesco: "MADRE",
+      },
+    });
+    setConfirmandoQuitar(false);
+    setError(null);
+    setEditando(true);
+  }
 
   async function guardar() {
     if (acompananteIncompleto(estado)) {
@@ -92,7 +113,10 @@ export function GestorAcompanante({
     setCargando(true);
     try {
       await quitarAcompanante(inscripcionId);
-      toast.success(`Se quitó el acompañante en ${edicionNombre}`);
+      toast.success(
+        `Se quitó el acompañante en ${edicionNombre}. Su ficha sigue guardada.`,
+      );
+      setConfirmandoQuitar(false);
       router.refresh();
     } catch (err) {
       const mensaje = mensajeDeError(
@@ -113,6 +137,25 @@ export function GestorAcompanante({
   if (editando) {
     return (
       <div className="space-y-3">
+        {/* De qué edición se está hablando, y a quién se va a sustituir: un
+            niño puede tener varias inscripciones y cada una lleva la suya. */}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {acompanante ? (
+            <>
+              En <span className="text-foreground">{edicionNombre}</span> lo trae{" "}
+              <span className="text-foreground">
+                {nombreCompletoAcompanante(acompanante)}
+              </span>
+              . Busca a quien lo trae ahora, o captúralo si es la primera vez.
+            </>
+          ) : (
+            <>
+              Con quién vino el niño en{" "}
+              <span className="text-foreground">{edicionNombre}</span>. Si ya
+              registraste a un hermano, búscalo y reutiliza el mismo.
+            </>
+          )}
+        </p>
         <CampoAcompanante
           valor={estado}
           onChange={(v) => {
@@ -156,20 +199,7 @@ export function GestorAcompanante({
           Sin acompañante registrado
         </span>
         {puedeEditar && (
-          <button
-            type="button"
-            onClick={() => {
-              setEstado({
-                modo: "nuevo",
-                datos: {
-                  nombre: "", apellidos: "", telefono: "", correo: "",
-                  parentesco: "MADRE",
-                },
-              });
-              setEditando(true);
-            }}
-            className={claseEnlace}
-          >
+          <button type="button" onClick={abrirFormulario} className={claseEnlace}>
             Agregar acompañante
           </button>
         )}
@@ -201,7 +231,9 @@ export function GestorAcompanante({
           </Link>
           <p className="text-xs mt-0.5 text-muted-foreground">
             {PARENTESCO_LABEL[acompanante.parentesco]}
-            {acompanante.telefono ? ` · ${acompanante.telefono}` : ""}
+            {puedeVerContacto && acompanante.telefono
+              ? ` · ${acompanante.telefono}`
+              : ""}
             {acompanados > 1 ? (
               <>
                 {" · acompaña a "}
@@ -210,21 +242,12 @@ export function GestorAcompanante({
             ) : null}
           </p>
 
-          {puedeEditar && (
+          {puedeEditar && !confirmandoQuitar && (
             <div className="flex flex-wrap gap-3 mt-1.5">
               <button
                 type="button"
                 disabled={cargando}
-                onClick={() => {
-                  setEstado({
-                    modo: "nuevo",
-                    datos: {
-                      nombre: "", apellidos: "", telefono: "", correo: "",
-                      parentesco: "MADRE",
-                    },
-                  });
-                  setEditando(true);
-                }}
+                onClick={abrirFormulario}
                 className={claseEnlace}
               >
                 Cambiar
@@ -232,7 +255,10 @@ export function GestorAcompanante({
               <button
                 type="button"
                 disabled={cargando}
-                onClick={quitar}
+                onClick={() => {
+                  setError(null);
+                  setConfirmandoQuitar(true);
+                }}
                 className={claseEnlace}
               >
                 Quitar
@@ -241,6 +267,52 @@ export function GestorAcompanante({
           )}
         </div>
       </div>
+
+      {/* Confirmar antes de quitar — en línea, no en diálogo: esto se usa desde
+          el teléfono y un diálogo aquí solo taparía el resto de la ficha.
+          Importa decir qué NO pasa: la ficha del adulto se comparte entre
+          hermanos y quitarla de esta inscripción no la borra ni toca a nadie
+          más. */}
+      {confirmandoQuitar && (
+        <div className="rounded-xl px-3 py-2.5 bg-muted border border-border space-y-2">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Se quitará a{" "}
+            <span className="text-foreground">
+              {nombreCompletoAcompanante(acompanante)}
+            </span>{" "}
+            de <span className="text-foreground">{edicionNombre}</span>.{" "}
+            {acompanados > 2 ? (
+              <>
+                Su ficha no se borra: también acompaña a otros{" "}
+                <span className="tabular">{acompanados - 1}</span> niños, que la
+                conservan.
+              </>
+            ) : acompanados === 2 ? (
+              <>Su ficha no se borra: también acompaña a otro niño, que la conserva.</>
+            ) : (
+              <>Su ficha no se borra: queda guardada para volver a usarla.</>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={cargando}
+              onClick={quitar}
+              className="px-3 rounded-xl text-sm font-medium min-h-[44px] sm:min-h-0 sm:h-9 transition-colors bg-destructive/10 border border-destructive/40 text-destructive hover:bg-destructive/15 disabled:opacity-50"
+            >
+              {cargando ? "Quitando…" : "Sí, quitar"}
+            </button>
+            <button
+              type="button"
+              disabled={cargando}
+              onClick={() => setConfirmandoQuitar(false)}
+              className="px-3 rounded-xl text-sm font-medium min-h-[44px] sm:min-h-0 sm:h-9 transition-colors bg-card border border-border text-foreground hover:bg-secondary/10 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div
