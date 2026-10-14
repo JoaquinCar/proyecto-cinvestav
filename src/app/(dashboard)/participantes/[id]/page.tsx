@@ -174,6 +174,9 @@ function TimelineItem({
             inscripcionId={inscripcion.id}
             acompanante={inscripcion.acompanante}
             puedeEditar={puedeCapturar}
+            // El contacto del adulto es dato personal: el API se lo oculta a
+            // READONLY y aquí se aplica el mismo criterio.
+            puedeVerContacto={puedeCapturar}
             edicionNombre={inscripcion.edicion.nombre}
           />
         </div>

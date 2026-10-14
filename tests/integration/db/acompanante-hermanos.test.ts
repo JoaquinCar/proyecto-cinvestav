@@ -189,6 +189,77 @@ describe.skipIf(!habilitado)("dos hermanos comparten un solo acompañante", () =
     expect(acompanante?.inscripciones).toHaveLength(1);
   });
 
+  it("se puede poner acompañante en una inscripción que no tenía", async () => {
+    const { inscribirParticipante } = await import("@/server/queries/participantes");
+    const { asignarAcompanante } = await import("@/server/queries/acompanantes");
+
+    const ana = await crearNino("Ana");
+    // Se inscribió sin acompañante: el caso que dejaba el hueco, porque hasta
+    // ahora solo se podía capturar en el momento del alta.
+    const inscripcion = await inscribirParticipante(ana.id, edicionId);
+    expect(inscripcion.acompananteId).toBeNull();
+
+    const conAcompanante = await asignarAcompanante(inscripcion.id, {
+      acompanante: { nombre: "Laura", apellidos: MARCA, parentesco: "MADRE" },
+    });
+
+    expect(conAcompanante.acompanante?.nombre).toBe("Laura");
+    expect(conAcompanante.acompananteId).toBeTruthy();
+  });
+
+  it("quitárselo a un hermano no se lo quita al otro", async () => {
+    const { inscribirParticipante } = await import("@/server/queries/participantes");
+    const { quitarAcompanante } = await import("@/server/queries/acompanantes");
+
+    const ana = await crearNino("Ana");
+    const beto = await crearNino("Beto");
+
+    const deAna = await inscribirParticipante(ana.id, edicionId, {
+      acompanante: { nombre: "Laura", apellidos: MARCA, parentesco: "MADRE" },
+    });
+    const deBeto = await inscribirParticipante(beto.id, edicionId, {
+      acompananteId: deAna.acompananteId!,
+    });
+
+    const lauraId = deAna.acompananteId!;
+    await quitarAcompanante(deAna.id);
+
+    // La ficha sigue existiendo…
+    expect(
+      await prisma.acompanante.findUnique({ where: { id: lauraId } }),
+    ).not.toBeNull();
+
+    // …y Beto la conserva: quitar solo desliga ESA inscripción.
+    const inscripcionDeBeto = await prisma.inscripcion.findUnique({
+      where: { id: deBeto.id },
+      select: { acompananteId: true },
+    });
+    expect(inscripcionDeBeto?.acompananteId).toBe(lauraId);
+  });
+
+  it("el historial del niño trae a cuántos niños acompaña cada ficha", async () => {
+    const { inscribirParticipante, obtenerHistorialParticipante } = await import(
+      "@/server/queries/participantes"
+    );
+
+    const ana = await crearNino("Ana");
+    const beto = await crearNino("Beto");
+
+    const deAna = await inscribirParticipante(ana.id, edicionId, {
+      acompanante: { nombre: "Laura", apellidos: MARCA, parentesco: "MADRE" },
+    });
+    await inscribirParticipante(beto.id, edicionId, {
+      acompananteId: deAna.acompananteId!,
+    });
+
+    const historial = await obtenerHistorialParticipante(ana.id);
+    const inscripcion = historial?.inscripciones.find((i) => i.id === deAna.id);
+
+    // Sin este conteo la ficha del niño no puede avisar «también acompaña a su
+    // hermano» antes de quitarla, que es justo lo que evita el susto.
+    expect(inscripcion?.acompanante?._count.inscripciones).toBe(2);
+  });
+
   it("un grupo organizado acompaña a muchos niños con una sola ficha", async () => {
     const { inscribirParticipante } = await import("@/server/queries/participantes");
     const { obtenerAcompanante } = await import("@/server/queries/acompanantes");

@@ -248,6 +248,11 @@ export async function obtenerHistorialParticipante(id: string) {
               telefono:   true,
               correo:     true,
               parentesco: true,
+              // A cuántas inscripciones está ligada esta ficha. Viaja hasta la
+              // pantalla porque es lo que permite avisar «también acompaña a
+              // su hermano» antes de quitarla: la ficha se comparte y quitarla
+              // de aquí no puede dejar al otro niño sin acompañante.
+              _count: { select: { inscripciones: true } },
             },
           },
           edicion: {
