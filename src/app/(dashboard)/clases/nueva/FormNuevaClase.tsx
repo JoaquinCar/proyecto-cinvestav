@@ -16,7 +16,7 @@ import {
   VALORES_TIPO_SESION,
   descripcionTipo,
   exigeInvestigador,
-  cuentaParaConstancia,
+  cuentaParaElPrograma,
   type TipoSesion,
 } from "@/lib/tipos-sesion";
 import { IconoTipoSesion, clasesTipoSesion } from "@/components/clases/BadgeTipoSesion";
@@ -308,7 +308,7 @@ export function FormNuevaClase({
             )}
             {/* El aviso solo aparece donde cambia algo: lo que no cuenta para
                 la constancia hay que decirlo ANTES de crearlo, no después. */}
-            {!cuentaParaConstancia(tipo) && (
+            {!cuentaParaElPrograma(tipo) && (
               <p className="text-xs leading-relaxed rounded-lg px-3 py-2 bg-muted border border-border text-muted-foreground">
                 Se le pasa lista igual, pero esa asistencia{" "}
                 <strong className="font-semibold text-foreground">

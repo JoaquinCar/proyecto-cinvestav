@@ -1,10 +1,13 @@
 import { prisma } from "@/server/db";
+import { ASISTENCIAS_QUE_CUENTAN, CLASES_QUE_CUENTAN } from "@/lib/tipos-sesion";
 
 export type HistoricoEdicion = {
   anio: number;
   nombre: string;
   totalParticipantes: number;
+  /** Solo las sesiones que cuentan, igual que en el tablero de cada edición. */
   totalSesiones: number;
+  /** Mismo recorte: si no, la gráfica comparativa contradecía al tablero. */
   promedioAsistencia: number;
 };
 
@@ -28,10 +31,17 @@ export async function obtenerHistoricoEdiciones(): Promise<HistoricoEdicion[]> {
     include: {
       inscripciones: {
         include: {
-          asistencias: { where: { presente: true }, select: { id: true } },
+          asistencias: { where: ASISTENCIAS_QUE_CUENTAN, select: { id: true } },
         },
       },
-      clases: { include: { sesiones: { select: { id: true } } } },
+      // El comparativo entre ediciones es una estadística más: cuenta lo mismo
+      // que el tablero de cada edición. Si aquí entraran las lecturas y los
+      // eventos, la gráfica «Sesiones por edición» diría 22 donde el tablero
+      // dice 12.
+      clases: {
+        where: CLASES_QUE_CUENTAN,
+        include: { sesiones: { select: { id: true } } },
+      },
     },
   });
 

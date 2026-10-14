@@ -2,7 +2,9 @@ import { prisma } from "@/server/db";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
 import {
   TIPOS_SESION,
-  cuentaParaConstancia,
+  ASISTENCIAS_QUE_CUENTAN,
+  CLASES_QUE_CUENTAN,
+  cuentaParaElPrograma,
   type TipoSesion,
 } from "@/lib/tipos-sesion";
 import type { Nivel } from "@/lib/importacion/texto";
@@ -29,17 +31,28 @@ function ordenGrado(g: string): number {
   return 50;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MÉTRICAS DE LA EDICIÓN.
+//
+// Todo lo que sea una ESTADÍSTICA cuenta solo las actividades que cuentan —hoy
+// las de pasaporte, ver `src/lib/tipos-sesion.ts`—. La única excepción es
+// `porTipo`, que es un INVENTARIO: existe justo para enseñar cuántas hay de
+// cada tipo, y filtrarlo lo dejaría sin sentido.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export type MetricasEdicion = {
   totalParticipantes: number;
-  /** Todas las actividades de la edición, de cualquier tipo. */
-  totalSesiones: number;
   /**
-   * Solo las que cuentan para la constancia. Hoy son las de pasaporte, pero el
-   * nombre no lo fija: sale de `TIPOS_QUE_CUENTAN_PARA_CONSTANCIA`, así que si
-   * mañana cuenta también la lectura, este número la incluye sin tocar nada.
-   * Es el número contra el que se lee `Edicion.minAsistencias`.
+   * Las sesiones que cuentan. Hoy son las de pasaporte, pero el nombre no lo
+   * fija: sale de `TIPOS_QUE_CUENTAN`, así que si mañana cuenta también la
+   * lectura, este número la incluye sin tocar nada. Es el número contra el que
+   * se lee `Edicion.minAsistencias`, y el denominador de `promedioAsistencia`.
+   *
+   * El total de TODAS las actividades no está aquí a propósito: sumar `porTipo`
+   * lo da, y tener los dos números con nombres parecidos fue justo lo que
+   * acabó enseñando 22 donde tenía que enseñar 12.
    */
-  totalSesionesQueCuentan: number;
+  totalSesiones: number;
   /** Desglose por tipo, en el orden del catálogo. Los tipos sin nada salen en 0. */
   porTipo: { tipo: TipoSesion; sesiones: number; asistencias: number }[];
   promedioAsistencia: number;
@@ -81,9 +94,14 @@ export async function obtenerMetricasEdicion(
               ciudad: true,
             },
           },
-          asistencias: { where: { presente: true }, select: { id: true } },
+          // Solo las asistencias que cuentan: una lectura o un evento no deben
+          // mover el porcentaje de asistencia de la edición.
+          asistencias: { where: ASISTENCIAS_QUE_CUENTAN, select: { id: true } },
         },
       }),
+      // Se traen TODAS las clases, de cualquier tipo, porque `porTipo` es un
+      // inventario y tiene que poder decir «0 eventos». Las estadísticas de
+      // más abajo trabajan sobre `clasesQueCuentan`, no sobre esta lista.
       prisma.clase.findMany({
         where: { edicionId },
         select: {
@@ -99,8 +117,6 @@ export async function obtenerMetricasEdicion(
         },
       }),
     ]);
-
-  const totalSesiones = clases.reduce((acc, c) => acc + c.sesiones.length, 0);
 
   // ── Desglose por tipo de actividad ──────────────────────────────────────────
   // Se cuenta sobre `clases`, que ya viene de la base con su tipo. Los tres
@@ -120,9 +136,16 @@ export async function obtenerMetricasEdicion(
     asistencias: asistenciasPorTipo.get(valor) ?? 0,
   }));
 
-  const totalSesionesQueCuentan = porTipo
-    .filter((t) => cuentaParaConstancia(t.tipo))
-    .reduce((acc, t) => acc + t.sesiones, 0);
+  // ── A partir de aquí, solo lo que cuenta ───────────────────────────────────
+  // El inventario ya quedó arriba. Todas las cifras que siguen son estadística
+  // del programa, y la lectura y los eventos no entran en ninguna: el
+  // coordinador los quiere registrados pero fuera de los números.
+  const clasesQueCuentan = clases.filter((c) => cuentaParaElPrograma(c.tipo));
+
+  const totalSesiones = clasesQueCuentan.reduce(
+    (acc, c) => acc + c.sesiones.length,
+    0,
+  );
 
   const totalAsistencias = inscripciones.reduce(
     (acc, i) => acc + i.asistencias.length,
@@ -166,7 +189,7 @@ export async function obtenerMetricasEdicion(
     .map(([escuela, cantidad]) => ({ escuela, cantidad }))
     .sort((a, b) => b.cantidad - a.cantidad);
 
-  const clasesResumen = clases.map((c) => {
+  const clasesResumen = clasesQueCuentan.map((c) => {
     const totalAs = c.sesiones.reduce((acc, s) => acc + s.asistencias.length, 0);
     const asistenciaPromedio =
       c.sesiones.length > 0 && totalParticipantes > 0
@@ -179,7 +202,7 @@ export async function obtenerMetricasEdicion(
 
   // ── Tendencia: presentes por fecha (programa a lo largo del tiempo) ──────────
   const fechaMap = new Map<string, number>();
-  for (const c of clases) {
+  for (const c of clasesQueCuentan) {
     for (const s of c.sesiones) {
       const key = aISOFecha(s.fecha);
       fechaMap.set(key, (fechaMap.get(key) ?? 0) + s.asistencias.length);
@@ -221,7 +244,7 @@ export async function obtenerMetricasEdicion(
     .map(([genero, cantidad]) => ({ genero, cantidad }));
 
   // ── Ranking de clases por asistentes totales ──────────────────────────────
-  const rankingClases = clases
+  const rankingClases = clasesQueCuentan
     .map((c) => ({
       nombre: c.nombre,
       tipo: c.tipo,
@@ -232,7 +255,6 @@ export async function obtenerMetricasEdicion(
   return {
     totalParticipantes,
     totalSesiones,
-    totalSesionesQueCuentan,
     porTipo,
     promedioAsistencia,
     totalConstancias,
@@ -259,9 +281,14 @@ export async function obtenerMetricasEdicion(
 
 export type MetricasAsistencia = {
   /**
-   * Sesiones registradas en la edición. Es el valor de «Sesiones registradas»
-   * en el dashboard: un conteo, no una fracción. Una sesión cuenta desde que se
-   * crea — ver `./asistencia-de-sesion` para por qué no hay denominador.
+   * Sesiones registradas en la edición QUE CUENTAN — hoy, las de pasaporte.
+   * Es el valor de «Sesiones registradas» en el dashboard y el denominador de
+   * «Asistencia capturada»: un conteo, no una fracción. Una sesión cuenta desde
+   * que se crea — ver `./asistencia-de-sesion` para por qué no hay denominador.
+   *
+   * Las lecturas y los eventos no están aquí: se siguen capturando, pero el
+   * coordinador no los quiere en el contador. Contándolos, su tablero decía
+   * «12/22 · faltan 10 por capturar» cuando no faltaba ninguna.
    */
   totalSesiones: number;
   /**
@@ -302,7 +329,10 @@ export async function obtenerMetricasAsistencia(
   edicionId: string,
 ): Promise<MetricasAsistencia> {
   const sesiones = await prisma.sesion.findMany({
-    where: { clase: { edicionId } },
+    // El filtro por tipo entra aquí, una sola vez: todo lo que calcula esta
+    // función sale de `sesiones`, así que dejando fuera la lectura y los
+    // eventos desde la consulta no queda ninguna cifra sin filtrar.
+    where: { clase: { edicionId, ...CLASES_QUE_CUENTAN } },
     orderBy: { fecha: "asc" },
     select: {
       fecha: true,
@@ -313,8 +343,8 @@ export async function obtenerMetricasAsistencia(
     },
   });
 
-  // Las sesiones registradas son, simplemente, las que existen: una cuenta
-  // desde que se crea. La fecha no interviene.
+  // Las sesiones registradas son, simplemente, las que existen (de las que
+  // cuentan): una cuenta desde que se crea. La fecha no interviene.
   const totalSesiones = sesiones.length;
 
   // Captura: cada sesión con su asistencia efectiva (el agregado si lo hay, si
@@ -433,8 +463,9 @@ export type AnalisisProfundo = {
   numEscuelas: number;
   escuelaTop: { nombre: string; cantidad: number; pct: number } | null;
   numContactos: number;
-  // Asistencia — misma definición de «capturada» que el dashboard.
-  /** De las sesiones registradas, cuántas tienen asistencia capturada. */
+  // Asistencia — misma definición de «capturada» que el dashboard, y el mismo
+  // recorte: solo las sesiones que cuentan (ver `src/lib/tipos-sesion.ts`).
+  /** De las sesiones registradas que cuentan, cuántas tienen asistencia capturada. */
   sesionesCapturadas: number;
   sesionesTotal: number;
   promedioAsist: number;
@@ -474,7 +505,9 @@ export async function obtenerAnalisisProfundo(
       },
     }),
     prisma.sesion.findMany({
-      where: { clase: { edicionId } },
+      // Mismo filtro que el tablero, y por el mismo motivo: promedio, pico,
+      // mínimo, caída, retención y acompañantes salen todos de aquí.
+      where: { clase: { edicionId, ...CLASES_QUE_CUENTAN } },
       orderBy: { fecha: "asc" },
       select: {
         fecha: true,

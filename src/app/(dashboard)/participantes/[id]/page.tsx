@@ -8,7 +8,7 @@ import { BotonConstancia } from "@/components/constancias/BotonConstancia";
 import { BotonBajaInscripcion } from "@/components/participantes/BotonBajaInscripcion";
 import { GestorAcompanante } from "@/components/acompanantes/GestorAcompanante";
 import type { Acompanante } from "@/lib/api/acompanantes";
-import { cuentaParaConstancia, type TipoSesion } from "@/lib/tipos-sesion";
+import { cuentaParaElPrograma, type TipoSesion } from "@/lib/tipos-sesion";
 import {
   GraduationCap,
   School,
@@ -75,7 +75,7 @@ function TimelineItem({
   // Solo unas cuentan para la constancia (hoy, las de pasaporte). La regla
   // vive en src/lib/tipos-sesion.ts; aquí solo se aplica.
   const asistenciasQueCuentan = inscripcion.asistencias.filter((a) =>
-    cuentaParaConstancia(a.sesion.clase.tipo),
+    cuentaParaElPrograma(a.sesion.clase.tipo),
   ).length;
   const hayExtras = asistencias !== asistenciasQueCuentan;
   const excluida = inscripcion.constanciaExcluida;
