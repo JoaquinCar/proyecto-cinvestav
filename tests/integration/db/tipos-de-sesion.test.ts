@@ -453,8 +453,9 @@ describe.skipIf(!habilitado)("tipos de sesión contra la base real", () => {
 
     const m = await obtenerMetricasEdicion(edicionId);
 
-    expect(m.totalSesiones).toBe(4);
-    expect(m.totalSesionesQueCuentan).toBe(2);
+    // `totalSesiones` son solo las que cuentan: 2 charlas de 4 actividades.
+    // El inventario de las cuatro sigue en `porTipo`, que no se filtra.
+    expect(m.totalSesiones).toBe(2);
     expect(m.porTipo).toEqual([
       { tipo: "PASAPORTE", sesiones: 2, asistencias: 0 },
       { tipo: "LECTURA", sesiones: 1, asistencias: 0 },

@@ -16,46 +16,75 @@ import type { TipoClase } from "@prisma/client";
 export type TipoSesion = TipoClase;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ⚠️  LA DECISIÓN: QUÉ CUENTA PARA LA CONSTANCIA
+// ⚠️  LA DECISIÓN: QUÉ CUENTA
 //
-// La constancia se emite al alcanzar `Edicion.minAsistencias`. Con tres tipos
-// de actividad hay que decidir cuáles suman a ese mínimo, y la decisión es:
-// SOLO LAS SESIONES DE PASAPORTE. El pasaporte es el programa; la lectura y los
-// eventos son extras y no deberían decidir quién recibe constancia.
+// Dos cosas se leen de esta misma lista, y por eso ya no se llama
+// «…_PARA_CONSTANCIA»:
 //
-// ESTO NO ESTÁ CONFIRMADO CON EL CLIENTE. Es lo que hay que preguntarle.
+//   1. La CONSTANCIA. Se emite al alcanzar `Edicion.minAsistencias`, y solo la
+//      asistencia a estos tipos suma a ese mínimo.
+//   2. Las ESTADÍSTICAS. El tablero, la ficha de la edición y el análisis
+//      profundo cuentan únicamente actividades de estos tipos: cuántas hay,
+//      cuántas tienen la asistencia capturada, promedios, picos, tendencias.
+//
+// Y la decisión es, para las dos: SOLO LAS SESIONES DE PASAPORTE. El pasaporte
+// es el programa; la lectura y los eventos son extras.
+//
+// DECISIÓN CONFIRMADA POR EL COORDINADOR, no una suposición:
+//   · 6 de octubre de 2026 — «lectura y eventos no, solo sesiones cuentan para
+//     constancia».
+//   · 13 de octubre de 2026 — lo reafirma para las estadísticas: «haz que solo
+//     se capturen las sesiones del pasaporte para que no cuenten dentro de las
+//     estadísticas o información las otras sesiones». En su tablero la tarjeta
+//     «Asistencia capturada» decía 12/22 (12 de pasaporte, 8 de lectura, 2 de
+//     evento) y tenía que decir 12/12.
+//
+// OJO con lo que esta lista NO decide: lectura y eventos SE SIGUEN pudiendo
+// capturar. El coordinador lo pidió expresamente — no se pierde quién fue al
+// día del niño. Lo que cambia es qué se cuenta, no qué se puede registrar: la
+// pantalla de asistencia sigue ofreciendo los tres tipos, y el desglose
+// `porTipo` de las estadísticas sigue enseñando los tres, incluso en cero.
 //
 // Para cambiarlo se toca esta lista Y NADA MÁS. Por ejemplo, para que la
 // lectura también cuente:
 //
-//     export const TIPOS_QUE_CUENTAN_PARA_CONSTANCIA = [
+//     export const TIPOS_QUE_CUENTAN = [
 //       "PASAPORTE",
 //       "LECTURA",
 //     ] as const satisfies readonly TipoSesion[];
 //
 // De aquí salen los dos filtros de Prisma de más abajo, que son los que usan
-// constancias.ts, participantes.ts y estadisticas.ts. No hay ninguna otra
-// condición sobre el tipo repartida por el código: si alguien escribe una, las
-// pruebas de tests/unit/lib/tipos-sesion.test.ts dejan de ser el candado que
-// son y hay que traerla aquí.
+// constancias.ts, participantes.ts, estadisticas.ts, ediciones.ts e
+// historico.ts. No hay ninguna otra condición sobre el tipo repartida por el
+// código: si alguien escribe una, las pruebas de
+// tests/unit/lib/tipos-sesion.test.ts dejan de ser el candado que son y hay que
+// traerla aquí.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const TIPOS_QUE_CUENTAN_PARA_CONSTANCIA = [
+export const TIPOS_QUE_CUENTAN = [
   "PASAPORTE",
 ] as const satisfies readonly TipoSesion[];
 
-/** ¿La asistencia a una actividad de este tipo suma al mínimo de la constancia? */
-export function cuentaParaConstancia(tipo: TipoSesion): boolean {
-  return (TIPOS_QUE_CUENTAN_PARA_CONSTANCIA as readonly TipoSesion[]).includes(tipo);
+/**
+ * ¿Una actividad de este tipo cuenta como parte del programa?
+ *
+ * Es decir: ¿su asistencia suma al mínimo de la constancia Y entra en las
+ * estadísticas? Es la misma pregunta para las dos cosas — ver el comentario de
+ * `TIPOS_QUE_CUENTAN`. La pantalla que lo use decide cómo decirlo: en la ficha
+ * de una sesión se lee «cuenta para la constancia» y en el tablero «solo
+ * sesiones de pasaporte», pero la condición es una sola.
+ */
+export function cuentaParaElPrograma(tipo: TipoSesion): boolean {
+  return (TIPOS_QUE_CUENTAN as readonly TipoSesion[]).includes(tipo);
 }
 
 // Los filtros de abajo se le pasan a Prisma, que exige arreglos mutables en un
 // `in`. Se construyen una sola vez a partir de la lista de arriba: nadie debe
 // reescribirlos, y quien quiera cambiar el criterio toca la lista, no esto.
-const TIPOS_CONTABLES: TipoSesion[] = [...TIPOS_QUE_CUENTAN_PARA_CONSTANCIA];
+const TIPOS_CONTABLES: TipoSesion[] = [...TIPOS_QUE_CUENTAN];
 
 /**
- * Filtro Prisma para las ASISTENCIAS que suman al mínimo de la constancia.
+ * Filtro Prisma para las ASISTENCIAS que cuentan.
  *
  * Se usa tal cual en el `where` de la relación `asistencias` de una
  * `Inscripcion`. Incluye `presente: true` porque una asistencia marcada como
@@ -67,11 +96,16 @@ export const ASISTENCIAS_QUE_CUENTAN = {
 };
 
 /**
- * Filtro Prisma para las SESIONES que forman el denominador.
+ * Filtro Prisma para las CLASES («sesiones» en pantalla) que cuentan.
  *
- * Hace falta en el modo «porcentaje mínimo»: si el denominador contara los
- * eventos, un niño que fue a todas las charlas podría quedarse sin constancia
- * por no haber ido a la clausura.
+ * Hace falta en el modo «porcentaje mínimo» de la constancia: si el
+ * denominador contara los eventos, un niño que fue a todas las charlas podría
+ * quedarse sin constancia por no haber ido a la clausura.
+ *
+ * Y en las estadísticas, que cuentan las mismas. Para filtrar FECHAS (el modelo
+ * `Sesion`) se anida dentro de su clase, junto a la edición:
+ *
+ *     prisma.sesion.findMany({ where: { clase: { edicionId, ...CLASES_QUE_CUENTAN } } })
  */
 export const CLASES_QUE_CUENTAN = {
   tipo: { in: TIPOS_CONTABLES },
@@ -101,7 +135,7 @@ export const TIPOS_SESION = [
     plural: "Sesiones de pasaporte",
     corta: "Pasaporte",
     ayuda:
-      "La charla que imparte un investigador. Es el programa: solo estas cuentan para la constancia.",
+      "La charla que imparte un investigador. Es el programa: solo estas cuentan para la constancia y para las estadísticas.",
   },
   {
     valor: "LECTURA",
@@ -109,7 +143,7 @@ export const TIPOS_SESION = [
     plural: "Sesiones de lectura",
     corta: "Lectura",
     ayuda:
-      "Actividad extra y opcional. Se registra su asistencia, pero no suma al mínimo de la constancia.",
+      "Actividad extra y opcional. Se pasa lista igual, pero no suma al mínimo de la constancia ni entra en las estadísticas.",
   },
   {
     valor: "EVENTO",
@@ -117,7 +151,7 @@ export const TIPOS_SESION = [
     plural: "Eventos especiales",
     corta: "Evento",
     ayuda:
-      "Día del niño, clausura y demás. Es independiente: puede caer el mismo día que una sesión de pasaporte.",
+      "Día del niño, clausura y demás. Se pasa lista igual, pero queda fuera de la constancia y de las estadísticas. Puede caer el mismo día que una sesión de pasaporte.",
   },
 ] as const satisfies readonly DescripcionTipo[];
 

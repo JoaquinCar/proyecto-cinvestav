@@ -43,16 +43,22 @@ export default async function EdicionDetallePage({
   const sesionesTotal = edicion.sesionesTotal ?? 0;
   const sesionesCapturadas = edicion.sesionesCapturadas ?? 0;
   const sinCapturar = sesionesTotal - sesionesCapturadas;
+  // `clases` es el inventario completo (los tres tipos, igual que la lista de
+  // sesiones); `sesionesTotal` y `sesionesCapturadas` cuentan solo las de
+  // pasaporte. Son dos números distintos a propósito y cada tarjeta lo dice:
+  // con 12 charlas, 8 lecturas y 2 eventos se lee «Sesiones 22 · todos los
+  // tipos» junto a «Asistencia capturada 12 de 12 · solo sesiones de
+  // pasaporte».
   const pendienteCaptura =
     sesionesTotal === 0
-      ? "sin sesiones todavía"
+      ? "sin sesiones de pasaporte todavía"
       : sinCapturar > 0
-        ? `faltan ${sinCapturar} por capturar`
-        : "todas capturadas";
+        ? `faltan ${sinCapturar} por capturar · solo sesiones de pasaporte`
+        : "todas capturadas · solo sesiones de pasaporte";
 
   const stats = [
     { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
-    { label: "Sesiones", value: clases, hint: "registradas en la edición", icon: BookOpen, colorClass: "text-success", bgClass: "bg-success/10" },
+    { label: "Sesiones", value: clases, hint: "registradas en la edición · todos los tipos", icon: BookOpen, colorClass: "text-success", bgClass: "bg-success/10" },
     // La fracción que sí se mueve. Antes esta tarjeta decía «Sesiones con
     // datos» y nadie sabía qué datos ni qué los generaba.
     { label: "Asistencia capturada", value: `${sesionesCapturadas} de ${sesionesTotal}`, hint: pendienteCaptura, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},

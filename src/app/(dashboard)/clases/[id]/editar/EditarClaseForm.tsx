@@ -15,7 +15,7 @@ import {
   VALORES_TIPO_SESION,
   descripcionTipo,
   exigeInvestigador,
-  cuentaParaConstancia,
+  cuentaParaElPrograma,
   type TipoSesion,
 } from "@/lib/tipos-sesion";
 import { IconoTipoSesion, clasesTipoSesion } from "@/components/clases/BadgeTipoSesion";
@@ -110,7 +110,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
   // antes de guardar, porque puede dejar a un niño sin constancia (o dársela).
   const cambiaElConteo =
     tipo !== clase.tipo &&
-    cuentaParaConstancia(tipo) !== cuentaParaConstancia(clase.tipo);
+    cuentaParaElPrograma(tipo) !== cuentaParaElPrograma(clase.tipo);
 
   async function onSubmit(data: FormData) {
     setLoading(true);
@@ -267,7 +267,7 @@ export function EditarClaseForm({ clase, edicion }: EditarClaseFormProps) {
                 aparente. */}
             {cambiaElConteo && (
               <p className="text-xs leading-relaxed rounded-lg px-3 py-2 bg-destructive/10 border border-destructive/35 text-foreground">
-                {cuentaParaConstancia(tipo) ? (
+                {cuentaParaElPrograma(tipo) ? (
                   <>
                     Al cambiarla a <strong>{descripcionTipo(tipo).etiqueta.toLowerCase()}</strong>, las
                     asistencias ya registradas <strong>empezarán a contar</strong> para el mínimo

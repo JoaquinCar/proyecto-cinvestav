@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { descripcionTipo, cuentaParaConstancia, type TipoSesion } from "@/lib/tipos-sesion";
+import { descripcionTipo, cuentaParaElPrograma, type TipoSesion } from "@/lib/tipos-sesion";
 import { IconoTipoSesion, clasesTipoSesion } from "@/components/clases/BadgeTipoSesion";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -15,17 +15,19 @@ import { IconoTipoSesion, clasesTipoSesion } from "@/components/clases/BadgeTipo
 export function DesgloseTipos({
   edicionId,
   porTipo,
-  totalSesionesQueCuentan,
+  sesionesQueCuentan,
   minAsistencias,
 }: {
   edicionId: string;
+  /** Inventario: los tres tipos, aunque alguno esté en cero. No se filtra. */
   porTipo: { tipo: TipoSesion; sesiones: number; asistencias: number }[];
-  totalSesionesQueCuentan: number;
+  /** Las que cuentan — `MetricasEdicion.totalSesiones`. */
+  sesionesQueCuentan: number;
   /** Mínimo de la edición, para avisar si es inalcanzable. */
   minAsistencias: number;
 }) {
   // El caso que hay que gritar: el mínimo pide más charlas de las que existen.
-  const minimoInalcanzable = minAsistencias > totalSesionesQueCuentan;
+  const minimoInalcanzable = minAsistencias > sesionesQueCuentan;
 
   return (
     <div className="animate-fade-up">
@@ -33,13 +35,16 @@ export function DesgloseTipos({
         Actividades por tipo
       </h2>
       <p className="text-sm text-muted-foreground mb-4">
-        Solo las sesiones de pasaporte suman al mínimo de la constancia
+        Este es el inventario completo de la edición. Solo las sesiones de
+        pasaporte suman al mínimo de la constancia y entran en las estadísticas;
+        en la lectura y los eventos se pasa lista igual, y se consulta desde
+        aquí.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {porTipo.map(({ tipo, sesiones, asistencias }) => {
           const d = descripcionTipo(tipo);
-          const cuenta = cuentaParaConstancia(tipo);
+          const cuenta = cuentaParaElPrograma(tipo);
 
           return (
             <Link
@@ -68,9 +73,9 @@ export function DesgloseTipos({
                 <span className="tabular">{asistencias}</span>{" "}
                 {asistencias === 1 ? "asistencia" : "asistencias"} ·{" "}
                 {cuenta ? (
-                  <span className="text-success font-medium">cuenta para la constancia</span>
+                  <span className="text-success font-medium">cuenta en las estadísticas</span>
                 ) : (
-                  "no cuenta para la constancia"
+                  "fuera de las estadísticas y de la constancia"
                 )}
               </p>
             </Link>
@@ -83,8 +88,8 @@ export function DesgloseTipos({
           Esta edición pide{" "}
           <strong className="tabular">{minAsistencias} asistencias</strong> para la
           constancia, pero solo hay{" "}
-          <strong className="tabular">{totalSesionesQueCuentan}</strong>{" "}
-          {totalSesionesQueCuentan === 1 ? "sesión" : "sesiones"} que cuenten: tal como
+          <strong className="tabular">{sesionesQueCuentan}</strong>{" "}
+          {sesionesQueCuentan === 1 ? "sesión" : "sesiones"} que cuenten: tal como
           está, <strong>ningún niño puede alcanzarlo</strong>. Baja el mínimo desde la
           edición, o registra las sesiones que falten.
         </p>

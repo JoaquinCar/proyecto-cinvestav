@@ -101,6 +101,12 @@ export default async function DashboardPage({
   // que se hacía en la aplicación lo movía. Ahora son dos cifras separadas —
   // cuántas sesiones hay y cuántas tienen la asistencia capturada— y cada una
   // dice en pantalla qué la mueve.
+  //
+  // Y desde octubre de 2026 las dos cuentan SOLO sesiones de pasaporte, así que
+  // el total de aquí (12) no coincide con el de la lista de sesiones (22). Eso
+  // hay que decirlo en pantalla, o es la misma pregunta de QA otra vez: el
+  // desglose «Actividades por tipo», justo debajo, enseña de dónde salen las
+  // otras diez.
   const fuentesCaptura = [
     asist.sesionesConLista > 0 ? `${asist.sesionesConLista} con lista pasada` : null,
     asist.sesionesConAgregado > 0 ? `${asist.sesionesConAgregado} del Excel` : null,
@@ -109,10 +115,10 @@ export default async function DashboardPage({
     fuentesCaptura.length > 0 ? fuentesCaptura.join(" · ") : "ninguna todavía";
   const pendienteCaptura =
     asist.totalSesiones === 0
-      ? "sin sesiones todavía"
+      ? "sin sesiones de pasaporte todavía"
       : asist.sesionesSinCapturar > 0
-        ? `faltan ${asist.sesionesSinCapturar} por capturar`
-        : "todas capturadas";
+        ? `faltan ${asist.sesionesSinCapturar} por capturar · solo sesiones de pasaporte`
+        : "todas capturadas · solo sesiones de pasaporte";
 
   return (
     <div className="space-y-8">
@@ -186,13 +192,13 @@ export default async function DashboardPage({
           </div>
           <div>
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
-              Sesiones registradas
+              Sesiones de pasaporte
             </p>
             <p className="text-foreground font-semibold text-lg">
               {asist.totalSesiones}
               <span className="text-muted-foreground font-normal text-sm">
                 {" "}
-                en la edición
+                registradas
               </span>
             </p>
             <p className="text-muted-foreground text-xs">
@@ -207,7 +213,7 @@ export default async function DashboardPage({
           distintas, no un error de captura.
         </p>
         <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-          Las <strong>sesiones registradas</strong> cuentan desde que se crean: no hay
+          Las <strong>sesiones de pasaporte</strong> cuentan desde que se crean: no hay
           que esperar a nada ni capturar nada para que aparezcan aquí. Lo que sí avanza
           es la <strong>asistencia capturada</strong> —{" "}
           <strong className="text-foreground">
@@ -225,13 +231,21 @@ export default async function DashboardPage({
             </>
           )}
         </p>
+        <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+          Todas las cifras de esta pantalla cuentan{" "}
+          <strong>solo las sesiones de pasaporte</strong>: la lectura y los eventos se
+          siguen capturando —no se pierde quién fue— pero no entran en las
+          estadísticas. Por eso el total de aquí puede ser menor que el de la lista de
+          sesiones. El desglose <strong>Actividades por tipo</strong>, justo debajo,
+          dice cuántas hay de cada tipo y lleva a sus listas.
+        </p>
       </div>
 
       {/* ════════ QUÉ SE HIZO, POR TIPO ════════ */}
       <DesgloseTipos
         edicionId={edicion.id}
         porTipo={metricas.porTipo}
-        totalSesionesQueCuentan={metricas.totalSesionesQueCuentan}
+        sesionesQueCuentan={metricas.totalSesiones}
         minAsistencias={edicion.minAsistencias}
       />
 

@@ -85,6 +85,19 @@ export async function AnalisisEdicion({
 
   return (
     <div className="space-y-8">
+      {/* ── Qué se está contando ──
+          El reporte cuenta solo sesiones de pasaporte: decirlo arriba evita la
+          pregunta de siempre («¿por qué aquí salen 12 si en la lista hay
+          22?»). La lectura y los eventos se capturan igual, pero no entran. */}
+      <p className="animate-fade-up text-sm leading-relaxed rounded-xl px-4 py-3 bg-muted/40 border border-border text-muted-foreground">
+        Este reporte cuenta <strong className="text-foreground">solo las sesiones de
+        pasaporte</strong>. En las sesiones de lectura y en los eventos especiales se
+        pasa lista igual y ese dato se conserva —se consulta en sus listas de{" "}
+        <strong className="text-foreground">Sesiones</strong> y{" "}
+        <strong className="text-foreground">Eventos</strong>—, pero queda fuera de
+        estas cifras.
+      </p>
+
       {/* ── Insights destacados ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up animate-fade-up-delay-1">
         <InsightCard
@@ -122,7 +135,7 @@ export async function AnalisisEdicion({
         <InsightCard
           label="Asistencia promedio"
           value={a.promedioAsist}
-          hint={`por sesión capturada (${a.sesionesCapturadas} de ${a.sesionesTotal} registradas)`}
+          hint={`por sesión de pasaporte capturada (${a.sesionesCapturadas} de ${a.sesionesTotal} registradas)`}
           icon={Activity}
           colorClass="text-success"
           bgClass="bg-success/10"
@@ -351,7 +364,7 @@ export async function AnalisisEdicion({
 
             <PanelGrafica
               title="Sesiones por edición"
-              subtitle="Cuántas sesiones se impartieron"
+              subtitle="Cuántas sesiones de pasaporte se impartieron"
               alto={230}
               altoExpandido={480}
               datos={{
@@ -364,7 +377,7 @@ export async function AnalisisEdicion({
 
             <PanelGrafica
               title="Asistencia promedio"
-              subtitle="% de asistencia de cada edición"
+              subtitle="% de asistencia a las sesiones de pasaporte de cada edición"
               alto={230}
               altoExpandido={480}
               datos={{

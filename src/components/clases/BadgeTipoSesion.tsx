@@ -1,5 +1,5 @@
 import { BookOpen, BookMarked, PartyPopper } from "lucide-react";
-import { descripcionTipo, cuentaParaConstancia, type TipoSesion } from "@/lib/tipos-sesion";
+import { descripcionTipo, cuentaParaElPrograma, type TipoSesion } from "@/lib/tipos-sesion";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // La insignia que distingue los tres tipos de actividad.
@@ -80,23 +80,24 @@ export function BadgeTipoSesion({
 }
 
 /**
- * Aviso de que la asistencia a esta actividad no suma para la constancia.
+ * Aviso de que la asistencia a esta actividad no cuenta.
  *
  * Se pinta solo donde importa —al pasar lista y en el detalle—, porque es justo
- * ahí donde alguien podría creer que está acercando a un niño a su constancia
- * cuando no es así.
+ * ahí donde alguien podría creer que está acercando a un niño a su constancia,
+ * o moviendo las cifras del tablero, cuando no es así. Lo que sí deja claro es
+ * que el dato se guarda: se sigue pasando lista aquí.
  */
 export function AvisoNoCuenta({ tipo }: { tipo: TipoSesion }) {
-  if (cuentaParaConstancia(tipo)) return null;
+  if (cuentaParaElPrograma(tipo)) return null;
 
   const d = descripcionTipo(tipo);
   return (
     <p className="text-xs leading-relaxed rounded-lg px-3 py-2 bg-muted border border-border text-muted-foreground">
-      La asistencia a {d.etiqueta.toLowerCase()} se guarda, pero{" "}
+      La asistencia a {d.etiqueta.toLowerCase()} se guarda y se consulta aquí, pero{" "}
       <strong className="font-semibold text-foreground">
-        no cuenta para el mínimo de la constancia
+        no cuenta para el mínimo de la constancia ni para las estadísticas
       </strong>
-      : ese mínimo solo lo suman las sesiones de pasaporte.
+      : el tablero y los reportes solo cuentan las sesiones de pasaporte.
     </p>
   );
 }
