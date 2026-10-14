@@ -178,6 +178,10 @@ export function CampoAcompanante({
           Acompañante{" "}
           <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
         </Label>
+        {/* «Cancelar» y no «Quitar»: esto solo cierra el campo y descarta lo que
+            se llevara escrito, no desliga a nadie de su inscripción. En la ficha
+            del participante convive con el «Quitar» de verdad, y llamarlos
+            igual hacía temer que se borrara al acompañante de un niño. */}
         <button
           type="button"
           disabled={disabled}
@@ -185,7 +189,7 @@ export function CampoAcompanante({
           className="inline-flex items-center gap-1 text-xs transition-opacity hover:opacity-70 text-muted-foreground disabled:opacity-50"
         >
           <X size={13} />
-          Quitar
+          Cancelar
         </button>
       </div>
 
