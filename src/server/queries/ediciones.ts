@@ -137,21 +137,123 @@ export async function editarEdicion(id: string, data: EditarEdicionInput) {
   });
 }
 
-// ── Eliminar edición (solo si no tiene inscripciones) ────────────────────────
+// ── Eliminar edición ─────────────────────────────────────────────────────────
+//
+// El guardia solo miraba las inscripciones, pero de una edición también cuelgan
+// sus SESIONES, y esa llave foránea no cascadea. Una edición de prueba con
+// sesiones y ningún niño inscrito pasaba el guardia y reventaba después en
+// Prisma, y el `catch` de la ruta lo devolvía como «Error interno del
+// servidor»: el coordinador no podía borrarla ni saber por qué.
+//
+// Qué se lleva el borrado y qué se para:
+//
+//   · Las sesiones y sus fechas se van con la edición cuando NADIE pasó lista.
+//     Un calendario sin asistencia es andamiaje, no historial, y obligar a
+//     borrarlo a mano antes no protege nada: solo estorba.
+//   · Las inscripciones y las asistencias NO. Son el respaldo de las
+//     constancias de los niños, y perderlas tiene que ser un acto deliberado:
+//     se responde 409 con los conteos y solo se borra si un ADMIN lo confirma.
+//
+// Mismo patrón que `eliminarClase` y que la baja de una inscripción.
 
-export async function eliminarEdicion(id: string) {
-  // Verificar que no haya inscripciones antes de eliminar
-  const conteo = await prisma.inscripcion.count({
-    where: { edicionId: id },
-  });
+export interface ConteosDeEdicion {
+  inscripciones: number;
+  sesiones: number;
+  fechas: number;
+  asistencias: number;
+  participantes: number;
+}
 
-  if (conteo > 0) {
-    throw new EdicionConInscripcionesError(
-      `No se puede eliminar la edición porque tiene ${conteo} inscripción(es) registrada(s)`
+export async function contarArrastreDeEdicion(
+  id: string,
+): Promise<ConteosDeEdicion> {
+  const [inscripciones, sesiones, fechas, asistencias, conAsistencia] =
+    await Promise.all([
+      prisma.inscripcion.count({ where: { edicionId: id } }),
+      prisma.clase.count({ where: { edicionId: id } }),
+      prisma.sesion.count({ where: { clase: { edicionId: id } } }),
+      prisma.asistencia.count({ where: { inscripcion: { edicionId: id } } }),
+      // Cuántos NIÑOS distintos quedarían sin respaldo, no cuántas marcas:
+      // «47 asistencias» no dice a cuánta gente afecta.
+      prisma.asistencia.findMany({
+        where:    { inscripcion: { edicionId: id } },
+        distinct: ["inscripcionId"],
+        select:   { inscripcionId: true },
+      }),
+    ]);
+
+  return {
+    inscripciones,
+    sesiones,
+    fechas,
+    asistencias,
+    participantes: conAsistencia.length,
+  };
+}
+
+function mensajeEdicionConHistorial(
+  nombre: string,
+  c: ConteosDeEdicion,
+): string {
+  const partes: string[] = [];
+  if (c.inscripciones > 0) {
+    partes.push(`${c.inscripciones} niño(s) inscrito(s)`);
+  }
+  if (c.asistencias > 0) {
+    partes.push(
+      `${c.asistencias} asistencia(s) de ${c.participantes} niño(s), que es el respaldo de sus constancias`,
     );
   }
 
-  return prisma.edicion.delete({ where: { id } });
+  return (
+    `No se puede eliminar «${nombre}» sin confirmarlo: tiene ${partes.join(" y ")}. ` +
+    `Si la edición se creó por error, confirma el borrado y se eliminará junto con ese historial. ` +
+    `Si solo sobran algunos niños, cancela y dalos de baja uno a uno.`
+  );
+}
+
+export async function eliminarEdicion(
+  id: string,
+  opciones: { forzar?: boolean } = {},
+) {
+  return prisma.$transaction(async (tx) => {
+    const edicion = await tx.edicion.findUnique({
+      where:  { id },
+      select: { id: true, nombre: true },
+    });
+
+    if (!edicion) {
+      throw new EdicionNoEncontradaError(
+        "Esta edición ya no existe: alguien pudo eliminarla. Vuelve a la lista " +
+          "de ediciones para ver las que siguen activas.",
+      );
+    }
+
+    const conteos = await contarArrastreDeEdicion(id);
+
+    if (!opciones.forzar && (conteos.inscripciones > 0 || conteos.asistencias > 0)) {
+      throw new EdicionConInscripcionesError(
+        mensajeEdicionConHistorial(edicion.nombre, conteos),
+        conteos,
+      );
+    }
+
+    // Cascada explícita en la aplicación, no en la llave foránea: el orden lo
+    // mandan las dependencias, y hacerlo a la vista evita que un `onDelete`
+    // silencioso se lleve por delante el historial de un niño.
+    if (conteos.asistencias > 0) {
+      await tx.asistencia.deleteMany({
+        where: { inscripcion: { edicionId: id } },
+      });
+    }
+    await tx.sesion.deleteMany({ where: { clase: { edicionId: id } } });
+    await tx.clase.deleteMany({ where: { edicionId: id } });
+    if (conteos.inscripciones > 0) {
+      await tx.inscripcion.deleteMany({ where: { edicionId: id } });
+    }
+
+    return tx.edicion.delete({ where: { id } });
+  });
 }
 
 // ── Activar edición (transacción: desactivar todas, luego activar la nueva) ──
@@ -204,8 +306,19 @@ export async function existeEdicion(id: string): Promise<boolean> {
 // ── Error personalizado ───────────────────────────────────────────────────────
 
 export class EdicionConInscripcionesError extends Error {
-  constructor(message: string) {
+  /** Para que la pantalla pregunte con los mismos números, no a ciegas. */
+  readonly conteos?: ConteosDeEdicion;
+
+  constructor(message: string, conteos?: ConteosDeEdicion) {
     super(message);
     this.name = "EdicionConInscripcionesError";
+    this.conteos = conteos;
+  }
+}
+
+export class EdicionNoEncontradaError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EdicionNoEncontradaError";
   }
 }

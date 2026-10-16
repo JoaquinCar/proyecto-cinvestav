@@ -17,10 +17,20 @@ vi.mock("@/server/queries/ediciones", () => ({
   eliminarEdicion: vi.fn(),
   activarEdicion: vi.fn(),
   existeEdicion: vi.fn(),
+  // Lleva `conteos` para que la pantalla pueda preguntar con los mismos
+  // números que calculó el servidor, en vez de a ciegas.
   EdicionConInscripcionesError: class EdicionConInscripcionesError extends Error {
-    constructor(message: string) {
+    conteos?: unknown;
+    constructor(message: string, conteos?: unknown) {
       super(message);
       this.name = "EdicionConInscripcionesError";
+      this.conteos = conteos;
+    }
+  },
+  EdicionNoEncontradaError: class EdicionNoEncontradaError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "EdicionNoEncontradaError";
     }
   },
 }));
