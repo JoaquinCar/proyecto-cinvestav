@@ -61,6 +61,14 @@ export const filaSesionSchema = z.object({
   sede: z.string().max(100, "la sede supera 100 caracteres"),
   fecha: z.date(),
   notas: z.string().max(500, "las notas superan 500 caracteres"),
+  /**
+   * ¿La celda «NOTAS» del archivo traía algo? Distinto de que `notas` tenga
+   * texto: cuando la sesión no trae totales, el parser inventa un aviso
+   * («Sesión sin datos…») que no vino del organizador. Al reimportar, una
+   * sesión que ya existe solo cambia sus notas si el archivo las trae: las que
+   * escribió el becario a mano no se pisan.
+   */
+  notasProvistas: z.boolean(),
   conDatos: z.boolean(),
   ninas: z.number().int().min(0, "el número de niñas no puede ser negativo"),
   ninos: z.number().int().min(0, "el número de niños no puede ser negativo"),

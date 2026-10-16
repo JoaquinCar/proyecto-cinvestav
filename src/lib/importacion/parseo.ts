@@ -387,6 +387,13 @@ export function parsearParticipantes(
 
 const RE_ORDEN = /^\s*(\d{1,2})\s*[.)-]\s*(.+)$/;
 
+/**
+ * Nota que pone el propio importador cuando la fila del concentrado todavía no
+ * tiene totales. No la escribió nadie, así que al reimportar se puede quitar en
+ * cuanto la sesión ya trae datos; las notas de verdad no se tocan.
+ */
+export const NOTA_SIN_DATOS = "Sesión sin datos de asistencia registrados.";
+
 export function parsearSesiones(
   archivo: Buffer | ArrayBuffer,
   anioEdicion: number,
@@ -521,6 +528,7 @@ export function parsearSesiones(
 
     const sede = textoCelda(celda(cruda, "sede")) || "MÉRIDA";
     const conDatos = total > 0 || sumaNinos > 0;
+    const notasDelArchivo = textoCelda(celda(cruda, "notas"));
 
     const candidato = {
       orden,
@@ -530,9 +538,8 @@ export function parsearSesiones(
         textoCelda(celda(cruda, "investigador")) || "Investigador(a) invitado(a) · CINVESTAV",
       sede,
       fecha: fecha as Date,
-      notas:
-        textoCelda(celda(cruda, "notas")) ||
-        (conDatos ? "" : "Sesión sin datos de asistencia registrados."),
+      notas: notasDelArchivo || (conDatos ? "" : NOTA_SIN_DATOS),
+      notasProvistas: notasDelArchivo !== "",
       conDatos,
       ninas: ninas ?? 0,
       ninos: ninos ?? 0,

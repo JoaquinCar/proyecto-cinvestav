@@ -13,10 +13,11 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
 import type { TipoImportacion } from "@/lib/importacion/columnas";
 import { claveFecha, claveParticipante, normalizar } from "@/lib/importacion/texto";
-import type {
-  Incidencia,
-  FilaLeida,
-  ColumnaSesionDetectada,
+import {
+  NOTA_SIN_DATOS,
+  type Incidencia,
+  type FilaLeida,
+  type ColumnaSesionDetectada,
 } from "@/lib/importacion/parseo";
 import type {
   FilaAsistencia,
@@ -773,15 +774,27 @@ export async function ejecutarImportacion(entrada: EntradaPlan): Promise<Resulta
               lt: new Date(`${dia}T23:59:59.999Z`),
             },
           },
-          select: { id: true },
+          select: { id: true, notas: true },
         });
 
         let sesionId: string;
         if (existente) {
-          await tx.sesion.update({
-            where: { id: existente.id },
-            data: { temas: op.datos.tema, notas: op.datos.notas || null },
-          });
+          // Las notas de la fecha se escriben A MANO desde la aplicación
+          // («Corregir fecha, temas y notas»), y el concentrado del organizador
+          // casi nunca trae la columna «NOTAS». Volver a subirlo no puede
+          // borrar lo que escribió el becario: solo se escriben las notas que
+          // el archivo trae. La única excepción es el aviso automático que puso
+          // esta misma importación cuando la fila aún no tenía totales: ese se
+          // quita en cuanto los totales llegan, porque ya no es cierto.
+          // Los acompañantes contados a mano (`acompanantesMamas`/`Papas`)
+          // tampoco se nombran aquí: siguen siendo de quien pasó lista.
+          const cambios: Prisma.SesionUpdateInput = { temas: op.datos.tema };
+          if (op.datos.notasProvistas) {
+            cambios.notas = op.datos.notas;
+          } else if (op.datos.conDatos && existente.notas === NOTA_SIN_DATOS) {
+            cambios.notas = null;
+          }
+          await tx.sesion.update({ where: { id: existente.id }, data: cambios });
           sesionId = existente.id;
           sesionesActualizadas++;
         } else {

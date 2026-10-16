@@ -429,6 +429,80 @@ describe("POST /api/importar", () => {
     expect(resultado.resumen).toContainEqual({ etiqueta: "Participantes creados", valor: 1 });
   });
 
+  // Regresión: la nota que el becario escribe a mano en la fecha (campo
+  // `Sesion.notas`, pantalla «Corregir fecha, temas y notas») desaparecía en
+  // cuanto alguien volvía a subir el concentrado de Excel, que casi nunca trae
+  // la columna «NOTAS» llena. La vista previa decía «se actualiza» sin avisar
+  // de que iba a borrar nada.
+  describe("sesiones · lo capturado a mano no se pisa", () => {
+    const CABECERA_SESIONES = ["SESIÓN", "SEDE", "FECHA", "NIÑAS", "NIÑOS", "NOTAS"];
+    const sesionEnBase = (notas: string | null) => ({
+      id: "s1",
+      notas,
+      fecha: new Date(Date.UTC(2026, 0, 24, 12)),
+      temas: "Robótica",
+    });
+
+    beforeEach(() => {
+      db.clase.findMany.mockResolvedValue([
+        { id: "c1", nombre: "Robótica", sesiones: [{ id: "s1", fecha: new Date(Date.UTC(2026, 0, 24, 12)), temas: "Robótica" }] },
+      ]);
+    });
+
+    it("conserva las notas escritas a mano cuando el Excel no trae «NOTAS»", async () => {
+      db.sesion.findFirst.mockResolvedValue(sesionEnBase("Llovió; se hizo en el aula 3"));
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, ""]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      expect(db.sesion.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { temas: "Robótica" },
+      });
+    });
+
+    it("sí escribe las notas cuando el Excel las trae", async () => {
+      db.sesion.findFirst.mockResolvedValue(sesionEnBase("Llovió; se hizo en el aula 3"));
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, "Vino el grupo de Umán"]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      expect(db.sesion.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { temas: "Robótica", notas: "Vino el grupo de Umán" },
+      });
+    });
+
+    it("quita el aviso automático de «sin datos» cuando la sesión ya trae totales", async () => {
+      db.sesion.findFirst.mockResolvedValue(
+        sesionEnBase("Sesión sin datos de asistencia registrados."),
+      );
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, ""]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      expect(db.sesion.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { temas: "Robótica", notas: null },
+      });
+    });
+
+    it("tampoco toca los acompañantes contados a mano en la fecha", async () => {
+      db.sesion.findFirst.mockResolvedValue(sesionEnBase(null));
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, ""]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      const datos = db.sesion.update.mock.calls[0][0].data;
+      expect(datos).not.toHaveProperty("acompanantesMamas");
+      expect(datos).not.toHaveProperty("acompanantesPapas");
+    });
+  });
+
   it("al niño que repite solo le crea la inscripción", async () => {
     db.participante.findMany.mockResolvedValue([
       {
