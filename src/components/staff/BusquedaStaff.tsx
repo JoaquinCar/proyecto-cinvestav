@@ -10,7 +10,7 @@ import { ROL_STAFF_LABEL } from "@/lib/schemas/staff.schema";
 // ─────────────────────────────────────────────────────────────────────────────
 // Buscador de staff ya capturado.
 //
-// Mismo patrón que BusquedaAcompanante y BusquedaParticipante, y a propósito:
+// Mismo patrón que BusquedaParticipante, y a propósito:
 // es el mismo problema. Un becario estará en veinte sesiones. Si en cada una
 // hubiera que teclear su nombre, nacerían veinte fichas —"Rocío Canul", "Rocio
 // Canul", "R. Canul"— y la lista de la sesión dejaría de servir para lo que se

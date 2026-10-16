@@ -10,7 +10,7 @@ import { fallaInesperada } from "@/server/respuestas";
 //
 // Quita a una persona de ESTA sesión. NO borra su ficha: casi siempre está
 // asignada a otras sesiones, y aunque no lo esté, sigue disponible para el año
-// que viene. Es el mismo criterio que DELETE /api/inscripciones/[id]/acompanante.
+// que viene.
 //
 // ADMIN y BECARIO. READONLY solo consulta.
 

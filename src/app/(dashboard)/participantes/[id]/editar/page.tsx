@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Users } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/server/db";
@@ -89,25 +89,6 @@ export default async function EditarParticipantePage({
           de generarla.
         </p>
 
-        {/* El acompañante NO se edita aquí, y quien lo busca llega a esta
-            pantalla primero. Vive en la inscripción, no en el niño: cambia
-            cada año y lo captura el becario, que no puede entrar aquí. Sin
-            este aviso la conclusión es «no existe ese apartado». */}
-        <div className="mt-4 flex items-start gap-3 rounded-2xl p-4 bg-muted/40 border border-border">
-          <Users size={17} strokeWidth={1.8} aria-hidden className="mt-0.5 shrink-0 text-muted-foreground" />
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            ¿Buscas el acompañante? No se edita aquí, porque no es del niño sino
-            de cada edición en la que participa: un año lo trae su mamá y otro su
-            abuela.{" "}
-            <Link
-              href={`/participantes/${participante.id}`}
-              className="font-medium underline underline-offset-4 text-foreground hover:text-primary transition-colors"
-            >
-              Se pone, se cambia y se quita en su ficha
-            </Link>
-            , en la tarjeta de cada edición.
-          </p>
-        </div>
       </div>
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />

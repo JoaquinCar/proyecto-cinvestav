@@ -184,11 +184,6 @@ describe.skipIf(!habilitado)("reporte por edición contra la base real", () => {
     expect(escuelasA).toEqual(["Primaria Alfa"]);
     expect(escuelasB).toEqual(["Primaria Beta"]);
 
-    // Ni los contactos.
-    expect(
-      a.registrosPorContacto.some((c) => c.contacto.includes(String(ANIO_B))),
-    ).toBe(false);
-
     expect(a.promedioAsist).toBe(7);
     expect(b.promedioAsist).toBe(9);
   });

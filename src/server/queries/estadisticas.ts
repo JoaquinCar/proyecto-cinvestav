@@ -469,7 +469,6 @@ export type AnalisisProfundo = {
   edadMax: number;
   numEscuelas: number;
   escuelaTop: { nombre: string; cantidad: number; pct: number } | null;
-  numContactos: number;
   // Asistencia — misma definición de «capturada» que el dashboard, y el mismo
   // recorte: solo las sesiones que cuentan (ver `src/lib/tipos-sesion.ts`).
   /** De las sesiones registradas que cuentan, cuántas tienen asistencia capturada. */
@@ -489,7 +488,6 @@ export type AnalisisProfundo = {
   generoPorNivel: SerieDual[]; // a=niñas, b=niños por nivel
   edadGenero: SerieDual[]; // a=niñas, b=niños por edad
   concentracionEscuelas: { escuela: string; cantidad: number; pct: number; acumPct: number }[];
-  registrosPorContacto: { contacto: string; cantidad: number; ejemplo: string; label: string | null }[];
   acompanantesPorSesion: SerieDual[]; // a=mamás, b=papás por sesión
   retencion: { fecha: string; etiqueta: string; presentes: number }[];
 };
@@ -502,15 +500,15 @@ export async function obtenerAnalisisProfundo(
       where: { edicionId },
       select: {
         participante: {
+          // Solo lo que el análisis cuenta. Ni nombre ni contacto: el único
+          // bloque que los usaba era «Familias y grupos» (agrupar por
+          // teléfono/correo), que se retiró, y traer datos personales que
+          // nadie pinta es gratis de evitar.
           select: {
             edad: true,
             genero: true,
             nivel: true,
             escuela: true,
-            telefono: true,
-            correo: true,
-            nombre: true,
-            apellidos: true,
           },
         },
       },
@@ -585,48 +583,6 @@ export async function obtenerAnalisisProfundo(
     .sort((x, y) => x[0] - y[0])
     .map(([edad, v]) => ({ etiqueta: `${edad}`, a: v.a, b: v.b }));
 
-  // Registros por contacto (teléfono; fallback correo). El valor crudo del
-  // contacto NO se expone al cliente: la página lo enmascara antes de render.
-  const contactoMap = new Map<string, { count: number; ejemplo: string }>();
-  for (const p of parts) {
-    const c = (p.telefono || p.correo || "Sin contacto").trim();
-    if (!contactoMap.has(c)) contactoMap.set(c, { count: 0, ejemplo: `${p.nombre} ${p.apellidos}` });
-    contactoMap.get(c)!.count++;
-  }
-  const registrosPorContacto = Array.from(contactoMap.entries())
-    .map(([contacto, v]) => ({
-      contacto,
-      cantidad: v.count,
-      ejemplo: v.ejemplo,
-      label: null as string | null,
-    }))
-    .sort((a, b) => b.cantidad - a.cantidad);
-
-  // Un contacto puede ser una familia (2-3 hermanos) o un grupo organizado que
-  // inscribe a muchos niños de golpe: en 2026 fue el Grupo Zarigüeyas, y verlo
-  // etiquetado evita leer sus 6 registros como "una familia enorme".
-  //
-  // Antes se identificaba por volumen (el contacto más numeroso con 5 o más),
-  // para no incrustar el teléfono real en un repo público. Pero el volumen no
-  // distingue un grupo de una familia grande: en cualquier edición nueva, el
-  // contacto más numeroso quedaba bautizado "Grupo Zarigüeyas" aunque el grupo
-  // no existiera ahí. El reporte inventaba un grupo.
-  //
-  // Ahora la identidad viene del entorno (CONTACTO_GRUPO = el teléfono o correo
-  // real; CONTACTO_GRUPO_ETIQUETA = cómo llamarlo). Sin configuración, ningún
-  // contacto lleva etiqueta, que es lo correcto para una edición nueva.
-  //
-  // "Sin contacto" queda excluido a propósito: no es un contacto sino el cajón
-  // de los registros sin teléfono ni correo, y aparece en todas las ediciones.
-  // Justo ese cajón era el que se llevaba la etiqueta cuando 5 o más niños
-  // venían sin datos de contacto.
-  const contactoGrupo = (process.env.CONTACTO_GRUPO ?? "").trim();
-  if (contactoGrupo && contactoGrupo !== "Sin contacto") {
-    const etiqueta = process.env.CONTACTO_GRUPO_ETIQUETA?.trim() || "Grupo Zarigüeyas";
-    const fila = registrosPorContacto.find((c) => c.contacto === contactoGrupo);
-    if (fila) fila.label = etiqueta;
-  }
-  const numContactos = registrosPorContacto.length;
 
   // Asistencia de las sesiones CAPTURADAS: el agregado del Excel cuando lo hay,
   // si no la lista pasada en la aplicación. Antes solo se miraba el agregado,
@@ -687,7 +643,6 @@ export async function obtenerAnalisisProfundo(
     edadMax: edades.length ? Math.max(...edades) : 0,
     numEscuelas: escMap.size,
     escuelaTop,
-    numContactos,
     sesionesCapturadas: conDatos.length,
     sesionesTotal: sesiones.length,
     promedioAsist,
@@ -701,7 +656,6 @@ export async function obtenerAnalisisProfundo(
     generoPorNivel,
     edadGenero,
     concentracionEscuelas,
-    registrosPorContacto,
     acompanantesPorSesion,
     retencion,
   };

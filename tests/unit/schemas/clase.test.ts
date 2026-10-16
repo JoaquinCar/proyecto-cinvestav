@@ -515,7 +515,7 @@ describe("subirImagenClaseSchema", () => {
 // ── Tests: actualizarSesionSchema · acompañantes de la fecha ──────────────────
 //
 // Dos números y nada más: cuántas mamás y cuántos papás fueron a ESA fecha.
-// No es la lista nominal de adultos (esa vive en `Acompanante`), y por eso aquí
+// No es una lista nominal de adultos (eso existió y se retiró), y por eso aquí
 // no hay nombres ni teléfonos que validar.
 
 describe("actualizarSesionSchema · acompañantes", () => {

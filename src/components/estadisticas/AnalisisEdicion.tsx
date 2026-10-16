@@ -6,7 +6,6 @@ import {
   Activity,
   HeartHandshake,
   Crown,
-  Contact,
 } from "lucide-react";
 import { obtenerAnalisisProfundo } from "@/server/queries/estadisticas";
 import { obtenerHistoricoEdiciones } from "@/server/queries/historico";
@@ -56,16 +55,6 @@ function InsightCard({
   );
 }
 
-/** El contacto crudo (teléfono/correo) nunca sale al cliente sin enmascarar. */
-function maskContacto(c: string): string {
-  if (/^\d{6,}$/.test(c)) return `tel. ••••${c.slice(-4)}`;
-  if (c.includes("@")) {
-    const [u, d] = c.split("@");
-    return `${u.slice(0, 2)}•••@${d}`;
-  }
-  return c;
-}
-
 export async function AnalisisEdicion({
   edicionId,
   mostrarComparativo = true,
@@ -79,7 +68,6 @@ export async function AnalisisEdicion({
     mostrarComparativo ? obtenerHistoricoEdiciones() : Promise.resolve([]),
   ]);
 
-  const maxContacto = a.registrosPorContacto[0]?.cantidad ?? 0;
   // Lectura de Pareto: cuántas escuelas hacen falta para llegar al 80% de los niños
   const escuelasHasta80 = a.concentracionEscuelas.findIndex((e) => e.acumPct >= 80) + 1;
 
@@ -123,14 +111,6 @@ export async function AnalisisEdicion({
           icon={School}
           colorClass="text-chart-5"
           bgClass="bg-chart-5/10"
-        />
-        <InsightCard
-          label="Contactos"
-          value={a.numContactos}
-          hint={`registraron a los ${a.totalNinos} niños`}
-          icon={Contact}
-          colorClass="text-primary"
-          bgClass="bg-primary/10"
         />
         <InsightCard
           label="Asistencia promedio"
@@ -241,59 +221,6 @@ export async function AnalisisEdicion({
           }}
         >
           <GraficaConcentracion data={a.concentracionEscuelas} />
-        </PanelGrafica>
-      </section>
-
-      {/* ── Familias / registros por contacto ── */}
-      <section className="animate-fade-up">
-        <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-          Familias y grupos
-        </h2>
-        <PanelGrafica
-          title="Registros por contacto"
-          subtitle="Un mismo teléfono/correo puede inscribir a varios niños (familias o grupos)"
-          alto="auto"
-          altoExpandido="auto"
-          nota={
-            maxContacto > 5
-              ? `El ${a.registrosPorContacto[0]?.label ?? "contacto principal"} registró ${maxContacto} niños; el resto son familias de 1 a ${
-                  a.registrosPorContacto.filter((c) => c.cantidad < maxContacto)[0]?.cantidad ?? 1
-                } niños.`
-              : "La mayoría de los registros son familias pequeñas."
-          }
-          datos={{
-            columnas: ["Contacto", "Niños registrados", "Ejemplo"],
-            filas: a.registrosPorContacto.map((c) => [
-              c.label ?? maskContacto(c.contacto),
-              c.cantidad,
-              c.ejemplo,
-            ]),
-          }}
-        >
-          <div className="space-y-2">
-            {a.registrosPorContacto.slice(0, 8).map((c, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div
-                  className={`w-36 shrink-0 text-xs truncate ${
-                    c.label ? "font-medium text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {c.label ?? maskContacto(c.contacto)}
-                </div>
-                <div className="flex-1 h-5 rounded-md bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-md bg-secondary/50 flex items-center px-2"
-                    style={{ width: `${Math.max((c.cantidad / maxContacto) * 100, 8)}%` }}
-                  >
-                    <span className="text-xs font-medium text-foreground tabular">{c.cantidad}</span>
-                  </div>
-                </div>
-                <div className="w-40 shrink-0 text-xs text-muted-foreground truncate hidden sm:block">
-                  p. ej. {c.ejemplo}
-                </div>
-              </div>
-            ))}
-          </div>
         </PanelGrafica>
       </section>
 

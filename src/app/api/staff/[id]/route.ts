@@ -12,7 +12,7 @@ const STAFF_NO_ENCONTRADO =
 //
 // Disponible para los tres roles, pero el contacto (teléfono y correo) se omite
 // para READONLY, que solo consulta reportes. Mismo criterio —y mismo código—
-// que GET /api/acompanantes/[id].
+// que el resto de los endpoints que devuelven datos de contacto.
 
 export async function GET(
   _request: NextRequest,

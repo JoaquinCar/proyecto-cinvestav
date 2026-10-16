@@ -10,13 +10,12 @@ import type { StaffInput } from "@/lib/schemas/staff.schema";
 // da completa. Por eso el enlace es `StaffClase` y las rutas cuelgan de
 // /api/clases/[id]/staff.
 //
-// Una persona de staff es una ficha GLOBAL, igual que `Participante` y que
-// `Acompanante`: existe una sola vez y se reutiliza en todas las sesiones y en
-// todas las ediciones. Ese es el punto entero de la función — el mismo becario
+// Una persona de staff es una ficha GLOBAL, igual que `Participante`: existe
+// una sola vez y se reutiliza en todas las sesiones y en todas las ediciones. Ese es el punto entero de la función — el mismo becario
 // estará en veinte sesiones, y si hubiera que teclearlo veinte veces la lista
 // se llenaría de "Rocío Canul", "Rocio Canul" y "R. Canul" y no serviría para
 // nada. La edición no se pierde: se deduce por las sesiones a las que está
-// asignado, igual que la de un acompañante se deduce por sus inscripciones.
+// asignado.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Errores de dominio ────────────────────────────────────────────────────────
@@ -65,10 +64,9 @@ const CAMPOS_STAFF = {
 } as const;
 
 // ── Buscar (typeahead para reutilizar) ───────────────────────────────────────
-// Búsqueda GLOBAL, sin acotar por edición, por lo mismo que en
-// `buscarAcompanantes`: lo que se quiere encontrar es justo a quien ya se
-// capturó antes — hace tres años o hace cinco minutos, al armar la sesión
-// anterior.
+// Búsqueda GLOBAL, sin acotar por edición: lo que se quiere encontrar es justo
+// a quien ya se capturó antes — hace tres años o hace cinco minutos, al armar
+// la sesión anterior.
 
 const LIMITE_BUSQUEDA = 50;
 
@@ -142,8 +140,7 @@ export async function obtenerStaff(id: string) {
 // ── Resolver la elección a un id ──────────────────────────────────────────────
 // Punto ÚNICO donde se decide entre reutilizar y crear. Vive aquí, y no
 // repetido en cada ruta, para que no haya un segundo camino capaz de crear
-// fichas duplicadas sin que nadie se entere. Mismo papel que
-// `resolverAcompanante`.
+// fichas duplicadas sin que nadie se entere.
 
 export async function resolverStaff(eleccion: EleccionStaff): Promise<string> {
   if (eleccion.staff) {
@@ -204,8 +201,7 @@ export async function asignarStaffAClase(
 
 // ── Quitar de una sesión ──────────────────────────────────────────────────────
 // Solo desasigna. La ficha de la persona NO se borra: casi siempre está en
-// otras sesiones, y aunque no lo esté, el año que viene se reutiliza. Es el
-// mismo criterio que `quitarAcompanante`.
+// otras sesiones, y aunque no lo esté, el año que viene se reutiliza.
 
 export async function quitarStaffDeClase(claseId: string, staffId: string) {
   const asignacion = await prisma.staffClase.findUnique({

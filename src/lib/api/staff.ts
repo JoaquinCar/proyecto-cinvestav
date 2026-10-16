@@ -1,6 +1,6 @@
 // Llamadas del cliente al API de staff.
 //
-// Fuera de los componentes por lo mismo que `lib/api/acompanantes.ts`: aquí es
+// Fuera de los componentes por lo mismo que el resto de `lib/api/*`: aquí es
 // donde se decide entre REUTILIZAR una ficha y crear una nueva, y equivocarse
 // en eso llena la base de becarios duplicados sin que se note hasta que alguien
 // imprime la lista.

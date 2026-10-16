@@ -39,8 +39,6 @@ const RAIZ = join(__dirname, "..", "..", "..", "src");
 
 /** Las ayudas de `@/lib/api/*` que ESCRIBEN. Buscar/listar no cuenta. */
 const AYUDAS_QUE_ESCRIBEN = [
-  "asignarAcompanante",
-  "quitarAcompanante",
   "eliminarClase",
   "cambiarExclusionConstancia",
   "generarConstancia",

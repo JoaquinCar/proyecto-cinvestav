@@ -8,7 +8,6 @@ import type {
   EditarParticipanteInput,
 } from "@/lib/schemas/participante.schema";
 import type { Participante } from "@/components/participantes/BusquedaParticipante";
-import type { EleccionAcompanante } from "@/lib/api/acompanantes";
 import { MENSAJE_SIN_CONEXION } from "@/lib/api/errores";
 
 async function leerError(res: Response, porDefecto: string): Promise<never> {
@@ -57,20 +56,11 @@ export async function crearParticipante(
  * Es el mismo camino para un niño nuevo y para uno que repite: cambia la
  * Inscripcion, nunca el Participante.
  */
-export async function crearInscripcion(
-  participanteId: string,
-  edicionId: string,
-  /**
-   * Acompañante de ESTE año, opcional. Viaja aquí y no en el alta de la ficha
-   * porque pertenece a la inscripción: el mismo niño puede venir con su mamá un
-   * año y con su abuela el siguiente.
-   */
-  acompanante?: EleccionAcompanante,
-) {
+export async function crearInscripcion(participanteId: string, edicionId: string) {
   const res = await pedir("/api/inscripciones", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ participanteId, edicionId, ...acompanante }),
+    body: JSON.stringify({ participanteId, edicionId }),
   });
   if (!res.ok) {
     await leerError(

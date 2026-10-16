@@ -293,9 +293,10 @@ export const actualizarSesionSchema = z.object({
     .optional(),
 
   // ── Acompañantes de esta fecha ─────────────────────────────────────────────
-  // Solo el conteo: cuántas mamás y cuántos papás fueron. No es la lista
-  // nominal de adultos (esa vive en `Acompanante`, ligada a la inscripción), y
-  // por eso aquí no hay nombres ni teléfonos que validar.
+  // Solo el conteo: cuántas mamás y cuántos papás fueron. No es una lista
+  // nominal de adultos —eso existió y se retiró por sobrar (ver `model
+  // Acompanante` en prisma/schema.prisma)—, y por eso aquí no hay nombres ni
+  // teléfonos que validar.
   //
   // `null` es «dejar esta fecha sin contar» y es distinto de 0, que es «no vino
   // ninguno». El tope existe para atajar el dedazo: a una sesión del programa

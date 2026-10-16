@@ -3,8 +3,7 @@ import { z } from "zod";
 // ── Rol del staff ─────────────────────────────────────────────────────────────
 // Qué hace esa persona en el programa. NO es el rol del sistema (`Role`:
 // ADMIN / BECARIO / READONLY): eso es un permiso de la app y la mayoría del
-// staff ni siquiera tiene cuenta. Esto describe a la persona, como `Parentesco`
-// describe a un acompañante.
+// staff ni siquiera tiene cuenta. Esto describe a la persona.
 
 export const ROLES_STAFF = [
   "INVESTIGADOR",
@@ -28,8 +27,7 @@ export const ROL_STAFF_LABEL: Record<RolStaff, string> = {
 };
 
 // ── Campos opcionales ─────────────────────────────────────────────────────────
-// Mismo tratamiento que en acompanante.schema: un campo vacío del formulario
-// llega como "" y no como ausente. Sin normalizarlo, `z.email()` rechazaría un
+// Un campo vacío del formulario llega como "" y no como ausente. Sin normalizarlo, `z.email()` rechazaría un
 // alta en la que simplemente no se capturó el correo.
 
 const textoOpcional = (max: number, mensajeMax: string) =>
@@ -78,8 +76,7 @@ export type StaffInput = z.infer<typeof staffSchema>;
 
 // ── Asignar staff a una sesión ────────────────────────────────────────────────
 //
-// Dos caminos, exactamente uno por petición — el mismo contrato que ya usa
-// `asignarAcompananteSchema`, y por la misma razón:
+// Dos caminos, exactamente uno por petición:
 //   · `staffId`  — la persona YA existe. Es el camino normal: el mismo becario
 //     está en veinte sesiones y en diecinueve de ellas se reutiliza su ficha.
 //   · `staff`    — nadie la había capturado; se crea y se asigna.

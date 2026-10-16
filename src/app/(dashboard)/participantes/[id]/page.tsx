@@ -6,8 +6,6 @@ import { obtenerHistorialParticipante } from "@/server/queries/participantes";
 import { EstadoBadge } from "@/components/shared/EstadoBadge";
 import { BotonConstancia } from "@/components/constancias/BotonConstancia";
 import { BotonBajaInscripcion } from "@/components/participantes/BotonBajaInscripcion";
-import { GestorAcompanante } from "@/components/acompanantes/GestorAcompanante";
-import type { Acompanante } from "@/lib/api/acompanantes";
 import { cuentaParaElPrograma, type TipoSesion } from "@/lib/tipos-sesion";
 import {
   GraduationCap,
@@ -46,8 +44,6 @@ type InscripcionTimeline = {
   /** `true` solo si un ADMIN dejó a este niño fuera de la entrega ese año. */
   constanciaExcluida: boolean;
   constanciaMotivoExclusion: string | null;
-  /** Con quién vino el niño ESA edición; null cuando vino solo. */
-  acompanante: Acompanante | null;
   edicion: {
     id: string;
     anio: number;
@@ -167,19 +163,6 @@ function TimelineItem({
               puedeGenerar={puedeCapturar}
             />
           </div>
-        </div>
-
-        {/* Con quién vino ese año */}
-        <div className="mt-3 pt-3 border-t border-border">
-          <GestorAcompanante
-            inscripcionId={inscripcion.id}
-            acompanante={inscripcion.acompanante}
-            puedeEditar={puedeCapturar}
-            // El contacto del adulto es dato personal: el API se lo oculta a
-            // READONLY y aquí se aplica el mismo criterio.
-            puedeVerContacto={puedeCapturar}
-            edicionNombre={inscripcion.edicion.nombre}
-          />
         </div>
 
         {/* Baja de esta edición — solo ADMIN */}

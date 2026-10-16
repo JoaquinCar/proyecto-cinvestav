@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { acompananteSchema } from "@/lib/schemas/acompanante.schema";
 import { LARGO_MAXIMO_CIUDAD, normalizarCiudad } from "@/lib/ciudades";
 
 // ── Participante ──────────────────────────────────────────────────────────────
@@ -69,24 +68,13 @@ export type BusquedaParticipanteInput = z.infer<typeof busquedaParticipanteSchem
 
 // ── Inscripción ───────────────────────────────────────────────────────────────
 
-// El acompañante viaja aquí, en la inscripción, y no en el alta del
-// participante: es de la edición, no del niño. Y es opcional — registrar a
-// quien viene solo no debe pedir nada de más.
+// Inscribir es ligar un niño que ya existe a una edición: nada más. El
+// acompañante nominal viajaba aquí y se retiró (ver `model Acompanante` en
+// prisma/schema.prisma); los adultos se cuentan por fecha al pasar lista.
 
-export const inscripcionSchema = z
-  .object({
-    participanteId: z.string().min(1, "Falta indicar el participante que se va a inscribir"),
-    edicionId:      z.string().min(1, "Falta indicar la edición en la que se va a inscribir"),
-
-    /** Acompañante que YA existe: el segundo hermano reutiliza el del primero. */
-    acompananteId: z.string().min(1).optional(),
-
-    /** Acompañante que nadie había capturado todavía: se crea y se liga. */
-    acompanante: acompananteSchema.optional(),
-  })
-  .refine((d) => !(d.acompananteId && d.acompanante), {
-    message:
-      "Elige un acompañante de la lista o captura uno nuevo, pero no las dos cosas a la vez",
-  });
+export const inscripcionSchema = z.object({
+  participanteId: z.string().min(1, "Falta indicar el participante que se va a inscribir"),
+  edicionId:      z.string().min(1, "Falta indicar la edición en la que se va a inscribir"),
+});
 
 export type InscripcionInput = z.infer<typeof inscripcionSchema>;
