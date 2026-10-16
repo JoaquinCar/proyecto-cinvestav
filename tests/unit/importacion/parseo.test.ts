@@ -10,7 +10,7 @@ import {
   parsearSesiones,
 } from "@/lib/importacion/parseo";
 import { generarPlantilla } from "@/lib/importacion/plantillas";
-import { claveFecha } from "@/lib/importacion/texto";
+import { claveFecha, claveParticipante } from "@/lib/importacion/texto";
 
 // ── Helper: arma un .xlsx en memoria a partir de una matriz ───────────────────
 
@@ -412,7 +412,7 @@ describe("las plantillas descargables se importan sin errores", () => {
   it("sesiones", () => {
     const r = parsearArchivo(generarPlantilla("sesiones", 2026), "sesiones", 2026);
     expect(r.errores).toEqual([]);
-    expect(r.filas).toHaveLength(2);
+    expect(r.filas).toHaveLength(3);
   });
 
   it("asistencia", () => {
@@ -420,5 +420,36 @@ describe("las plantillas descargables se importan sin errores", () => {
     expect(r.errores).toEqual([]);
     expect(r.filas).toHaveLength(2);
     expect(r.columnasSesion).toHaveLength(3);
+  });
+
+  // Las tres plantillas son los tres pasos de un mismo ejemplo. Si no encajan
+  // entre sí, quien las descarga para ensayar el procedimiento completo choca
+  // en el paso 3 con «la columna X no corresponde a ninguna sesión» sin haber
+  // hecho nada mal, y no sabe si el fallo es suyo o de la aplicación.
+  it("las tres plantillas encajan entre sí, paso a paso", () => {
+    const participantes = parsearArchivo(generarPlantilla("participantes", 2026), "participantes", 2026);
+    const sesiones = parsearArchivo(generarPlantilla("sesiones", 2026), "sesiones", 2026);
+    const asistencia = parsearArchivo(generarPlantilla("asistencia", 2026), "asistencia", 2026);
+
+    // Cada columna de sesión del paso 3 es una fecha del paso 2.
+    const fechasDelPaso2 = new Set(
+      sesiones.filas.map((f) => claveFecha((f.datos as { fecha: Date }).fecha)),
+    );
+    for (const col of asistencia.columnasSesion) {
+      expect(col.fecha).not.toBeNull();
+      expect(fechasDelPaso2).toContain(claveFecha(col.fecha as Date));
+    }
+
+    // Cada niño del paso 3 está dado de alta en el paso 1.
+    const delPaso1 = new Set(
+      participantes.filas.map((f) => {
+        const d = f.datos as { nombre: string; apellidos: string };
+        return claveParticipante(d.nombre, d.apellidos);
+      }),
+    );
+    for (const fila of asistencia.filas) {
+      const d = fila.datos as { nombre: string; apellidos: string };
+      expect(delPaso1).toContain(claveParticipante(d.nombre, d.apellidos));
+    }
   });
 });
