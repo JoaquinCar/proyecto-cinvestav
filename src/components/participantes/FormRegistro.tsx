@@ -36,6 +36,7 @@ import {
   type EstadoAcompanante,
 } from "@/components/acompanantes/CampoAcompanante";
 import { GRADOS_POR_NIVEL, NIVEL_GRUPO_LABEL, NIVELES_ORDENADOS } from "@/lib/grados";
+import { CIUDADES, LARGO_MAXIMO_CIUDAD } from "@/lib/ciudades";
 import {
   mensajeAltaSinInscripcion,
   mensajeDeError,
@@ -68,6 +69,9 @@ const formSchema = z.object({
   escuela:   z.string().min(1, "Escuela requerida").max(200).trim(),
   grado:     z.string().min(1, "Grado requerido"),
   genero:    z.enum(["FEMENINO", "MASCULINO"]).optional(),
+  // Opcional, y vacía por omisión: no se presupone «Mérida». El servidor la
+  // canoniza al guardar (ver src/lib/ciudades.ts).
+  ciudad:    z.string().max(LARGO_MAXIMO_CIUDAD, "La ciudad es demasiado larga").optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -431,6 +435,43 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
               )}
             />
           </div>
+        </div>
+
+        {/* Ciudad — faltaba en el alta y es lo que alimenta la gráfica «Por
+            ciudad». Datalist y no select: se sugiere el catálogo de Mérida y
+            alrededores pero se admite cualquier localidad; el servidor la
+            canoniza al guardar (ver src/lib/ciudades.ts). */}
+        <div className="space-y-1.5">
+          <Label htmlFor="reg-ciudad" className="text-sm font-medium text-foreground">
+            Ciudad{" "}
+            <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          <Input
+            id="reg-ciudad"
+            type="text"
+            list="ciudades-registro"
+            maxLength={LARGO_MAXIMO_CIUDAD}
+            placeholder="Ej. Mérida"
+            {...register("ciudad")}
+            className={[
+              "h-11 rounded-xl bg-muted border transition-colors w-full",
+              "focus-visible:ring-primary",
+              errors.ciudad ? "border-destructive" : "border-border",
+            ].join(" ")}
+            aria-describedby="reg-ciudad-hint"
+          />
+          <datalist id="ciudades-registro">
+            {CIUDADES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+          <p id="reg-ciudad-hint" className="text-xs text-muted-foreground">
+            De dónde viene el niño. Si no está en la lista, escríbela: se guarda
+            igual.
+          </p>
+          {errors.ciudad && (
+            <p className="text-xs text-destructive">{errors.ciudad.message}</p>
+          )}
         </div>
       </fieldset>
 

@@ -258,6 +258,22 @@ export const crearSesionSchema = z.object({
 
 // ── Schema para actualizar una sesión (BECARIO+) ──────────────────────────────
 
+/** Cuántos adultos de un tipo fueron a una fecha. Ver `actualizarSesionSchema`. */
+export const MAXIMO_ACOMPANANTES_POR_FECHA = 999;
+
+function contadorAcompanantesSchema(quienes: string) {
+  return z
+    .number()
+    .int(`El número de ${quienes} tiene que ser un número entero`)
+    .min(0, `El número de ${quienes} no puede ser negativo`)
+    .max(
+      MAXIMO_ACOMPANANTES_POR_FECHA,
+      `El número de ${quienes} no puede pasar de ${MAXIMO_ACOMPANANTES_POR_FECHA}`,
+    )
+    .nullable()
+    .optional();
+}
+
 export const actualizarSesionSchema = z.object({
   /** Corregir la fecha: un dedazo en el año no debe quedar permanente. */
   fecha: fechaCalendarioSchema.optional(),
@@ -275,6 +291,18 @@ export const actualizarSesionSchema = z.object({
     .trim()
     .nullable()
     .optional(),
+
+  // ── Acompañantes de esta fecha ─────────────────────────────────────────────
+  // Solo el conteo: cuántas mamás y cuántos papás fueron. No es la lista
+  // nominal de adultos (esa vive en `Acompanante`, ligada a la inscripción), y
+  // por eso aquí no hay nombres ni teléfonos que validar.
+  //
+  // `null` es «dejar esta fecha sin contar» y es distinto de 0, que es «no vino
+  // ninguno». El tope existe para atajar el dedazo: a una sesión del programa
+  // no van novecientas mamás, y un 55555 escrito sin querer se llevaría por
+  // delante el total de la edición.
+  acompanantesMamas: contadorAcompanantesSchema("mamás"),
+  acompanantesPapas: contadorAcompanantesSchema("papás"),
 });
 
 // ── Imágenes de clase ─────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import {
   type TipoSesion,
 } from "@/lib/tipos-sesion";
 import type { Nivel } from "@/lib/importacion/texto";
+import { normalizarCiudad } from "@/lib/ciudades";
 import {
   asistenciaDeSesion,
   etiquetaNivel,
@@ -169,7 +170,11 @@ export async function obtenerMetricasEdicion(
     gradoCounts.set(g, (gradoCounts.get(g) ?? 0) + 1);
     const n = etiquetaNivel(i.participante.nivel);
     nivelCounts.set(n, (nivelCounts.get(n) ?? 0) + 1);
-    const c = i.participante.ciudad?.trim() || "Sin especificar";
+    // Se canoniza AL LEER, no solo al escribir: en los respaldos ya hay fichas
+    // con «merida», «Mérida, Yuc.» y «MERIDA», y sin esto la gráfica «Por
+    // ciudad» las enseña como tres barras distintas. Así salen juntas sin
+    // tener que reescribir ni una fila de la base.
+    const c = normalizarCiudad(i.participante.ciudad) ?? "Sin especificar";
     ciudadCounts.set(c, (ciudadCounts.get(c) ?? 0) + 1);
   }
 
@@ -339,6 +344,8 @@ export async function obtenerMetricasAsistencia(
       temas: true,
       clase: { select: { nombre: true } },
       resumen: true,
+      acompanantesMamas: true,
+      acompanantesPapas: true,
       asistencias: SELECCION_LISTA,
     },
   });
@@ -473,6 +480,10 @@ export type AnalisisProfundo = {
   minAsist: { tema: string; total: number } | null;
   caidaPct: number; // caída de la última sesión con datos respecto a la primera
   totalAcompanantes: number;
+  // El desglose que pidió el coordinador, literal: «papás fueron: 4, mamás: 5».
+  // El total solo no contesta esa pregunta.
+  totalMamas: number;
+  totalPapas: number;
   ratioAcompanantes: number; // acompañantes por cada 10 niños (eventos)
   // Distribuciones cruzadas
   generoPorNivel: SerieDual[]; // a=niñas, b=niños por nivel
@@ -514,6 +525,8 @@ export async function obtenerAnalisisProfundo(
         temas: true,
         clase: { select: { nombre: true } },
         resumen: true,
+        acompanantesMamas: true,
+        acompanantesPapas: true,
         asistencias: SELECCION_LISTA,
       },
     }),
@@ -627,7 +640,9 @@ export async function obtenerAnalisisProfundo(
   const promedioAsist = conDatos.length
     ? Math.round(totalEventos / conDatos.length)
     : 0;
-  const totalAcompanantes = conDatos.reduce((acc, { a }) => acc + a.mamas + a.papas, 0);
+  const totalMamas = conDatos.reduce((acc, { a }) => acc + a.mamas, 0);
+  const totalPapas = conDatos.reduce((acc, { a }) => acc + a.papas, 0);
+  const totalAcompanantes = totalMamas + totalPapas;
   const ratioAcompanantes = totalEventos
     ? Math.round((totalAcompanantes / totalEventos) * 100) / 10
     : 0;
@@ -680,6 +695,8 @@ export async function obtenerAnalisisProfundo(
     minAsist: minAsist ? { tema: minAsist.tema, total: minAsist.total } : null,
     caidaPct,
     totalAcompanantes,
+    totalMamas,
+    totalPapas,
     ratioAcompanantes,
     generoPorNivel,
     edadGenero,

@@ -85,9 +85,16 @@ export type AsistenciaDeSesion = {
   ninos: number;
   total: number;
   /**
-   * Acompañantes. Solo el agregado del Excel los registra: la lista individual
-   * de la aplicación es de niños inscritos y no tiene dónde apuntar al adulto
-   * que vino con ellos, así que en una sesión capturada en la app salen en 0.
+   * Acompañantes: cuántas mamás y cuántos papás fueron a esta fecha.
+   *
+   * Salen de `Sesion.acompanantesMamas` / `acompanantesPapas`, que es lo que se
+   * captura al pasar lista, y si esos campos están en NULL —toda fecha
+   * importada— del agregado del Excel. Antes solo existía la segunda fuente, y
+   * por eso el tablero decía «Acompañantes 0 · 0 mamás · 0 papás» en cuanto una
+   * edición se capturaba en la aplicación: el dato no existía.
+   *
+   * OJO: no son una lista de personas. Quién acompaña a CADA niño ese año es
+   * otra cosa y vive en `Acompanante` ligado a la `Inscripcion`.
    */
   mamas: number;
   papas: number;
@@ -143,6 +150,16 @@ export type SesionConAsistencia = {
     mediaSuperior: number;
     porEdad: unknown;
   } | null;
+  /**
+   * Conteo de adultos capturado al pasar lista. `null` (o ausente) significa
+   * «nadie los contó», y entonces manda el agregado importado; 0 significa «no
+   * vino ninguno» y es un dato tan bueno como cualquier otro.
+   *
+   * Opcionales en el tipo para que una consulta que no los necesite —o una
+   * prueba antigua— siga compilando sin arrastrarlos.
+   */
+  acompanantesMamas?: number | null;
+  acompanantesPapas?: number | null;
   asistencias: {
     inscripcion: {
       participante: {
@@ -161,14 +178,29 @@ export type SesionConAsistencia = {
 export function asistenciaDeSesion(
   sesion: SesionConAsistencia,
 ): AsistenciaDeSesion | null {
+  // Los acompañantes se resuelven aparte de los niños, y a propósito.
+  //
+  // Para los NIÑOS manda el agregado del Excel: el organizador contó también al
+  // público que no está inscrito, y la lista de la aplicación solo ve a los
+  // inscritos (ver «Precedencia» arriba). Para los ADULTOS manda lo que alguien
+  // contó en la aplicación, porque `ResumenSesion.mamas` y `.papas` son `Int
+  // @default(0)` y valen 0 en casi todas las filas importadas —la hoja del
+  // organizador no siempre llevaba esas columnas—. Un 0 que nadie escribió no
+  // puede tapar un 4 que alguien contó de pie en la sesión.
+  //
+  // Las fechas ya importadas tienen los dos campos en NULL, así que siguen
+  // dando exactamente los números de antes del cambio.
+  const mamas = sesion.acompanantesMamas ?? sesion.resumen?.mamas ?? 0;
+  const papas = sesion.acompanantesPapas ?? sesion.resumen?.papas ?? 0;
+
   const r = sesion.resumen;
   if (r) {
     return {
       ninas: r.ninas,
       ninos: r.ninos,
       total: r.total,
-      mamas: r.mamas,
-      papas: r.papas,
+      mamas,
+      papas,
       preescolar: r.preescolar,
       primaria: r.primaria,
       secundaria: r.secundaria,
@@ -178,15 +210,21 @@ export function asistenciaDeSesion(
     };
   }
 
+  // Contar adultos NO es pasar lista: una fecha en la que solo se apuntó «4
+  // mamás» sigue sin capturar, y la tarjeta «Asistencia capturada» tiene que
+  // seguir diciéndole al coordinador que le falta.
   const lista = sesion.asistencias ?? [];
   if (lista.length === 0) return null;
 
   const a: AsistenciaDeSesion = {
     ninas: 0,
     ninos: 0,
+    // Los adultos NO entran en el total: el total son los niños presentes y es
+    // el que alimenta promedio, pico y tendencia. Mezclarlos inflaría la
+    // asistencia del programa con gente que no está inscrita.
     total: lista.length,
-    mamas: 0,
-    papas: 0,
+    mamas,
+    papas,
     preescolar: 0,
     primaria: 0,
     secundaria: 0,

@@ -159,7 +159,9 @@ export async function AnalisisEdicion({
         <InsightCard
           label="Acompañantes"
           value={a.totalAcompanantes}
-          hint={`${a.ratioAcompanantes} por cada 10 niños`}
+          // El desglose antes que el ratio: el coordinador pidió ver «mamás: 5,
+          // papás: 4», que es la pregunta que se hace. El ratio es contexto.
+          hint={`${a.totalMamas} mamás · ${a.totalPapas} papás · ${a.ratioAcompanantes} por cada 10 niños`}
           icon={HeartHandshake}
           colorClass="text-chart-3"
           bgClass="bg-chart-3/10"

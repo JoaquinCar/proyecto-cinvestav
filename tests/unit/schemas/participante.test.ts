@@ -287,3 +287,80 @@ describe("inscripcionSchema", () => {
     expect(Object.keys(errors ?? {}).length).toBeGreaterThanOrEqual(2);
   });
 });
+
+// ── ciudad ────────────────────────────────────────────────────────────────────
+//
+// El campo es OPCIONAL a propósito. Dos motivos, los dos del terreno:
+//   · En los respaldos hay participantes sin ciudad. Exigirla al editar
+//     convertiría cualquier corrección de un nombre en una cacería del dato.
+//   · La carga la hace una persona a mano, sesión por sesión. Un campo
+//     obligatorio que no puede rellenar la deja atascada.
+// Lo que sí se exige es que, cuando venga, venga LIMPIA: la estadística «de
+// dónde vienen los niños» es justo para lo que se pidió el campo.
+
+describe("participanteSchema · ciudad", () => {
+  const base = {
+    nombre: "Juan",
+    apellidos: "García López",
+    edad: 10,
+    escuela: "Primaria Benito Juárez",
+    grado: "4°",
+  };
+
+  it("acepta un participante sin ciudad", () => {
+    // Ausente ≠ vacía: la petición simplemente no habla de la ciudad. Al dar de
+    // alta acaba en NULL de todas formas (lo hace `crearParticipante`), pero al
+    // editar es lo que significa «no la toques».
+    const result = participanteSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.ciudad).toBeUndefined();
+  });
+
+  it("acepta la ciudad vacía como «no se capturó»", () => {
+    const result = participanteSchema.safeParse({ ...base, ciudad: "   " });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.ciudad).toBeNull();
+  });
+
+  it("acepta null explícito", () => {
+    const result = participanteSchema.safeParse({ ...base, ciudad: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.ciudad).toBeNull();
+  });
+
+  it("canoniza la ciudad antes de guardarla", () => {
+    const result = participanteSchema.safeParse({ ...base, ciudad: "  merida, yuc. " });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.ciudad).toBe("Mérida");
+  });
+
+  it("conserva una ciudad fuera del catálogo", () => {
+    const result = participanteSchema.safeParse({ ...base, ciudad: "cancún" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.ciudad).toBe("Cancún");
+  });
+
+  it("rechaza una ciudad que supera 100 caracteres", () => {
+    const result = participanteSchema.safeParse({ ...base, ciudad: "M".repeat(101) });
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.ciudad).toBeDefined();
+  });
+});
+
+describe("editarParticipanteSchema · ciudad", () => {
+  it("permite corregir solo la ciudad", () => {
+    const result = editarParticipanteSchema.safeParse({ ciudad: "kanasin" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.ciudad).toBe("Kanasín");
+  });
+
+  it("permite borrar la ciudad mal capturada", () => {
+    const result = editarParticipanteSchema.safeParse({ ciudad: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.ciudad).toBeNull();
+  });
+
+  it("sigue exigiendo al menos un campo", () => {
+    expect(editarParticipanteSchema.safeParse({}).success).toBe(false);
+  });
+});

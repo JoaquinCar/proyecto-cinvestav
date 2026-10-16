@@ -53,6 +53,7 @@ export default async function EditarParticipantePage({
       escuela:   true,
       grado:     true,
       genero:    true,
+      ciudad:    true,
     },
   });
 

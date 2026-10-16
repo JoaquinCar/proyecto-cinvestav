@@ -5,6 +5,7 @@ import { ArrowLeft, Calendar, User } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { obtenerSesionConClase } from "@/server/queries/clases";
 import { ListaAsistencia } from "@/components/asistencia/ListaAsistencia";
+import { ContadorAcompanantesFecha } from "@/components/acompanantes/ContadorAcompanantesFecha";
 import { formatearFecha, aISOFecha } from "@/lib/fechas";
 import {
   BadgeTipoSesion,
@@ -142,6 +143,19 @@ export default async function AsistenciaPage({
       </div>
 
       <div className="h-px bg-border animate-fade-up animate-fade-up-delay-1" />
+
+      {/* Acompañantes de la fecha — solo el conteo. Va junto a la lista porque
+          es el mismo momento: quien pasa lista es quien tiene delante a los
+          adultos. Nada que ver con el acompañante de cada niño, que se captura
+          al inscribirlo. */}
+      <div className="animate-fade-up animate-fade-up-delay-2">
+        <ContadorAcompanantesFecha
+          sesionId={sesionId}
+          mamas={sesion.acompanantesMamas}
+          papas={sesion.acompanantesPapas}
+          readOnly={session.user.role === "READONLY"}
+        />
+      </div>
 
       {/* Core client component */}
       <div className="animate-fade-up animate-fade-up-delay-2">

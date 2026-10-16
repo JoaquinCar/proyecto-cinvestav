@@ -122,6 +122,10 @@ const sesionMock = {
   notas:           "Excelente sesión",
   registradaPorId: "user-1",
   createdAt:       new Date("2025-03-10T00:00:00.000Z"),
+  // Acompañantes de la fecha, sin contar todavía: una fecha recién creada nace
+  // con los dos en NULL (que no es lo mismo que cero).
+  acompanantesMamas: null,
+  acompanantesPapas: null,
   _count:          { asistencias: 15 },
 };
 
