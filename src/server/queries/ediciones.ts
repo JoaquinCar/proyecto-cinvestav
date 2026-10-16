@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
 import type { CrearEdicionInput, EditarEdicionInput } from "@/lib/schemas/edicion.schema";
 import { SESION_CAPTURADA } from "./asistencia-de-sesion";
@@ -164,18 +165,28 @@ export interface ConteosDeEdicion {
   participantes: number;
 }
 
+// Recibe el cliente de la transacción, NO el global. Esto importa de verdad:
+// un `prisma.*` suelto dentro de un `$transaction` pide una SEGUNDA conexión
+// mientras la transacción retiene la primera. En local, donde el pozo de
+// conexiones es amplio y la base está a menos de un milisegundo, no se nota;
+// en Vercel con Supabase, donde las funciones corren con el pozo al mínimo,
+// esa segunda conexión puede no llegar nunca y la transacción muere esperando.
+// Con `tx` todo viaja por la misma conexión y además los conteos son
+// consistentes con el borrado: nadie puede inscribir a un niño entre la
+// comprobación y el delete.
 export async function contarArrastreDeEdicion(
+  db: Prisma.TransactionClient,
   id: string,
 ): Promise<ConteosDeEdicion> {
   const [inscripciones, sesiones, fechas, asistencias, conAsistencia] =
     await Promise.all([
-      prisma.inscripcion.count({ where: { edicionId: id } }),
-      prisma.clase.count({ where: { edicionId: id } }),
-      prisma.sesion.count({ where: { clase: { edicionId: id } } }),
-      prisma.asistencia.count({ where: { inscripcion: { edicionId: id } } }),
+      db.inscripcion.count({ where: { edicionId: id } }),
+      db.clase.count({ where: { edicionId: id } }),
+      db.sesion.count({ where: { clase: { edicionId: id } } }),
+      db.asistencia.count({ where: { inscripcion: { edicionId: id } } }),
       // Cuántos NIÑOS distintos quedarían sin respaldo, no cuántas marcas:
       // «47 asistencias» no dice a cuánta gente afecta.
-      prisma.asistencia.findMany({
+      db.asistencia.findMany({
         where:    { inscripcion: { edicionId: id } },
         distinct: ["inscripcionId"],
         select:   { inscripcionId: true },
@@ -216,44 +227,55 @@ export async function eliminarEdicion(
   id: string,
   opciones: { forzar?: boolean } = {},
 ) {
-  return prisma.$transaction(async (tx) => {
-    const edicion = await tx.edicion.findUnique({
-      where:  { id },
-      select: { id: true, nombre: true },
-    });
-
-    if (!edicion) {
-      throw new EdicionNoEncontradaError(
-        "Esta edición ya no existe: alguien pudo eliminarla. Vuelve a la lista " +
-          "de ediciones para ver las que siguen activas.",
-      );
-    }
-
-    const conteos = await contarArrastreDeEdicion(id);
-
-    if (!opciones.forzar && (conteos.inscripciones > 0 || conteos.asistencias > 0)) {
-      throw new EdicionConInscripcionesError(
-        mensajeEdicionConHistorial(edicion.nombre, conteos),
-        conteos,
-      );
-    }
-
-    // Cascada explícita en la aplicación, no en la llave foránea: el orden lo
-    // mandan las dependencias, y hacerlo a la vista evita que un `onDelete`
-    // silencioso se lleve por delante el historial de un niño.
-    if (conteos.asistencias > 0) {
-      await tx.asistencia.deleteMany({
-        where: { inscripcion: { edicionId: id } },
+  return prisma.$transaction(
+    async (tx) => {
+      const edicion = await tx.edicion.findUnique({
+        where:  { id },
+        select: { id: true, nombre: true },
       });
-    }
-    await tx.sesion.deleteMany({ where: { clase: { edicionId: id } } });
-    await tx.clase.deleteMany({ where: { edicionId: id } });
-    if (conteos.inscripciones > 0) {
-      await tx.inscripcion.deleteMany({ where: { edicionId: id } });
-    }
 
-    return tx.edicion.delete({ where: { id } });
-  });
+      if (!edicion) {
+        throw new EdicionNoEncontradaError(
+          "Esta edición ya no existe: alguien pudo eliminarla. Vuelve a la " +
+            "lista de ediciones para ver las que siguen activas.",
+        );
+      }
+
+      const conteos = await contarArrastreDeEdicion(tx, id);
+
+      if (
+        !opciones.forzar &&
+        (conteos.inscripciones > 0 || conteos.asistencias > 0)
+      ) {
+        throw new EdicionConInscripcionesError(
+          mensajeEdicionConHistorial(edicion.nombre, conteos),
+          conteos,
+        );
+      }
+
+      // Cascada explícita en la aplicación, no en la llave foránea: el orden
+      // lo mandan las dependencias, y hacerlo a la vista evita que un
+      // `onDelete` silencioso se lleve por delante el historial de un niño.
+      if (conteos.asistencias > 0) {
+        await tx.asistencia.deleteMany({
+          where: { inscripcion: { edicionId: id } },
+        });
+      }
+      await tx.sesion.deleteMany({ where: { clase: { edicionId: id } } });
+      await tx.clase.deleteMany({ where: { edicionId: id } });
+      if (conteos.inscripciones > 0) {
+        await tx.inscripcion.deleteMany({ where: { edicionId: id } });
+      }
+
+      return tx.edicion.delete({ where: { id } });
+    },
+    // La base vive al otro lado de internet, no en la máquina. Los 5 s por
+    // omisión de Prisma se pensaron para una base local; aquí cada ida y
+    // vuelta cuesta ~100 ms y una edición entera son varias. Borrar una
+    // edición se hace una vez al año: que tarde no importa, que se quede a
+    // medias sí —y una transacción agotada deja el borrado sin terminar.
+    { timeout: 20_000, maxWait: 10_000 },
+  );
 }
 
 // ── Activar edición (transacción: desactivar todas, luego activar la nueva) ──
