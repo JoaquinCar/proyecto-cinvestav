@@ -42,6 +42,12 @@ export interface EdicionDestino {
   id: string;
   anio: number;
   nombre: string;
+  /**
+   * Una edición cerrada está congelada: ni sesiones, ni temas, ni asistencias
+   * (ver src/server/queries/edicion-cerrada.ts). La importación escribe esas
+   * tres cosas de golpe, así que tiene que respetarlo como el resto.
+   */
+  cerrada: boolean;
 }
 
 export interface PlanImportacion {
@@ -78,7 +84,7 @@ export function etiquetaAccion(accion: TonoAccion): string {
 export async function obtenerEdicionDestino(edicionId: string): Promise<EdicionDestino> {
   const edicion = await prisma.edicion.findUnique({
     where: { id: edicionId },
-    select: { id: true, anio: true, nombre: true },
+    select: { id: true, anio: true, nombre: true, cerrada: true },
   });
   if (!edicion) throw new ErrorImportacion("La edición seleccionada no existe.");
   return edicion;
@@ -87,7 +93,7 @@ export async function obtenerEdicionDestino(edicionId: string): Promise<EdicionD
 export async function listarEdicionesParaImportar(): Promise<EdicionDestino[]> {
   return prisma.edicion.findMany({
     orderBy: [{ activa: "desc" }, { anio: "desc" }],
-    select: { id: true, anio: true, nombre: true },
+    select: { id: true, anio: true, nombre: true, cerrada: true },
   });
 }
 
@@ -561,8 +567,21 @@ export interface EntradaPlan {
   avisosParseo: Incidencia[];
 }
 
+/** El aviso, idéntico en la vista previa y al intentar importar. */
+export function mensajeEdicionCerrada(anio: number): string {
+  return (
+    `La edición ${anio} está cerrada y no admite cambios: no se puede importar nada en ella. ` +
+    "Un administrador puede reabrirla desde su ficha."
+  );
+}
+
 export async function planificarImportacion(entrada: EntradaPlan): Promise<PlanImportacion> {
   const errores = [...entrada.erroresParseo];
+  // Se avisa ya en la vista previa, no al confirmar: si no, el organizador
+  // prepara su archivo entero y choca con el muro en el último clic.
+  if (entrada.edicion.cerrada) {
+    errores.push({ fila: null, mensaje: mensajeEdicionCerrada(entrada.edicion.anio) });
+  }
   const avisos = [...entrada.avisosParseo];
   let acciones: AccionFila[] = [];
   let resumen: { etiqueta: string; valor: number }[] = [];
@@ -656,6 +675,9 @@ export async function planificarImportacion(entrada: EntradaPlan): Promise<PlanI
 const OPCIONES_TX = { maxWait: 15_000, timeout: 120_000 };
 
 export async function ejecutarImportacion(entrada: EntradaPlan): Promise<ResultadoEjecucion> {
+  if (entrada.edicion.cerrada) {
+    throw new ErrorImportacion(mensajeEdicionCerrada(entrada.edicion.anio));
+  }
   if (entrada.erroresParseo.length) {
     throw new ErrorImportacion(
       "El archivo tiene errores sin resolver; corrígelos y vuelve a intentar.",

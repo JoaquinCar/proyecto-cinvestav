@@ -145,6 +145,34 @@ describe("validación de la petición", () => {
     expect((await previsualizar(req)).status).toBe(422);
   });
 
+  // Cerrar una edición significa congelarla: las sesiones, los temas y las
+  // asistencias ya no se tocan (ver src/server/queries/edicion-cerrada.ts).
+  // Toda la aplicación lo respeta —pasar lista, crear sesiones, corregir
+  // temas— menos la importación de Excel, que es justo la que más escribe de
+  // golpe y sin que nadie revise fila por fila lo que entró.
+  describe("edición cerrada", () => {
+    const archivo = () =>
+      peticion(xlsx([CABECERA, ["Ana", "Poot", 9, "Niña", "3°", "Emma Godoy"]]), "participantes");
+
+    beforeEach(() => {
+      db.edicion.findUnique.mockResolvedValue({ ...EDICION, cerrada: true });
+    });
+
+    it("la vista previa lo dice y deja el botón de importar bloqueado", async () => {
+      const { plan } = await (await previsualizar(archivo())).json();
+      expect(plan.puedeImportar).toBe(false);
+      expect(plan.errores.some((e: { mensaje: string }) => e.mensaje.includes("cerrada"))).toBe(true);
+    });
+
+    it("importar responde 409 y no escribe nada", async () => {
+      const res = await importar(archivo());
+      expect(res.status).toBe(409);
+      expect((await res.json()).error).toContain("cerrada");
+      expect(db.$transaction).not.toHaveBeenCalled();
+      expect(db.participante.create).not.toHaveBeenCalled();
+    });
+  });
+
   it("rechaza una edición inexistente", async () => {
     db.edicion.findUnique.mockResolvedValue(null);
     const req = peticion(xlsx([CABECERA, ["Ana", "Poot", 9, "Niña", "3°", "X"]]), "participantes");

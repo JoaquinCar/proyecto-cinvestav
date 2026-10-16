@@ -5,6 +5,7 @@ import { ErrorPeticion, leerPeticionImportacion } from "@/lib/importacion/petici
 import {
   ErrorImportacion,
   ejecutarImportacion,
+  mensajeEdicionCerrada,
   obtenerEdicionDestino,
   planificarImportacion,
   type EntradaPlan,
@@ -31,6 +32,17 @@ export async function POST(request: Request) {
   try {
     const peticion = await leerPeticionImportacion(request);
     const edicion = await obtenerEdicionDestino(peticion.edicionId);
+
+    // Una edición cerrada está congelada para todo el ciclo de captura, y la
+    // importación es la escritura más grande de todas. Mismo 409 que el resto
+    // de la aplicación (crear sesión, pasar lista, corregir temas).
+    if (edicion.cerrada) {
+      return NextResponse.json(
+        { error: mensajeEdicionCerrada(edicion.anio) },
+        { status: 409 },
+      );
+    }
+
     const parseo = parsearArchivo(peticion.archivo, peticion.tipo, edicion.anio);
 
     const entrada: EntradaPlan = {

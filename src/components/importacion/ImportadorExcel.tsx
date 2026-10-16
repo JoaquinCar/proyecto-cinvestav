@@ -201,9 +201,12 @@ export function ImportadorExcel({ guias, ediciones }: Props) {
                   }}
                   className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
+                  {/* Una edición cerrada se sigue listando —se puede querer
+                      reabrir— pero se dice aquí mismo, para no descubrirlo
+                      después de preparar el archivo entero. */}
                   {ediciones.map((e) => (
                     <option key={e.id} value={e.id}>
-                      {e.nombre} ({e.anio})
+                      {e.nombre} ({e.anio}){e.cerrada ? " · cerrada" : ""}
                     </option>
                   ))}
                 </select>
