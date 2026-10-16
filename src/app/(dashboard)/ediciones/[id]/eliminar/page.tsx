@@ -84,11 +84,22 @@ export default function EliminarEdicionPage() {
           </div>
         </div>
 
+        {/* Una pregunta y un fallo no se pintan igual. Cuando el servidor pide
+            confirmación (409) esto NO es un error: es el paso siguiente, y en
+            rojo de error se lee como «no se pudo» —que fue justo lo que pasó—.
+            En ámbar y encabezado propio se entiende que falta un clic. */}
         {error && (
           <div
-            className="rounded-lg px-4 py-3 text-sm mb-4 text-destructive bg-destructive/10 border border-destructive/40"
-            role="alert"
+            className={
+              pideConfirmar
+                ? "rounded-lg px-4 py-3 text-sm mb-4 text-secondary-soft-foreground bg-secondary/12 border border-secondary/40"
+                : "rounded-lg px-4 py-3 text-sm mb-4 text-destructive bg-destructive/10 border border-destructive/40"
+            }
+            role={pideConfirmar ? "status" : "alert"}
           >
+            {pideConfirmar && (
+              <p className="font-semibold mb-1">Hace falta que lo confirmes</p>
+            )}
             {error}
           </div>
         )}
