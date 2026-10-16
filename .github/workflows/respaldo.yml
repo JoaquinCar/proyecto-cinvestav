@@ -79,9 +79,27 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Rama huérfana: sin historial del código, solo respaldos.
-          git fetch origin respaldos --depth=1 2>/dev/null && git checkout respaldos \
-            || git checkout --orphan respaldos
+          # Rama aparte: sin historial del código, solo respaldos.
+          #
+          # Aquí se perdieron SEIS DÍAS de respaldos sin que nadie se enterara.
+          # El fallo: `git fetch origin respaldos --depth=1` traía un historial
+          # de un solo commit, el `checkout` no siempre encontraba la rama, y
+          # entonces saltaba el `||` y se creaba una rama HUÉRFANA —sin ningún
+          # commit en común con la remota—. El push se rechazaba por
+          # «non-fast-forward», todos los días, con el respaldo ya generado y
+          # cifrado. Lo único que fallaba era guardarlo.
+          #
+          # Ahora: se parte SIEMPRE del extremo remoto cuando la rama existe
+          # (`checkout -B` sobre `origin/respaldos`), y solo se crea huérfana
+          # la primera vez, cuando de verdad no hay nada. Sin `--depth`: son
+          # treinta archivos de 30 KB, el historial completo no pesa nada y a
+          # cambio el push siempre avanza en línea recta.
+          if git fetch origin respaldos 2>/dev/null; then
+            git checkout -B respaldos origin/respaldos
+          else
+            echo "La rama respaldos no existe todavía: se crea."
+            git checkout --orphan respaldos
+          fi
           git rm -rf --cached . >/dev/null 2>&1 || true
           find . -maxdepth 1 ! -name . ! -name .git ! -name respaldos -exec rm -rf {} + 2>/dev/null || true
 
@@ -106,5 +124,18 @@ jobs:
           git add -A
           git diff --cached --quiet && { echo "Sin cambios"; exit 0; }
           git commit -q -m "respaldo: $nombre"
-          git push -q origin respaldos
+
+          # Un reintento: si otra ejecución guardó su respaldo entre el fetch y
+          # el push, se vuelve a partir del extremo remoto en vez de dar el día
+          # por perdido. Nunca `--force`: aquí viven los treinta respaldos y
+          # pisarlos sería exactamente el desastre del que protegen.
+          if ! git push -q origin respaldos; then
+            echo "El push no avanzó; alguien más escribió. Se reintenta una vez."
+            git fetch origin respaldos
+            git rebase origin/respaldos || {
+              echo "::error::No se pudo guardar el respaldo en la rama. El archivo cifrado SÍ se generó, pero no quedó almacenado."
+              exit 1
+            }
+            git push -q origin respaldos
+          fi
           echo "✓ guardado en la rama respaldos"
