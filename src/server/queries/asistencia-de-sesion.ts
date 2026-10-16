@@ -61,6 +61,29 @@ export const SESION_CAPTURADA: {
 };
 
 /**
+ * `_count` de Prisma para el número que se enseña con la etiqueta
+ * «asistentes» (las tarjetas del panel de asistencia y la página de la sesión).
+ *
+ * El filtro NO es decorativo. `Asistencia` guarda también a los ausentes:
+ * marcar ausente a un niño no borra su fila, le pone `presente = false` (ver
+ * el modelo en schema.prisma). Un `_count` pelado cuenta filas, así que
+ * marcar a alguien como ausente SUMABA uno al contador de fuera mientras la
+ * lista de dentro —que sí filtra— restaba uno. El coordinador lo vio como
+ * «por fuera 7 y por dentro 3», y dio por perdida una lista que estaba bien
+ * guardada.
+ *
+ * Que sea una constante y no un literal repetido es justamente para que las
+ * dos pantallas no puedan volver a contar cosas distintas.
+ *
+ * OJO: esto es para CONTAR ASISTENTES. Para «cuántos registros se perderían
+ * al borrar» hay que contar las filas, ausentes incluidos — eso lo hace
+ * `contarArrastreDeClase` y ahí un filtro por presente sería el error.
+ */
+export const CONTEO_PRESENTES = {
+  select: { asistencias: { where: { presente: true } } },
+} as const;
+
+/**
  * `select` de Prisma para traer la lista individual con lo mínimo que hace
  * falta para derivar los agregados de una sesión sin resumen importado.
  */
