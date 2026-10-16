@@ -22,6 +22,7 @@ import {
   eliminarParticipante,
 } from "@/lib/api/participantes";
 import { GRADOS } from "@/lib/grados";
+import { CIUDADES, LARGO_MAXIMO_CIUDAD } from "@/lib/ciudades";
 
 // ── Grados sugeridos ──────────────────────────────────────────────────────────
 // Van en un <datalist>, no en un <select>: hay 34 grafías distintas entre las
@@ -41,6 +42,7 @@ export interface ParticipanteEditable {
   escuela:   string;
   grado:     string;
   genero:    "FEMENINO" | "MASCULINO" | null;
+  ciudad:    string | null;
 }
 
 interface FormEditarParticipanteProps {
@@ -69,6 +71,7 @@ export function FormEditarParticipante({
       escuela:   participante.escuela,
       grado:     participante.grado,
       genero:    participante.genero ?? undefined,
+      ciudad:    participante.ciudad ?? "",
     },
   });
 
@@ -83,6 +86,14 @@ export function FormEditarParticipante({
       if (data.grado     !== participante.grado)     cambios.grado     = data.grado;
       if (data.genero && data.genero !== participante.genero) {
         cambios.genero = data.genero;
+      }
+      // La ciudad se compara ya canonizada contra lo guardado: escribir
+      // «merida» donde dice «Mérida» no es un cambio, y mandarlo haría que el
+      // botón pareciera guardar algo que no cambió. El campo vacío SÍ es un
+      // cambio —es borrar una ciudad mal capturada—, por eso se compara contra
+      // null y no se descarta por falsy.
+      if ((data.ciudad ?? null) !== (participante.ciudad ?? null)) {
+        cambios.ciudad = data.ciudad ?? null;
       }
 
       if (Object.keys(cambios).length === 0) {
@@ -255,6 +266,41 @@ export function FormEditarParticipante({
               <option value="MASCULINO">Niño</option>
             </select>
           </div>
+        </div>
+
+        {/* Ciudad — datalist, no select: se sugiere el catálogo pero se admite
+            cualquier localidad. Al guardar se canoniza (ver lib/ciudades.ts),
+            así que «merida» y «Mérida, Yuc.» acaban siendo la misma barra en
+            la gráfica «Por ciudad». */}
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-ciudad" className="text-sm font-medium text-foreground">
+            Ciudad{" "}
+            <span className="text-xs font-normal text-muted-foreground">
+              (opcional)
+            </span>
+          </Label>
+          <Input
+            id="edit-ciudad"
+            type="text"
+            list="ciudades-sugeridas"
+            maxLength={LARGO_MAXIMO_CIUDAD}
+            placeholder="Ej. Mérida"
+            {...register("ciudad")}
+            className={claseCampo(!!errors.ciudad)}
+            aria-describedby="edit-ciudad-hint"
+          />
+          <datalist id="ciudades-sugeridas">
+            {CIUDADES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+          <p id="edit-ciudad-hint" className="text-xs text-muted-foreground">
+            De dónde viene el niño. Si no está en la lista, escríbela: se guarda
+            igual. Déjala en blanco si no se sabe.
+          </p>
+          {errors.ciudad && (
+            <p className="text-xs text-destructive">{errors.ciudad.message}</p>
+          )}
         </div>
 
         <Button

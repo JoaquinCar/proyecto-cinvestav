@@ -75,6 +75,21 @@ model Participante {
   nivel     String?
   correo    String?
   telefono  String?
+
+  // De dónde viene el niño. La columna existía desde el importador de Excel,
+  // pero el alta y la edición a mano no la pedían: todo niño capturado en la
+  // aplicación quedaba sin ciudad y salía como «Sin especificar» en la gráfica
+  // «Por ciudad» —justo la que el coordinador quiere leer.
+  //
+  // OPCIONAL a propósito, y se queda así: en los respaldos hay fichas sin
+  // ciudad y la carga la hace una persona a mano, sesión por sesión. Un campo
+  // obligatorio que no puede rellenar la deja atascada, y rellenarlo con
+  // «Mérida» por omisión falsearía el único dato que se quiere analizar.
+  //
+  // Texto libre en la columna, pero NO texto libre en la aplicación: lo que se
+  // guarda pasa siempre por `normalizarCiudad` (src/lib/ciudades.ts), que fija
+  // la grafía contra un catálogo de Mérida y alrededores. La base solo sabe que
+  // es texto; quién decide cómo se escribe es ese módulo, y es el único sitio.
   ciudad    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

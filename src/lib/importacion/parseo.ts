@@ -5,6 +5,7 @@
 // Excel (el que el organizador ve en la barra lateral de su hoja).
 
 import * as XLSX from "xlsx";
+import { normalizarCiudad } from "@/lib/ciudades";
 import {
   COLUMNAS_IGNORADAS_ASISTENCIA,
   EDAD_MAX_COLUMNA,
@@ -339,7 +340,12 @@ export function parsearParticipantes(
     // «—» para lo que no tiene dato, y no debe reimportarse como si fuera texto.
     const escuela = textoOpcional(celda(cruda, "escuela")) || "Sin escuela";
     const grado = textoOpcional(celda(cruda, "grado")) || "Sin especificar";
-    const ciudad = textoOpcional(celda(cruda, "ciudad")) || "Mérida";
+    // La ciudad se canoniza aquí mismo, antes de que llegue a la base: la hoja
+    // del organizador trae «merida», «Mérida» y «Mérida, Yuc.» mezcladas, y la
+    // estadística «de dónde vienen los niños» no soporta esa mezcla. El valor
+    // por omisión sigue siendo Mérida, como antes: es de donde son casi todos
+    // y esa hoja no se llena con niños de fuera.
+    const ciudad = normalizarCiudad(celda(cruda, "ciudad")) ?? "Mérida";
     const correo = textoOpcional(celda(cruda, "correo"));
     const telefono = textoOpcional(celda(cruda, "telefono"));
 

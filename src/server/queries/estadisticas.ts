@@ -8,6 +8,7 @@ import {
   type TipoSesion,
 } from "@/lib/tipos-sesion";
 import type { Nivel } from "@/lib/importacion/texto";
+import { normalizarCiudad } from "@/lib/ciudades";
 import {
   asistenciaDeSesion,
   etiquetaNivel,
@@ -169,7 +170,11 @@ export async function obtenerMetricasEdicion(
     gradoCounts.set(g, (gradoCounts.get(g) ?? 0) + 1);
     const n = etiquetaNivel(i.participante.nivel);
     nivelCounts.set(n, (nivelCounts.get(n) ?? 0) + 1);
-    const c = i.participante.ciudad?.trim() || "Sin especificar";
+    // Se canoniza AL LEER, no solo al escribir: en los respaldos ya hay fichas
+    // con «merida», «Mérida, Yuc.» y «MERIDA», y sin esto la gráfica «Por
+    // ciudad» las enseña como tres barras distintas. Así salen juntas sin
+    // tener que reescribir ni una fila de la base.
+    const c = normalizarCiudad(i.participante.ciudad) ?? "Sin especificar";
     ciudadCounts.set(c, (ciudadCounts.get(c) ?? 0) + 1);
   }
 

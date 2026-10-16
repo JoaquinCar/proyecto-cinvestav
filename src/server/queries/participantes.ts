@@ -8,6 +8,7 @@ import {
   type EleccionAcompanante,
 } from "@/server/queries/acompanantes";
 import { derivarNivel } from "@/lib/importacion/texto";
+import { normalizarCiudad } from "@/lib/ciudades";
 
 // ── Errores de dominio ────────────────────────────────────────────────────────
 // Se lanzan desde las queries y las rutas los traducen a un código HTTP con un
@@ -142,6 +143,13 @@ export async function crearParticipante(data: ParticipanteInput) {
       grado:     data.grado,
       genero:    data.genero ?? null,
       nivel:     derivarNivel(data.grado, data.escuela, data.edad),
+      // La ciudad se canoniza aquí aunque Zod ya lo haya hecho en la ruta:
+      // `normalizarCiudad` es idempotente y así NINGÚN camino de escritura
+      // puede meter una grafía suelta, ni siquiera un script que llame a esta
+      // función directamente. `null` es «no se capturó», no «Mérida»:
+      // inventarle una procedencia al niño falsearía justo la estadística para
+      // la que se pidió el campo.
+      ciudad:    normalizarCiudad(data.ciudad),
     },
   });
 }
@@ -180,9 +188,15 @@ export async function editarParticipante(
       )
     : undefined;
 
+  // Misma canonización que en el alta, y por el mismo motivo. Solo se toca si
+  // la ciudad viene en la petición: un PUT que solo corrige el nombre no debe
+  // reescribir la ciudad guardada.
+  const ciudad =
+    data.ciudad !== undefined ? { ciudad: normalizarCiudad(data.ciudad) } : {};
+
   return prisma.participante.update({
     where: { id },
-    data: nivel === undefined ? data : { ...data, nivel },
+    data: { ...data, ...ciudad, ...(nivel === undefined ? {} : { nivel }) },
   });
 }
 

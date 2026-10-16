@@ -11,6 +11,7 @@ import type { Acompanante } from "@/lib/api/acompanantes";
 import { cuentaParaElPrograma, type TipoSesion } from "@/lib/tipos-sesion";
 import {
   GraduationCap,
+  MapPin,
   School,
   Calendar,
   ArrowLeft,
@@ -271,6 +272,15 @@ export default async function ParticipanteHistorialPage({
                 <Calendar size={14} />
                 <span className="tabular">{participante.edad}</span> años
               </span>
+              {/* De dónde viene. Solo se enseña si está: una etiqueta «Sin
+                  especificar» en la ficha de un niño no aporta nada, y en la
+                  estadística ya se le cuenta aparte. */}
+              {participante.ciudad && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin size={14} />
+                  {participante.ciudad}
+                </span>
+              )}
             </div>
 
             {/* Corregir la ficha — solo ADMIN (estos datos van en la constancia) */}
