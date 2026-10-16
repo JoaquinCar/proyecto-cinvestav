@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -98,6 +99,8 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
     useState<EstadoAcompanante>(ACOMPANANTE_VACIO);
   const [errorAcompanante, setErrorAcompanante] = useState<string | null>(null);
 
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
@@ -132,6 +135,11 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       setModoExistente(false);
       setAcompanante(ACOMPANANTE_VACIO);
       setErrorAcompanante(null);
+      // La lista de participantes de la edición la pinta el servidor y el
+      // cliente de Next se queda con esa carga: sin esto, el niño recién
+      // inscrito no aparecía hasta recargar a mano. `invalidateQueries` de
+      // arriba solo arregla la búsqueda, que es la parte de cliente.
+      router.refresh();
       onSuccess?.();
     },
     onError: (err: Error, data) => {
@@ -167,6 +175,11 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       setModoExistente(false);
       setAcompanante(ACOMPANANTE_VACIO);
       setErrorAcompanante(null);
+      // La lista de participantes de la edición la pinta el servidor y el
+      // cliente de Next se queda con esa carga: sin esto, el niño recién
+      // inscrito no aparecía hasta recargar a mano. `invalidateQueries` de
+      // arriba solo arregla la búsqueda, que es la parte de cliente.
+      router.refresh();
       onSuccess?.();
     },
     onError: (err: Error) => {

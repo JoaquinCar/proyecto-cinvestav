@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
+import { CONTEO_PRESENTES } from "@/server/queries/asistencia-de-sesion";
 import { TIPO_SESION_POR_DEFECTO, type TipoSesion } from "@/lib/tipos-sesion";
 import type {
   CrearClaseInput,
@@ -65,7 +66,8 @@ export async function listarClasesConSesiones(edicionId: string) {
           id: true,
           fecha: true,
           temas: true,
-          _count: { select: { asistencias: true } },
+          // Presentes, no filas: ver CONTEO_PRESENTES.
+          _count: CONTEO_PRESENTES,
         },
       },
     },
@@ -396,11 +398,9 @@ export async function listarSesionesDeClase(claseId: string) {
       notas:           true,
       registradaPorId: true,
       createdAt:       true,
-      _count: {
-        select: {
-          asistencias: true,
-        },
-      },
+      // La página de la sesión enseña este número como «N asistentes»: tiene
+      // que contar lo mismo que el panel de asistencia. Ver CONTEO_PRESENTES.
+      _count: CONTEO_PRESENTES,
     },
   });
 }

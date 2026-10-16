@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Search, Users } from "lucide-react";
@@ -78,6 +79,7 @@ export function ListaAsistencia({
   readOnly = false,
 }: Props) {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   // Server state
   const { data, isLoading, isError, error } = useQuery<AsistenciaResponse>({
@@ -159,6 +161,20 @@ export function ListaAsistencia({
       };
       setPendientes((prev) => clear(prev));
       pendientesRef.current = clear(pendientesRef.current);
+
+      // Lo de esta pantalla ya está al día —se acaba de escribir en el cache de
+      // React Query, arriba—, pero el contador del panel de asistencia y el
+      // «N asistentes» de la página de la sesión los pinta el servidor, y el
+      // cliente de Next guarda esa carga: al volver atrás se veía el número de
+      // antes de pasar lista, y solo un F5 lo corregía. `router.refresh()` es
+      // lo único que invalida esa caché del navegador; `revalidatePath` en la
+      // ruta de API no la toca, porque la caché que estaba vieja no es la del
+      // servidor.
+      //
+      // Va aquí, en el guardado confirmado, y no al salir de la pantalla: el
+      // guardado ya viene agrupado por el debounce, así que son unas pocas
+      // peticiones por lista, no una por casilla.
+      router.refresh();
     },
     onError: (error) => {
       // Rollback: descartar optimismo para volver al estado del servidor.
