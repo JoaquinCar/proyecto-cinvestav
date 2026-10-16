@@ -87,29 +87,33 @@ describe("obtenerEdicionPorId — solo sesiones que cuentan", () => {
     }
   });
 
-  it("el inventario de sesiones de la ficha NO se filtra", async () => {
-    // `_count.clases` es la tarjeta «Sesiones · todos los tipos», que tiene que
-    // seguir diciendo 22: es el mismo número que la lista de sesiones. Filtrarlo
-    // escondería la lectura y los eventos en vez de solo sacarlos de las cifras.
+  it("la tarjeta «Sesiones» de la ficha TAMBIÉN se filtra", async () => {
+    // Esta prueba fijaba lo contrario: `_count.clases` era el inventario
+    // completo y enseñaba 22 a propósito, para no esconder la lectura ni los
+    // eventos. El coordinador lo revirtió el 15 de octubre de 2026 al ver «22»
+    // junto a «12 de 12» en la misma pantalla, hablando de cosas distintas.
+    // Ahora toda cifra de la ficha cuenta lo mismo; el inventario completo
+    // sigue a la vista en la lista de sesiones y en «Actividades por tipo».
     const { prisma } = await import("@/lib/prisma");
     vi.mocked(prisma.edicion.findUnique).mockResolvedValue({
       id: "ed-1",
       anio: 2026,
-      _count: { inscripciones: 51, clases: 22 },
+      _count: { inscripciones: 51, clases: 12 },
     } as never);
     vi.mocked(prisma.sesion.count).mockResolvedValue(12 as never);
 
     const { obtenerEdicionPorId } = await import("@/server/queries/ediciones");
     const e = await obtenerEdicionPorId("ed-1");
 
-    expect(e?._count.clases).toBe(22);
+    expect(e?._count.clases).toBe(12);
     expect(e?.sesionesTotal).toBe(12);
     expect(e?.sesionesCapturadas).toBe(12);
 
     const seleccion = vi.mocked(prisma.edicion.findUnique).mock.calls[0][0]?.select;
     const clases = (seleccion?._count as { select?: Record<string, unknown> })?.select
       ?.clases;
-    expect(clases, "el conteo de clases de la ficha no lleva filtro").toBe(true);
+    expect(clases, "el conteo de clases de la ficha lleva el filtro del programa")
+      .toMatchObject({ where: CLASES_QUE_CUENTAN });
   });
 });
 

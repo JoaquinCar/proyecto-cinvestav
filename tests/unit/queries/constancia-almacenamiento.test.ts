@@ -38,6 +38,18 @@ const inscripcionMock = {
   asistencias: [{ id: "a1" }, { id: "a2" }],
 };
 
+/** Cliente de almacenamiento que guarda bien y devuelve la URL pública. */
+function almacenamientoQueFunciona(publicUrl = "https://archivos/constancia.pdf") {
+  return {
+    storage: {
+      from: () => ({
+        upload: vi.fn(async () => ({ error: null })),
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl } })),
+      }),
+    },
+  };
+}
+
 /** Cliente de almacenamiento cuyo `upload` devuelve el error indicado. */
 function almacenamientoQueFalla(mensaje: string) {
   return {
@@ -116,6 +128,36 @@ describe("generarYGuardarConstancia — fallos del almacenamiento", () => {
 
     const { prisma } = await import("@/lib/prisma");
     expect(prisma.inscripcion.update).not.toHaveBeenCalled();
+  });
+
+  // El contador «emitidas» de la pantalla de constancias no es un número suelto:
+  // sale de contar las inscripciones con `constanciaGenerada`. Así que lo único
+  // que hace avanzar ese contador es que ESTA escritura ocurra. Había prueba de
+  // que no se marca cuando el guardado falla, pero ninguna de que sí se marca
+  // cuando funciona, que es la mitad que de verdad sostiene el contador.
+  it("marca la constancia como generada cuando el guardado funcionó", async () => {
+    const { getSupabaseAdmin } = await import("@/lib/supabase");
+    vi.mocked(getSupabaseAdmin).mockReturnValue(
+      almacenamientoQueFunciona("https://archivos/insc-1.pdf") as never,
+    );
+
+    const { generarYGuardarConstancia } = await import(
+      "@/server/queries/constancias"
+    );
+    const resultado = await generarYGuardarConstancia("insc-1");
+
+    expect(resultado.url).toBe("https://archivos/insc-1.pdf");
+
+    const { prisma } = await import("@/lib/prisma");
+    expect(prisma.inscripcion.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "insc-1" },
+        data: expect.objectContaining({
+          constanciaGenerada: true,
+          constanciaUrl: "https://archivos/insc-1.pdf",
+        }),
+      }),
+    );
   });
 
   it("avisa con nombre propio si la inscripción desapareció", async () => {

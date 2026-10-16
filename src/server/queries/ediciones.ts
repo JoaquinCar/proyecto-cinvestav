@@ -24,7 +24,13 @@ export async function listarEdiciones() {
       _count: {
         select: {
           inscripciones: true,
-          clases: true,
+          // Solo las sesiones que cuentan. La tarjeta «Sesiones» enseñaba el
+          // inventario entero —pasaporte, lectura y eventos— y quedaba un «22»
+          // al lado de un «12 de 12» que hablaba de otra cosa. Decisión del
+          // coordinador el 15 de octubre de 2026: aquí tampoco se cuentan la
+          // lectura ni los eventos. El inventario completo sigue en la lista
+          // de sesiones y en «Actividades por tipo».
+          clases: { where: CLASES_QUE_CUENTAN },
         },
       },
     },
@@ -52,7 +58,13 @@ export async function obtenerEdicionPorId(id: string) {
       _count: {
         select: {
           inscripciones: true,
-          clases: true,
+          // Solo las sesiones que cuentan. La tarjeta «Sesiones» enseñaba el
+          // inventario entero —pasaporte, lectura y eventos— y quedaba un «22»
+          // al lado de un «12 de 12» que hablaba de otra cosa. Decisión del
+          // coordinador el 15 de octubre de 2026: aquí tampoco se cuentan la
+          // lectura ni los eventos. El inventario completo sigue en la lista
+          // de sesiones y en «Actividades por tipo».
+          clases: { where: CLASES_QUE_CUENTAN },
         },
       },
     },
@@ -68,8 +80,8 @@ export async function obtenerEdicionPorId(id: string) {
   //
   // Los dos conteos miran SOLO las sesiones que cuentan —hoy las de pasaporte,
   // ver `src/lib/tipos-sesion.ts`—, que es lo que hace que esta ficha diga «12
-  // de 12» y no «12 de 22». El inventario completo sigue a la vista en la
-  // tarjeta «Sesiones», que sale de `_count.clases` y no filtra nada.
+  // de 12» y no «12 de 22». La tarjeta «Sesiones» usa ahora el mismo criterio:
+  // toda cifra de esta pantalla habla de lo mismo.
   const [sesionesTotal, sesionesCapturadas] = await Promise.all([
     prisma.sesion.count({
       where: { clase: { edicionId: id, ...CLASES_QUE_CUENTAN } },

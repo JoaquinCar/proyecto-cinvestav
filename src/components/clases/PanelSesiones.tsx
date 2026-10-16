@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Calendar, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { listarEdiciones } from "@/server/queries/ediciones";
 import { listarClasesDeEdicion } from "@/server/queries/clases";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -110,11 +110,15 @@ export async function PanelSesiones({
     conteoPorTipo.set(c.tipo, (conteoPorTipo.get(c.tipo) ?? 0) + 1);
   }
 
-  const conFecha = clases.filter((c) => c._count.sesiones > 0).length;
-
   // En /clases el resumen es el desglose por tipo —que es la novedad y lo que
   // el coordinador quiere ver de un golpe—. En /eventos, donde el tipo ya es
-  // uno solo, se enseña lo de siempre: cuántos hay y cuántos tienen fecha.
+  // uno solo, basta con cuántos hay.
+  //
+  // Aquí había también un «Con fecha». Se quitó porque dejó de decir nada:
+  // desde que crear una sesión crea su fecha en la misma transacción, ese
+  // número es SIEMPRE igual al total. Era un resto de cuando una sesión podía
+  // existir sin fecha, y lo único que hacía era ocupar sitio con un dato que
+  // no podía variar.
   const resumen = tipoFijo
     ? [
         {
@@ -123,13 +127,6 @@ export async function PanelSesiones({
           value: clases.length,
           icono: <IconoTipoSesion tipo={tipoFijo} size={13} />,
           marco: clasesTipoSesion(tipoFijo),
-        },
-        {
-          clave: "con-fecha",
-          label: "Con fecha",
-          value: conFecha,
-          icono: <Calendar size={13} strokeWidth={2} className="text-success" aria-hidden />,
-          marco: "bg-success/10 border-success/30 text-success",
         },
       ]
     : TIPOS_SESION.map((t) => ({

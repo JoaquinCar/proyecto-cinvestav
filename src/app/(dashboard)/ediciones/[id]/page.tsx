@@ -58,7 +58,7 @@ export default async function EdicionDetallePage({
 
   const stats = [
     { label: "Participantes", value: inscripciones, icon: Users,          colorClass: "text-primary",   bgClass: "bg-primary/10"  },
-    { label: "Sesiones", value: clases, hint: "registradas en la edición · todos los tipos", icon: BookOpen, colorClass: "text-success", bgClass: "bg-success/10" },
+    { label: "Sesiones", value: clases, hint: "registradas en la edición · solo pasaporte", icon: BookOpen, colorClass: "text-success", bgClass: "bg-success/10" },
     // La fracción que sí se mueve. Antes esta tarjeta decía «Sesiones con
     // datos» y nadie sabía qué datos ni qué los generaba.
     { label: "Asistencia capturada", value: `${sesionesCapturadas} de ${sesionesTotal}`, hint: pendienteCaptura, icon: ClipboardCheck, colorClass: "text-secondary", bgClass: "bg-secondary/10"},
