@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Download, Award, Loader2, ShieldOff } from "lucide-react";
 import { generarConstancia } from "@/lib/api/constancias";
 import { mensajeDeError } from "@/lib/api/errores";
@@ -35,6 +36,7 @@ export function BotonConstancia({
   constanciaGenerada: initialGenerada,
   puedeGenerar = true,
 }: BotonConstanciaProps) {
+  const router = useRouter();
   const [url, setUrl] = useState<string | null>(initialUrl ?? null);
   const [generada, setGenerada] = useState(initialGenerada ?? false);
   const [loading, setLoading] = useState(false);
@@ -47,6 +49,11 @@ export function BotonConstancia({
       const { url: nueva } = await generarConstancia(inscripcionId);
       setUrl(nueva);
       setGenerada(true);
+      // El botón ya cambió a «Descargar» por su cuenta, pero «constancia
+      // generada» también se pinta desde el servidor en la ficha del niño, en
+      // la lista de participantes y en el panel de constancias. Sin esto, esas
+      // pantallas seguían diciendo que faltaba por generar.
+      router.refresh();
     } catch (err) {
       // El servidor ya explica el caso concreto: exclusión, inscripción
       // borrada, almacenamiento de archivos caído.
