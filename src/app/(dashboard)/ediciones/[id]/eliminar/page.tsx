@@ -10,12 +10,19 @@ export default function EliminarEdicionPage() {
   const params = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Confirmación en dos tiempos: el primer intento va SIN forzar, y solo si el
+  // servidor avisa de que hay historial de niños se ofrece seguir. Así nadie
+  // borra inscripciones y asistencias creyendo que borra una edición vacía.
+  const [pideConfirmar, setPideConfirmar] = useState(false);
 
-  async function handleEliminar() {
+  async function handleEliminar(forzar = false) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/ediciones/${params.id}`, { method: "DELETE" });
+      const res = await fetch(
+        `/api/ediciones/${params.id}${forzar ? "?forzar=true" : ""}`,
+        { method: "DELETE" },
+      );
       if (res.status === 204) {
         router.push("/ediciones");
         router.refresh();
@@ -23,6 +30,7 @@ export default function EliminarEdicionPage() {
       }
       const json = await res.json();
       setError(json?.error ?? "Error al eliminar.");
+      setPideConfirmar(res.status === 409);
     } catch {
       setError("Error de red. Intenta de nuevo.");
     } finally {
@@ -68,8 +76,10 @@ export default function EliminarEdicionPage() {
               Esta acción es irreversible
             </p>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Solo se puede eliminar una edición que no tenga participantes inscritos.
-              Si tiene inscripciones, la operación será rechazada.
+              Se eliminará la edición con sus sesiones y las fechas de estas. Si
+              hay niños inscritos o listas de asistencia pasadas, se avisa antes
+              con los números y hace falta confirmarlo otra vez: eso es el
+              respaldo de sus constancias.
             </p>
           </div>
         </div>
@@ -91,12 +101,16 @@ export default function EliminarEdicionPage() {
             Cancelar
           </Link>
           <button
-            onClick={handleEliminar}
+            onClick={() => handleEliminar(pideConfirmar)}
             disabled={loading}
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-destructive/15 border border-destructive/50 text-destructive hover:bg-destructive/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
           >
             <Trash2 size={15} strokeWidth={2} aria-hidden />
-            {loading ? "Eliminando…" : "Confirmar eliminación"}
+            {loading
+              ? "Eliminando…"
+              : pideConfirmar
+                ? "Sí, eliminar con todo su historial"
+                : "Confirmar eliminación"}
           </button>
         </div>
       </div>

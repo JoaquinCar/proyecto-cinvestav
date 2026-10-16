@@ -6,7 +6,9 @@ import {
   editarEdicion,
   eliminarEdicion,
   EdicionConInscripcionesError,
+  EdicionNoEncontradaError,
 } from "@/server/queries/ediciones";
+import { fallaInesperada } from "@/server/respuestas";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -96,7 +98,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
 // ── DELETE /api/ediciones/[id] — eliminar si no tiene inscripciones (solo ADMIN)
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   try {
     const session = await auth();
     if (!session) {
@@ -117,16 +119,31 @@ export async function DELETE(_request: Request, context: RouteContext) {
       );
     }
 
-    await eliminarEdicion(id);
+    const forzar = new URL(request.url).searchParams.get("forzar") === "true";
+
+    await eliminarEdicion(id, { forzar });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    if (error instanceof EdicionConInscripcionesError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+    if (error instanceof EdicionNoEncontradaError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
     }
 
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
+    // 409 con los conteos: la pantalla los usa para preguntar con números en
+    // vez de dejar al coordinador adivinando qué se perdería.
+    if (error instanceof EdicionConInscripcionesError) {
+      return NextResponse.json(
+        { error: error.message, conteos: error.conteos },
+        { status: 409 },
+      );
+    }
+
+    // Antes esto era un «Error interno del servidor» a secas, sin registro:
+    // la causa real —una llave foránea de las sesiones— moría aquí y el
+    // coordinador se quedaba sin saber qué hacer.
+    return fallaInesperada(
+      "DELETE /api/ediciones/[id]",
+      error,
+      "No se pudo eliminar la edición; sigue como estaba. Vuelve a intentarlo en unos minutos.",
     );
   }
 }
