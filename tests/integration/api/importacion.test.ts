@@ -319,6 +319,61 @@ describe("vista previa de asistencia nominal", () => {
     expect(plan.errores[0].mensaje).toContain("Importa primero las sesiones");
   });
 
+  // Regresión: la importación de SESIONES deja `Clase.nombre` y `Sesion.temas`
+  // con el MISMO texto cuando la hoja no trae columna «CLASE» —que es el caso
+  // normal del concentrado del organizador—. El índice por nombre guardaba esa
+  // única sesión dos veces y la columna salía como «coincide con 2 sesiones
+  // distintas», justo el consejo que el organizador ya había seguido.
+  it("acepta el nombre de la clase como encabezado aunque coincida con el tema", async () => {
+    db.sesion.findMany.mockResolvedValue([
+      {
+        id: "s1",
+        fecha: new Date(Date.UTC(2026, 5, 13, 12)),
+        temas: "Malvabichos",
+        clase: { nombre: "Malvabichos" },
+      },
+    ]);
+    db.inscripcion.findMany.mockResolvedValue([
+      { id: "i1", participante: { nombre: "Ana", apellidos: "Poot" }, asistencias: [] },
+    ]);
+
+    const req = peticion(
+      xlsx([["Nombre", "Apellidos", "Malvabichos"], ["Ana", "Poot", "X"]]),
+      "asistencia",
+    );
+    const { plan } = await (await previsualizar(req)).json();
+    expect(plan.errores).toEqual([]);
+    expect(plan.puedeImportar).toBe(true);
+    expect(plan.resumen).toContainEqual({ etiqueta: "Asistencias nuevas", valor: 1 });
+  });
+
+  it("sigue avisando cuando el encabezado coincide con DOS sesiones de verdad", async () => {
+    db.sesion.findMany.mockResolvedValue([
+      {
+        id: "s1",
+        fecha: new Date(Date.UTC(2026, 5, 13, 12)),
+        temas: "Malvabichos",
+        clase: { nombre: "Malvabichos" },
+      },
+      {
+        id: "s2",
+        fecha: new Date(Date.UTC(2026, 5, 20, 12)),
+        temas: "Malvabichos",
+        clase: { nombre: "Bichos de la milpa" },
+      },
+    ]);
+    db.inscripcion.findMany.mockResolvedValue([
+      { id: "i1", participante: { nombre: "Ana", apellidos: "Poot" }, asistencias: [] },
+    ]);
+
+    const req = peticion(
+      xlsx([["Nombre", "Apellidos", "Malvabichos"], ["Ana", "Poot", "X"]]),
+      "asistencia",
+    );
+    const { plan } = await (await previsualizar(req)).json();
+    expect(plan.errores[0].mensaje).toContain("coincide con 2 sesiones distintas");
+  });
+
   it("distingue asistencias nuevas de las que ya estaban", async () => {
     db.sesion.findMany.mockResolvedValue([
       { id: "s1", fecha: new Date(Date.UTC(2026, 0, 24, 12)), temas: "Robótica", clase: { nombre: "Robótica" } },

@@ -393,10 +393,16 @@ async function resolverColumnasSesion(
 
   const porDia = new Map<string, string[]>();
   const porNombre = new Map<string, string[]>();
+  // Una misma sesión se indexa por varias claves (el nombre de su clase y su
+  // tema). Cuando esos dos textos son iguales —el caso NORMAL: la importación
+  // de sesiones copia el tema como nombre de la clase cuando la hoja no trae
+  // columna «CLASE»— la sesión acabaría dos veces en la misma lista y la
+  // columna se declararía ambigua contra sí misma. Se guarda una sola vez por
+  // clave: lo que cuenta es cuántas sesiones DISTINTAS coinciden.
   const agregar = (mapa: Map<string, string[]>, clave: string, id: string) => {
     if (!clave) return;
     const lista = mapa.get(clave) ?? [];
-    lista.push(id);
+    if (!lista.includes(id)) lista.push(id);
     mapa.set(clave, lista);
   };
   for (const s of sesiones) {
