@@ -216,10 +216,16 @@ function mensajeEdicionConHistorial(
     );
   }
 
+  // El mensaje NO ofrece «da de baja a los niños uno a uno» como alternativa,
+  // aunque sea posible. La primera versión lo hacía y el coordinador se pasó un
+  // rato sacando niños a mano para poder borrar una edición de prueba: leyó la
+  // salida larga porque era la única que entendió. Si alguien está en esta
+  // pantalla es porque quiere borrar la edición entera; la baja uno a uno es
+  // otra tarea y vive en otro sitio.
   return (
-    `No se puede eliminar «${nombre}» sin confirmarlo: tiene ${partes.join(" y ")}. ` +
-    `Si la edición se creó por error, confirma el borrado y se eliminará junto con ese historial. ` +
-    `Si solo sobran algunos niños, cancela y dalos de baja uno a uno.`
+    `«${nombre}» tiene ${partes.join(" y ")}. ` +
+    `Si borras la edición, eso se va con ella. ` +
+    `Vuelve a pulsar el botón para confirmarlo.`
   );
 }
 

@@ -158,6 +158,12 @@ describe.skipIf(!habilitado)("borrar una edición", () => {
     expect(error.message).toMatch(/3 niño/);
     expect(error.conteos.participantes).toBe(3);
 
+    // Y dice qué hacer ahora: volver a pulsar. La primera versión ofrecía
+    // además «cancela y dalos de baja uno a uno», y el coordinador se pasó un
+    // rato sacando niños a mano para poder borrar una edición de prueba.
+    expect(error.message).toMatch(/vuelve a pulsar/i);
+    expect(error.message).not.toMatch(/uno a uno|da de baja|dalos de baja/i);
+
     // Y sobre todo: no se borró nada.
     expect(await huerfanos(edicionId)).toEqual({
       ediciones: 1,
