@@ -346,6 +346,34 @@ model Sesion {
   registradaPorId String?
   createdAt       DateTime @default(now())
 
+  // ── Cuántos adultos acompañaron en ESTA fecha ──────────────────────────────
+  //
+  // Dos números y nada más, los que se cuentan al pasar lista. NO es una lista
+  // nominal de adultos: esa ya existe y es otra cosa (`Acompanante` ligado a la
+  // `Inscripcion` — con quién llega CADA niño ese año). El coordinador fue
+  // explícito: «solo número, no lista de papás».
+  //
+  // Por qué aquí y no en `ResumenSesion`, que ya tiene columnas `mamas` y
+  // `papas`: ese modelo es la foto agregada que entra POR EL IMPORTADOR del
+  // Excel, y su sola existencia significa tres cosas en el código — que la
+  // asistencia de la fecha está capturada (`SESION_CAPTURADA`), que el origen
+  // de los números es AGREGADA y manda sobre la lista individual
+  // (`asistenciaDeSesion`), y que la sesión tiene datos que no se borran sin
+  // forzar (`eliminarClase`). Crear un `ResumenSesion` desde la pantalla de
+  // pasar lista solo para apuntar «4 mamás» activaría las tres: la fecha
+  // contaría como capturada sin estarlo, sus totales de niños (0 por defecto)
+  // taparían a los de la lista real, y la siguiente importación del Excel
+  // pisaría el conteo escrito a mano con su propio upsert. Aquí no hay ninguna
+  // de esas interferencias y la importación no se toca.
+  //
+  // NULLables, no `@default(0)`: NULL es «nadie los contó» y 0 es «no vino
+  // ninguno», y son respuestas distintas. Además es lo que hace la migración
+  // segura sobre una base con datos restaurada de un respaldo — las fechas ya
+  // cargadas nacen en NULL y sus acompañantes siguen saliendo del
+  // `ResumenSesion` importado, con los mismos números de siempre.
+  acompanantesMamas Int?
+  acompanantesPapas Int?
+
   clase         Clase          @relation(fields: [claseId], references: [id])
   registradaPor User?          @relation(fields: [registradaPorId], references: [id])
   asistencias   Asistencia[]

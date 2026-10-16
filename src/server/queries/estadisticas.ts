@@ -344,6 +344,8 @@ export async function obtenerMetricasAsistencia(
       temas: true,
       clase: { select: { nombre: true } },
       resumen: true,
+      acompanantesMamas: true,
+      acompanantesPapas: true,
       asistencias: SELECCION_LISTA,
     },
   });
@@ -478,6 +480,10 @@ export type AnalisisProfundo = {
   minAsist: { tema: string; total: number } | null;
   caidaPct: number; // caída de la última sesión con datos respecto a la primera
   totalAcompanantes: number;
+  // El desglose que pidió el coordinador, literal: «papás fueron: 4, mamás: 5».
+  // El total solo no contesta esa pregunta.
+  totalMamas: number;
+  totalPapas: number;
   ratioAcompanantes: number; // acompañantes por cada 10 niños (eventos)
   // Distribuciones cruzadas
   generoPorNivel: SerieDual[]; // a=niñas, b=niños por nivel
@@ -519,6 +525,8 @@ export async function obtenerAnalisisProfundo(
         temas: true,
         clase: { select: { nombre: true } },
         resumen: true,
+        acompanantesMamas: true,
+        acompanantesPapas: true,
         asistencias: SELECCION_LISTA,
       },
     }),
@@ -632,7 +640,9 @@ export async function obtenerAnalisisProfundo(
   const promedioAsist = conDatos.length
     ? Math.round(totalEventos / conDatos.length)
     : 0;
-  const totalAcompanantes = conDatos.reduce((acc, { a }) => acc + a.mamas + a.papas, 0);
+  const totalMamas = conDatos.reduce((acc, { a }) => acc + a.mamas, 0);
+  const totalPapas = conDatos.reduce((acc, { a }) => acc + a.papas, 0);
+  const totalAcompanantes = totalMamas + totalPapas;
   const ratioAcompanantes = totalEventos
     ? Math.round((totalAcompanantes / totalEventos) * 100) / 10
     : 0;
@@ -685,6 +695,8 @@ export async function obtenerAnalisisProfundo(
     minAsist: minAsist ? { tema: minAsist.tema, total: minAsist.total } : null,
     caidaPct,
     totalAcompanantes,
+    totalMamas,
+    totalPapas,
     ratioAcompanantes,
     generoPorNivel,
     edadGenero,

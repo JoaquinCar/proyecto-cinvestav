@@ -61,7 +61,7 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json(
         {
           error:
-            "No hay ningún cambio que guardar en esta sesión: la fecha, los temas y las notas siguen igual.",
+            "No hay ningún cambio que guardar en esta sesión: la fecha, los temas, las notas y los acompañantes siguen igual.",
         },
         { status: 422 },
       );

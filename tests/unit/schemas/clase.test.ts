@@ -511,3 +511,58 @@ describe("subirImagenClaseSchema", () => {
     expect(result.success).toBe(false);
   });
 });
+
+// ── Tests: actualizarSesionSchema · acompañantes de la fecha ──────────────────
+//
+// Dos números y nada más: cuántas mamás y cuántos papás fueron a ESA fecha.
+// No es la lista nominal de adultos (esa vive en `Acompanante`), y por eso aquí
+// no hay nombres ni teléfonos que validar.
+
+describe("actualizarSesionSchema · acompañantes", () => {
+  it("acepta el conteo de mamás y papás", () => {
+    const result = actualizarSesionSchema.safeParse({
+      acompanantesMamas: 5,
+      acompanantesPapas: 4,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.acompanantesMamas).toBe(5);
+      expect(result.data.acompanantesPapas).toBe(4);
+    }
+  });
+
+  it("acepta cero: «no vino ningún adulto» es una respuesta", () => {
+    const result = actualizarSesionSchema.safeParse({
+      acompanantesMamas: 0,
+      acompanantesPapas: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("acepta null para dejar la fecha sin contar", () => {
+    const result = actualizarSesionSchema.safeParse({
+      acompanantesMamas: null,
+      acompanantesPapas: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.acompanantesMamas).toBeNull();
+    }
+  });
+
+  it("rechaza un conteo negativo", () => {
+    const result = actualizarSesionSchema.safeParse({ acompanantesMamas: -1 });
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.acompanantesMamas).toBeDefined();
+  });
+
+  it("rechaza un conteo decimal: son personas, no promedios", () => {
+    const result = actualizarSesionSchema.safeParse({ acompanantesPapas: 2.5 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rechaza un conteo absurdo (dedazo al teclear)", () => {
+    const result = actualizarSesionSchema.safeParse({ acompanantesMamas: 100000 });
+    expect(result.success).toBe(false);
+  });
+});

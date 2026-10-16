@@ -439,6 +439,10 @@ export async function obtenerSesionConClase(id: string) {
       fecha: true,
       temas: true,
       notas: true,
+      // Cuántos adultos acompañaron en esta fecha. Se capturan en la misma
+      // pantalla en que se pasa lista, que es cuando alguien los tiene delante.
+      acompanantesMamas: true,
+      acompanantesPapas: true,
       clase: {
         select: {
           id:           true,
@@ -484,6 +488,16 @@ export async function actualizarSesion(id: string, data: ActualizarSesionInput) 
       ...(data.fecha !== undefined && { fecha: data.fecha }),
       ...(data.temas !== undefined && { temas: data.temas }),
       ...(data.notas !== undefined && { notas: data.notas }),
+      // Los conteos de acompañantes se escriben SOLO si vienen. El diálogo de
+      // temas y el contador de acompañantes son dos formularios distintos
+      // sobre la misma fecha: guardar los temas no puede borrar el conteo, ni
+      // al revés.
+      ...(data.acompanantesMamas !== undefined && {
+        acompanantesMamas: data.acompanantesMamas,
+      }),
+      ...(data.acompanantesPapas !== undefined && {
+        acompanantesPapas: data.acompanantesPapas,
+      }),
     },
   });
 }
