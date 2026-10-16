@@ -13,10 +13,11 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
 import type { TipoImportacion } from "@/lib/importacion/columnas";
 import { claveFecha, claveParticipante, normalizar } from "@/lib/importacion/texto";
-import type {
-  Incidencia,
-  FilaLeida,
-  ColumnaSesionDetectada,
+import {
+  NOTA_SIN_DATOS,
+  type Incidencia,
+  type FilaLeida,
+  type ColumnaSesionDetectada,
 } from "@/lib/importacion/parseo";
 import type {
   FilaAsistencia,
@@ -41,6 +42,12 @@ export interface EdicionDestino {
   id: string;
   anio: number;
   nombre: string;
+  /**
+   * Una edición cerrada está congelada: ni sesiones, ni temas, ni asistencias
+   * (ver src/server/queries/edicion-cerrada.ts). La importación escribe esas
+   * tres cosas de golpe, así que tiene que respetarlo como el resto.
+   */
+  cerrada: boolean;
 }
 
 export interface PlanImportacion {
@@ -77,7 +84,7 @@ export function etiquetaAccion(accion: TonoAccion): string {
 export async function obtenerEdicionDestino(edicionId: string): Promise<EdicionDestino> {
   const edicion = await prisma.edicion.findUnique({
     where: { id: edicionId },
-    select: { id: true, anio: true, nombre: true },
+    select: { id: true, anio: true, nombre: true, cerrada: true },
   });
   if (!edicion) throw new ErrorImportacion("La edición seleccionada no existe.");
   return edicion;
@@ -86,7 +93,7 @@ export async function obtenerEdicionDestino(edicionId: string): Promise<EdicionD
 export async function listarEdicionesParaImportar(): Promise<EdicionDestino[]> {
   return prisma.edicion.findMany({
     orderBy: [{ activa: "desc" }, { anio: "desc" }],
-    select: { id: true, anio: true, nombre: true },
+    select: { id: true, anio: true, nombre: true, cerrada: true },
   });
 }
 
@@ -393,10 +400,16 @@ async function resolverColumnasSesion(
 
   const porDia = new Map<string, string[]>();
   const porNombre = new Map<string, string[]>();
+  // Una misma sesión se indexa por varias claves (el nombre de su clase y su
+  // tema). Cuando esos dos textos son iguales —el caso NORMAL: la importación
+  // de sesiones copia el tema como nombre de la clase cuando la hoja no trae
+  // columna «CLASE»— la sesión acabaría dos veces en la misma lista y la
+  // columna se declararía ambigua contra sí misma. Se guarda una sola vez por
+  // clave: lo que cuenta es cuántas sesiones DISTINTAS coinciden.
   const agregar = (mapa: Map<string, string[]>, clave: string, id: string) => {
     if (!clave) return;
     const lista = mapa.get(clave) ?? [];
-    lista.push(id);
+    if (!lista.includes(id)) lista.push(id);
     mapa.set(clave, lista);
   };
   for (const s of sesiones) {
@@ -554,8 +567,21 @@ export interface EntradaPlan {
   avisosParseo: Incidencia[];
 }
 
+/** El aviso, idéntico en la vista previa y al intentar importar. */
+export function mensajeEdicionCerrada(anio: number): string {
+  return (
+    `La edición ${anio} está cerrada y no admite cambios: no se puede importar nada en ella. ` +
+    "Un administrador puede reabrirla desde su ficha."
+  );
+}
+
 export async function planificarImportacion(entrada: EntradaPlan): Promise<PlanImportacion> {
   const errores = [...entrada.erroresParseo];
+  // Se avisa ya en la vista previa, no al confirmar: si no, el organizador
+  // prepara su archivo entero y choca con el muro en el último clic.
+  if (entrada.edicion.cerrada) {
+    errores.push({ fila: null, mensaje: mensajeEdicionCerrada(entrada.edicion.anio) });
+  }
   const avisos = [...entrada.avisosParseo];
   let acciones: AccionFila[] = [];
   let resumen: { etiqueta: string; valor: number }[] = [];
@@ -649,6 +675,9 @@ export async function planificarImportacion(entrada: EntradaPlan): Promise<PlanI
 const OPCIONES_TX = { maxWait: 15_000, timeout: 120_000 };
 
 export async function ejecutarImportacion(entrada: EntradaPlan): Promise<ResultadoEjecucion> {
+  if (entrada.edicion.cerrada) {
+    throw new ErrorImportacion(mensajeEdicionCerrada(entrada.edicion.anio));
+  }
   if (entrada.erroresParseo.length) {
     throw new ErrorImportacion(
       "El archivo tiene errores sin resolver; corrígelos y vuelve a intentar.",
@@ -767,15 +796,27 @@ export async function ejecutarImportacion(entrada: EntradaPlan): Promise<Resulta
               lt: new Date(`${dia}T23:59:59.999Z`),
             },
           },
-          select: { id: true },
+          select: { id: true, notas: true },
         });
 
         let sesionId: string;
         if (existente) {
-          await tx.sesion.update({
-            where: { id: existente.id },
-            data: { temas: op.datos.tema, notas: op.datos.notas || null },
-          });
+          // Las notas de la fecha se escriben A MANO desde la aplicación
+          // («Corregir fecha, temas y notas»), y el concentrado del organizador
+          // casi nunca trae la columna «NOTAS». Volver a subirlo no puede
+          // borrar lo que escribió el becario: solo se escriben las notas que
+          // el archivo trae. La única excepción es el aviso automático que puso
+          // esta misma importación cuando la fila aún no tenía totales: ese se
+          // quita en cuanto los totales llegan, porque ya no es cierto.
+          // Los acompañantes contados a mano (`acompanantesMamas`/`Papas`)
+          // tampoco se nombran aquí: siguen siendo de quien pasó lista.
+          const cambios: Prisma.SesionUpdateInput = { temas: op.datos.tema };
+          if (op.datos.notasProvistas) {
+            cambios.notas = op.datos.notas;
+          } else if (op.datos.conDatos && existente.notas === NOTA_SIN_DATOS) {
+            cambios.notas = null;
+          }
+          await tx.sesion.update({ where: { id: existente.id }, data: cambios });
           sesionId = existente.id;
           sesionesActualizadas++;
         } else {

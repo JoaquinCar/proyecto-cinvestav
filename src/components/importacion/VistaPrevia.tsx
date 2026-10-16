@@ -10,6 +10,7 @@ import {
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
+import { tituloDeErrores } from "@/lib/importacion/mensajes";
 import type { PlanImportacion, TonoAccion } from "@/server/queries/importacion";
 
 export interface InfoArchivo {
@@ -106,8 +107,7 @@ export function VistaPrevia({
         <section className="rounded-xl border border-destructive/40 bg-destructive/5 p-4">
           <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-destructive">
             <AlertCircle size={15} strokeWidth={2} aria-hidden />
-            {plan.errores.length} error{plan.errores.length === 1 ? "" : "es"} que impiden
-            importar
+            {tituloDeErrores(plan.errores.length)}
           </h3>
           <ul className="space-y-1.5 text-xs">
             {plan.errores.map((e, i) => (

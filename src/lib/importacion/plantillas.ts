@@ -30,9 +30,15 @@ const EJEMPLO_PARTICIPANTES: (string | number)[][] = [
   ["Máxima", "Interián Poot", 5, "Niña", "Preescolar", "Preescolar", "Preescolar Chak Pepen", "Umán", "", ""],
 ];
 
+// Las fechas de este ejemplo son las mismas columnas que lleva la plantilla de
+// asistencia nominal (ver más abajo): las tres plantillas son los tres pasos de
+// un mismo ejemplo y tienen que encajar entre sí. Si aquí falta una fecha que
+// allá sí está, quien ensaya el procedimiento completo choca en el paso 3 con
+// «la columna … no corresponde a ninguna sesión» sin haber hecho nada mal.
 const EJEMPLO_SESIONES: (string | number)[][] = [
   ["1. Cómputo bio-inspirado", "MÉRIDA", "24 de enero", "", "Dra. Ejemplo Pérez", 14, 17, 31, 7, 4, 3, 10, 4, 1, ""],
   ["2. Descubre el mundo con los mapas", "MÉRIDA", "7 de febrero", "", "", 17, 12, 29, 5, 4, 2, 9, 4, 1, ""],
+  ["3. Los misteriosos gusanos marinos", "MÉRIDA", "21 de febrero", "", "", 14, 13, 27, 2, 6, 2, 9, 4, 1, ""],
 ];
 
 const EJEMPLO_ASISTENCIA: (string | number)[][] = [

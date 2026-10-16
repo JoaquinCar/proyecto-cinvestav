@@ -12,6 +12,7 @@ import {
   Upload,
   UploadCloud,
 } from "lucide-react";
+import { avisoDeErrores } from "@/lib/importacion/mensajes";
 import type { Guia } from "@/lib/importacion/guia";
 import type { TipoImportacion } from "@/lib/importacion/columnas";
 import type { EdicionDestino, PlanImportacion } from "@/server/queries/importacion";
@@ -82,10 +83,7 @@ export function ImportadorExcel({ guias, ediciones }: Props) {
       }
       setPrevia({ plan: datos.plan, archivo: datos.archivo });
       if (datos.plan.errores.length > 0) {
-        toast.warning(
-          `El archivo tiene ${datos.plan.errores.length} fila(s) con problemas y no se importará hasta corregirlas. ` +
-            "Revisa el detalle que aparece abajo.",
-        );
+        toast.warning(avisoDeErrores(datos.plan.errores));
       }
     } catch {
       toast.error(`${MENSAJE_SIN_CONEXION} No se revisó el archivo ni se guardó nada.`);
@@ -203,9 +201,12 @@ export function ImportadorExcel({ guias, ediciones }: Props) {
                   }}
                   className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
+                  {/* Una edición cerrada se sigue listando —se puede querer
+                      reabrir— pero se dice aquí mismo, para no descubrirlo
+                      después de preparar el archivo entero. */}
                   {ediciones.map((e) => (
                     <option key={e.id} value={e.id}>
-                      {e.nombre} ({e.anio})
+                      {e.nombre} ({e.anio}){e.cerrada ? " · cerrada" : ""}
                     </option>
                   ))}
                 </select>

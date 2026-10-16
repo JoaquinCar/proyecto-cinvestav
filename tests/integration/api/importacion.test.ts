@@ -145,6 +145,34 @@ describe("validación de la petición", () => {
     expect((await previsualizar(req)).status).toBe(422);
   });
 
+  // Cerrar una edición significa congelarla: las sesiones, los temas y las
+  // asistencias ya no se tocan (ver src/server/queries/edicion-cerrada.ts).
+  // Toda la aplicación lo respeta —pasar lista, crear sesiones, corregir
+  // temas— menos la importación de Excel, que es justo la que más escribe de
+  // golpe y sin que nadie revise fila por fila lo que entró.
+  describe("edición cerrada", () => {
+    const archivo = () =>
+      peticion(xlsx([CABECERA, ["Ana", "Poot", 9, "Niña", "3°", "Emma Godoy"]]), "participantes");
+
+    beforeEach(() => {
+      db.edicion.findUnique.mockResolvedValue({ ...EDICION, cerrada: true });
+    });
+
+    it("la vista previa lo dice y deja el botón de importar bloqueado", async () => {
+      const { plan } = await (await previsualizar(archivo())).json();
+      expect(plan.puedeImportar).toBe(false);
+      expect(plan.errores.some((e: { mensaje: string }) => e.mensaje.includes("cerrada"))).toBe(true);
+    });
+
+    it("importar responde 409 y no escribe nada", async () => {
+      const res = await importar(archivo());
+      expect(res.status).toBe(409);
+      expect((await res.json()).error).toContain("cerrada");
+      expect(db.$transaction).not.toHaveBeenCalled();
+      expect(db.participante.create).not.toHaveBeenCalled();
+    });
+  });
+
   it("rechaza una edición inexistente", async () => {
     db.edicion.findUnique.mockResolvedValue(null);
     const req = peticion(xlsx([CABECERA, ["Ana", "Poot", 9, "Niña", "3°", "X"]]), "participantes");
@@ -319,6 +347,61 @@ describe("vista previa de asistencia nominal", () => {
     expect(plan.errores[0].mensaje).toContain("Importa primero las sesiones");
   });
 
+  // Regresión: la importación de SESIONES deja `Clase.nombre` y `Sesion.temas`
+  // con el MISMO texto cuando la hoja no trae columna «CLASE» —que es el caso
+  // normal del concentrado del organizador—. El índice por nombre guardaba esa
+  // única sesión dos veces y la columna salía como «coincide con 2 sesiones
+  // distintas», justo el consejo que el organizador ya había seguido.
+  it("acepta el nombre de la clase como encabezado aunque coincida con el tema", async () => {
+    db.sesion.findMany.mockResolvedValue([
+      {
+        id: "s1",
+        fecha: new Date(Date.UTC(2026, 5, 13, 12)),
+        temas: "Malvabichos",
+        clase: { nombre: "Malvabichos" },
+      },
+    ]);
+    db.inscripcion.findMany.mockResolvedValue([
+      { id: "i1", participante: { nombre: "Ana", apellidos: "Poot" }, asistencias: [] },
+    ]);
+
+    const req = peticion(
+      xlsx([["Nombre", "Apellidos", "Malvabichos"], ["Ana", "Poot", "X"]]),
+      "asistencia",
+    );
+    const { plan } = await (await previsualizar(req)).json();
+    expect(plan.errores).toEqual([]);
+    expect(plan.puedeImportar).toBe(true);
+    expect(plan.resumen).toContainEqual({ etiqueta: "Asistencias nuevas", valor: 1 });
+  });
+
+  it("sigue avisando cuando el encabezado coincide con DOS sesiones de verdad", async () => {
+    db.sesion.findMany.mockResolvedValue([
+      {
+        id: "s1",
+        fecha: new Date(Date.UTC(2026, 5, 13, 12)),
+        temas: "Malvabichos",
+        clase: { nombre: "Malvabichos" },
+      },
+      {
+        id: "s2",
+        fecha: new Date(Date.UTC(2026, 5, 20, 12)),
+        temas: "Malvabichos",
+        clase: { nombre: "Bichos de la milpa" },
+      },
+    ]);
+    db.inscripcion.findMany.mockResolvedValue([
+      { id: "i1", participante: { nombre: "Ana", apellidos: "Poot" }, asistencias: [] },
+    ]);
+
+    const req = peticion(
+      xlsx([["Nombre", "Apellidos", "Malvabichos"], ["Ana", "Poot", "X"]]),
+      "asistencia",
+    );
+    const { plan } = await (await previsualizar(req)).json();
+    expect(plan.errores[0].mensaje).toContain("coincide con 2 sesiones distintas");
+  });
+
   it("distingue asistencias nuevas de las que ya estaban", async () => {
     db.sesion.findMany.mockResolvedValue([
       { id: "s1", fecha: new Date(Date.UTC(2026, 0, 24, 12)), temas: "Robótica", clase: { nombre: "Robótica" } },
@@ -372,6 +455,80 @@ describe("POST /api/importar", () => {
     expect(db.inscripcion.upsert).toHaveBeenCalledTimes(1);
     const { resultado } = await res.json();
     expect(resultado.resumen).toContainEqual({ etiqueta: "Participantes creados", valor: 1 });
+  });
+
+  // Regresión: la nota que el becario escribe a mano en la fecha (campo
+  // `Sesion.notas`, pantalla «Corregir fecha, temas y notas») desaparecía en
+  // cuanto alguien volvía a subir el concentrado de Excel, que casi nunca trae
+  // la columna «NOTAS» llena. La vista previa decía «se actualiza» sin avisar
+  // de que iba a borrar nada.
+  describe("sesiones · lo capturado a mano no se pisa", () => {
+    const CABECERA_SESIONES = ["SESIÓN", "SEDE", "FECHA", "NIÑAS", "NIÑOS", "NOTAS"];
+    const sesionEnBase = (notas: string | null) => ({
+      id: "s1",
+      notas,
+      fecha: new Date(Date.UTC(2026, 0, 24, 12)),
+      temas: "Robótica",
+    });
+
+    beforeEach(() => {
+      db.clase.findMany.mockResolvedValue([
+        { id: "c1", nombre: "Robótica", sesiones: [{ id: "s1", fecha: new Date(Date.UTC(2026, 0, 24, 12)), temas: "Robótica" }] },
+      ]);
+    });
+
+    it("conserva las notas escritas a mano cuando el Excel no trae «NOTAS»", async () => {
+      db.sesion.findFirst.mockResolvedValue(sesionEnBase("Llovió; se hizo en el aula 3"));
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, ""]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      expect(db.sesion.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { temas: "Robótica" },
+      });
+    });
+
+    it("sí escribe las notas cuando el Excel las trae", async () => {
+      db.sesion.findFirst.mockResolvedValue(sesionEnBase("Llovió; se hizo en el aula 3"));
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, "Vino el grupo de Umán"]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      expect(db.sesion.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { temas: "Robótica", notas: "Vino el grupo de Umán" },
+      });
+    });
+
+    it("quita el aviso automático de «sin datos» cuando la sesión ya trae totales", async () => {
+      db.sesion.findFirst.mockResolvedValue(
+        sesionEnBase("Sesión sin datos de asistencia registrados."),
+      );
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, ""]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      expect(db.sesion.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { temas: "Robótica", notas: null },
+      });
+    });
+
+    it("tampoco toca los acompañantes contados a mano en la fecha", async () => {
+      db.sesion.findFirst.mockResolvedValue(sesionEnBase(null));
+      const req = peticion(
+        xlsx([CABECERA_SESIONES, ["1. Robótica", "MÉRIDA", "24 de enero", 5, 5, ""]]),
+        "sesiones",
+      );
+      expect((await importar(req)).status).toBe(200);
+      const datos = db.sesion.update.mock.calls[0][0].data;
+      expect(datos).not.toHaveProperty("acompanantesMamas");
+      expect(datos).not.toHaveProperty("acompanantesPapas");
+    });
   });
 
   it("al niño que repite solo le crea la inscripción", async () => {
