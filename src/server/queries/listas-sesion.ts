@@ -34,8 +34,7 @@ import type { TipoSesion } from "@/lib/tipos-sesion";
 //   │  El teléfono y el correo del staff llegan en `null` salvo que se     │
 //   │  pida `incluirContactoStaff: true`. Es deliberado: un anexo que      │
 //   │  circula por correo no debería llevar teléfonos por omisión, y       │
-//   │  READONLY no los ve nunca (mismo criterio que                        │
-//   │  GET /api/acompanantes/[id]). Quien llame decide, y tiene que        │
+//   │  READONLY no los ve nunca. Quien llame decide, y tiene que           │
 //   │  decidirlo a propósito.                                              │
 //   │                                                                      │
 //   │  Los niños NO traen contacto: el anexo lista a quién asistió, no     │

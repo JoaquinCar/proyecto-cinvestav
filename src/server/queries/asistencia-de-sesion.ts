@@ -116,8 +116,9 @@ export type AsistenciaDeSesion = {
    * por eso el tablero decía «Acompañantes 0 · 0 mamás · 0 papás» en cuanto una
    * edición se capturaba en la aplicación: el dato no existía.
    *
-   * OJO: no son una lista de personas. Quién acompaña a CADA niño ese año es
-   * otra cosa y vive en `Acompanante` ligado a la `Inscripcion`.
+   * OJO: no son una lista de personas, y no hay ninguna: el registro nominal
+   * del adulto se retiró del sistema por sobrar (ver `model Acompanante` en
+   * prisma/schema.prisma). Estos dos números son todo lo que se guarda.
    */
   mamas: number;
   papas: number;

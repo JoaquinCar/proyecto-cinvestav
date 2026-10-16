@@ -28,9 +28,9 @@ import {
 // Quién imparte u organiza ESTA sesión.
 //
 // El formulario arranca por el BUSCADOR y no por los campos en blanco, igual
-// que CampoAcompanante y por la misma razón: el caso que más se repite no es
-// dar de alta a alguien nuevo, es volver a poner al mismo becario que estuvo en
-// la sesión anterior. Teclearlo otra vez crearía una ficha duplicada y la lista
+// que el resto de los buscadores del proyecto y por la misma razón: el caso
+// que más se repite no es dar de alta a alguien nuevo, es volver a poner al
+// mismo becario que estuvo en la sesión anterior. Teclearlo otra vez crearía una ficha duplicada y la lista
 // de la sesión —la que se anexa— dejaría de cuadrar.
 //
 // Quitar solo desasigna: la ficha sigue existiendo porque casi siempre está en

@@ -104,15 +104,40 @@ enum Genero {
   MASCULINO
 }
 
+// ── RETIRADO DE LA APLICACIÓN (sigue en el esquema, vacío) ───────────────────
+//
+// El acompañante NOMINAL —registrar al adulto con nombre, apellidos, teléfono
+// y parentesco— se retiró de toda la aplicación. Palabras de Dario, del
+// equipo, después de probar el sistema entero:
+//
+//   «Creo que es mejor quitar la parte de añadir acompañante de la parte de
+//    registrar al niño y después. Con lo que acabas de añadir de agregar papás
+//    y mamás ya funciona súper bien, tanto en las estadísticas como en el
+//    registro. […] Ya con eso cumple exactamente lo que necesitan, sin
+//    necesidad de poner el nombre de papá o mamá y esas cosas.»
+//
+// Lo que el programa necesita es cuántas mamás y cuántos papás vinieron a cada
+// fecha, y eso vive en `Sesion.acompanantesMamas` / `acompanantesPapas`, que
+// SÍ se usa y no tiene nada que ver con esta tabla.
+//
+// Por qué la tabla se queda en el esquema y NO hay migración que la borre:
+//   1. Los respaldos que ya están en el USB del proyecto traen filas de
+//      acompañantes. Si se borra la tabla, esos respaldos dejan de poder
+//      restaurarse enteros.
+//   2. Si el equipo cambia de opinión, volver atrás no exige migración: basta
+//      con reponer el código de la aplicación.
+//
+// En producción hay 0 acompañantes, así que no se perdió ningún dato.
+//
+// ── Lo que era ───────────────────────────────────────────────────────────────
+//
 // El adulto (o el grupo organizado) con el que llega el niño.
 //
-// Es una PERSONA global, igual que Participante: existe una vez y se reutiliza
-// año tras año y entre hermanos. Ese es el punto — en 2026, un mismo contacto
-// inscribió a 25 niños y siete parejas de hermanos compartieron el suyo. Si
-// cada inscripción guardara su propia copia del adulto, la ficha "a quién
-// acompaña" no podría existir y se capturarían duplicados.
+// Era una PERSONA global, igual que Participante: existía una vez y se
+// reutilizaba año tras año y entre hermanos, para que dos hermanos pudieran
+// compartir la misma ficha sin duplicarla.
 //
-// NO sustituye a Participante.correo / telefono: esos campos siguen guardando
+// NO sustituía a Participante.correo / telefono: esos campos siguen guardando
 // el contacto tal como vino del Excel y no se tocan aquí.
 model Acompanante {
   id         String     @id @default(cuid())
@@ -129,9 +154,13 @@ model Acompanante {
   @@index([nombre, apellidos])
 }
 
-// Quién es ese adulto respecto del niño. Incluye GRUPO e INSTITUCION a
-// propósito: el contacto que trae a 25 niños no es su tutor, es un colectivo, y
-// obligarlo a decir "TUTOR" falsearía el dato.
+// RETIRADO con `model Acompanante` (ver arriba): ya no lo escribe ni lo lee
+// nada de la aplicación. Se conserva porque la columna `Acompanante.parentesco`
+// lo usa y los respaldos del USB lo traen.
+//
+// Qué era: quién es ese adulto respecto del niño. Incluía GRUPO e INSTITUCION a
+// propósito, porque el contacto que trae a 25 niños no es su tutor sino un
+// colectivo, y obligarlo a decir "TUTOR" falsearía el dato.
 enum Parentesco {
   MADRE
   PADRE
@@ -149,10 +178,13 @@ model Inscripcion {
   id                 String   @id @default(cuid())
   participanteId     String
   edicionId          String
-  // Quién acompañó al niño ESTA edición. Vive en la inscripción y no en el
-  // participante porque cambia de un año a otro: un niño puede venir con su
-  // mamá en 2026 y con su abuela en 2027, y ambas cosas deben quedar
-  // registradas. Opcional: muchos niños llegan solos.
+  // RETIRADO de la aplicación (ver `model Acompanante`): ninguna pantalla ni
+  // endpoint lo escribe ni lo lee ya. Se queda en el esquema, siempre null,
+  // para no romper los respaldos del USB y para poder volver atrás sin
+  // migración.
+  //
+  // Qué era: quién acompañó al niño ESTA edición. Vivía en la inscripción y no
+  // en el participante porque cambiaba de un año a otro.
   acompananteId      String?
   constanciaUrl      String?
   constanciaGenerada Boolean  @default(false)
@@ -181,9 +213,9 @@ model Inscripcion {
 
   participante Participante @relation(fields: [participanteId], references: [id])
   edicion      Edicion      @relation(fields: [edicionId], references: [id])
-  // Restrict, no SetNull: borrar a un acompañante que todavía acompaña a
-  // alguien desligaría en silencio a varios niños a la vez. Primero se quita de
-  // cada inscripción (PUT/DELETE .../acompanante) y después se borra.
+  // Relación retirada de la aplicación junto con `model Acompanante`. El
+  // Restrict se conserva tal cual: era lo que impedía que borrar a un adulto
+  // desligara en silencio a varios niños a la vez.
   acompanante  Acompanante? @relation(fields: [acompananteId], references: [id], onDelete: Restrict)
   asistencias  Asistencia[]
   // Restrict, no SetNull: dejar a un niño sin constancia es una decisión que
@@ -349,9 +381,9 @@ model Sesion {
   // ── Cuántos adultos acompañaron en ESTA fecha ──────────────────────────────
   //
   // Dos números y nada más, los que se cuentan al pasar lista. NO es una lista
-  // nominal de adultos: esa ya existe y es otra cosa (`Acompanante` ligado a la
-  // `Inscripcion` — con quién llega CADA niño ese año). El coordinador fue
-  // explícito: «solo número, no lista de papás».
+  // nominal de adultos: eso existió (`Acompanante` ligado a la `Inscripcion`) y
+  // se retiró por sobrar — estos dos números son lo único que el programa
+  // necesita. El coordinador fue explícito: «solo número, no lista de papás».
   //
   // Por qué aquí y no en `ResumenSesion`, que ya tiene columnas `mamas` y
   // `papas`: ese modelo es la foto agregada que entra POR EL IMPORTADOR del
@@ -424,19 +456,19 @@ model Asistencia {
 // Es la tercera clase de persona del sistema y no se confunde con ninguna de
 // las otras dos:
 //   · `Participante` es el niño.
-//   · `Acompanante` es el adulto con el que LLEGA el niño.
+//   · `Acompanante` era el adulto con el que LLEGA el niño — RETIRADO de la
+//     aplicación (ver su modelo), pero la distinción sigue valiendo: staff no
+//     es ni fue nunca lo mismo que un acompañante.
 //   · `Staff` es quien está del otro lado: el investigador que da la charla, el
 //     becario que pasa lista, quien coordina o apoya en logística.
 //   · `User` es una CUENTA del sistema. Un becario suele ser las dos cosas,
 //     pero la mayoría del staff no tiene cuenta (y no debe tenerla para salir
 //     en la lista), así que Staff no cuelga de User ni al revés.
 //
-// GLOBAL, como Participante y Acompanante — no por edición. El mismo becario
-// vuelve año tras año y a veinte sesiones del mismo año: una ficha por persona
-// es lo único que permite contar en cuántas participó. La edición no se pierde,
-// se deduce por las sesiones a las que está asignado (StaffClase → Clase →
-// Edicion), igual que la edición de un acompañante se deduce por sus
-// inscripciones.
+// GLOBAL, como Participante — no por edición. El mismo becario vuelve año tras
+// año y a veinte sesiones del mismo año: una ficha por persona es lo único que
+// permite contar en cuántas participó. La edición no se pierde, se deduce por
+// las sesiones a las que está asignado (StaffClase → Clase → Edicion).
 model Staff {
   id          String   @id @default(cuid())
   nombre      String
@@ -456,8 +488,8 @@ model Staff {
   @@index([nombre, apellidos])
 }
 
-// Qué hace esa persona en el programa. Análogo a `Parentesco`: describe a la
-// persona, no una relación laboral ni un permiso del sistema. NO se confunde
+// Qué hace esa persona en el programa: describe a la persona, no una relación
+// laboral ni un permiso del sistema. NO se confunde
 // con `Role` (ADMIN / BECARIO / READONLY), que es lo que una CUENTA puede hacer.
 enum RolStaff {
   INVESTIGADOR

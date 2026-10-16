@@ -199,8 +199,8 @@ export function ContadorAcompanantesFecha({
             Acompañantes de esta fecha
           </h2>
           <p className="text-xs mt-0.5 leading-relaxed text-muted-foreground">
-            Cuántos adultos vinieron. Solo el número: los nombres no se piden
-            aquí.{" "}
+            Cuántos adultos vinieron. Solo el número: los nombres no se
+            registran.{" "}
             {sinContar ? (
               <span>Déjalo en blanco si nadie los contó.</span>
             ) : (

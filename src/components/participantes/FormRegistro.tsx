@@ -29,13 +29,6 @@ import {
   crearParticipante,
   crearInscripcion,
 } from "@/lib/api/participantes";
-import {
-  CampoAcompanante,
-  ACOMPANANTE_VACIO,
-  aEleccionAcompanante,
-  acompananteIncompleto,
-  type EstadoAcompanante,
-} from "@/components/acompanantes/CampoAcompanante";
 import { GRADOS_POR_NIVEL, NIVEL_GRUPO_LABEL, NIVELES_ORDENADOS } from "@/lib/grados";
 import { CIUDADES, LARGO_MAXIMO_CIUDAD } from "@/lib/ciudades";
 import {
@@ -92,13 +85,6 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
     useState<Participante | null>(null);
   const [modoExistente, setModoExistente] = useState(false);
 
-  // El acompañante vive fuera de react-hook-form porque no es del niño: es de
-  // la inscripción de este año. Se manda igual tanto si el niño es nuevo como
-  // si ya participó antes — de hecho, reinscribiendo es cuando más cambia.
-  const [acompanante, setAcompanante] =
-    useState<EstadoAcompanante>(ACOMPANANTE_VACIO);
-  const [errorAcompanante, setErrorAcompanante] = useState<string | null>(null);
-
   const router = useRouter();
 
   const {
@@ -115,11 +101,7 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
     mutationFn: async (data: FormValues) => {
       const participante = await crearParticipante(data);
       try {
-        await crearInscripcion(
-          participante.id,
-          edicionId,
-          aEleccionAcompanante(acompanante),
-        );
+        await crearInscripcion(participante.id, edicionId);
       } catch (err) {
         throw new InscripcionTrasAltaError(
           `${data.nombre} ${data.apellidos}`,
@@ -133,8 +115,6 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
       reset();
       setParticipanteExistente(null);
       setModoExistente(false);
-      setAcompanante(ACOMPANANTE_VACIO);
-      setErrorAcompanante(null);
       // La lista de participantes de la edición la pinta el servidor y el
       // cliente de Next se queda con esa carga: sin esto, el niño recién
       // inscrito no aparecía hasta recargar a mano. `invalidateQueries` de
@@ -161,20 +141,13 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
 
   // Mutación: flujo inscribir existente
   const mutacionExistente = useMutation({
-    mutationFn: () =>
-      crearInscripcion(
-        participanteExistente!.id,
-        edicionId,
-        aEleccionAcompanante(acompanante),
-      ),
+    mutationFn: () => crearInscripcion(participanteExistente!.id, edicionId),
     onSuccess: () => {
       toast.success("Participante inscrito en esta edición");
       queryClient.invalidateQueries({ queryKey: ["participantes", edicionId] });
       reset();
       setParticipanteExistente(null);
       setModoExistente(false);
-      setAcompanante(ACOMPANANTE_VACIO);
-      setErrorAcompanante(null);
       // La lista de participantes de la edición la pinta el servidor y el
       // cliente de Next se queda con esa carga: sin esto, el niño recién
       // inscrito no aparecía hasta recargar a mano. `invalidateQueries` de
@@ -217,16 +190,6 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
   }
 
   function onSubmit(data: FormValues) {
-    // Un acompañante con teléfono pero sin nombre se descartaría en silencio al
-    // guardar: quien lo capturó creería que quedó registrado.
-    if (acompananteIncompleto(acompanante)) {
-      setErrorAcompanante(
-        "Escribe al menos el nombre del acompañante, o quítalo si el niño viene solo.",
-      );
-      return;
-    }
-    setErrorAcompanante(null);
-
     if (modoExistente && participanteExistente) {
       mutacionExistente.mutate();
     } else {
@@ -487,18 +450,6 @@ export function FormRegistro({ edicionId, onSuccess }: FormRegistroProps) {
           )}
         </div>
       </fieldset>
-
-      {/* Acompañante — fuera del fieldset: aunque el niño ya esté registrado,
-          con quién viene ESTE año es lo que se está capturando ahora. */}
-      <CampoAcompanante
-        valor={acompanante}
-        onChange={(v) => {
-          setAcompanante(v);
-          setErrorAcompanante(null);
-        }}
-        error={errorAcompanante}
-        disabled={isLoading}
-      />
 
       {/* Botón de envío */}
       <Button
