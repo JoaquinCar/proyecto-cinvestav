@@ -79,6 +79,25 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # El respaldo ya está a salvo en /tmp, así que el árbol de trabajo
+          # sobra. Y hay que limpiarlo: el paso anterior corre `npm install`
+          # —no `npm ci`, porque el lockfile está desincronizado con
+          # package.json— y eso MODIFICA `package-lock.json`. Con el árbol
+          # sucio, cambiar de rama se niega:
+          #
+          #   error: Your local changes to the following files would be
+          #   overwritten by checkout: package-lock.json
+          #
+          # Esa era la causa de fondo de que no hubiera respaldos. Antes
+          # quedaba tapada: al fallar el checkout saltaba el `||` y se creaba
+          # una rama huérfana, que no toca el árbol y por eso «funcionaba»,
+          # hasta que el push se rechazaba por no compartir historial.
+          #
+          # Arreglar el lockfile haría innecesario esto, pero el respaldo no
+          # puede depender de que alguien se acuerde: aquí se limpia y punto.
+          git reset --hard HEAD
+          git clean -fd -e respaldos
+
           # Rama aparte: sin historial del código, solo respaldos.
           #
           # Aquí se perdieron SEIS DÍAS de respaldos sin que nadie se enterara.
